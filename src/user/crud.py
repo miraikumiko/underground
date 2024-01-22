@@ -10,11 +10,11 @@ from src.auth.utils import get_password_hash
 
 
 async def crud_add_user(email: str, password: str) -> None | Exception:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             try:
                 stmt = select(User).where(User.email == email)
-                result = await s.execute(stmt)
+                result = await session.execute(stmt)
                 user = result.first()
             except Exception as e:
                 raise e
@@ -23,16 +23,16 @@ async def crud_add_user(email: str, password: str) -> None | Exception:
                 raise Exception("user already exist")
             else:
                 hpw = get_password_hash(password)
-                s.add_all([User(email=email, hashed_password=hpw)])
-                await s.commit()
+                session.add_all([User(email=email, hashed_password=hpw)])
+                await session.commit()
 
 
 async def crud_get_users() -> list[UserRead] | Exception:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             try:
                 stmt = select(User)
-                result = await s.execute(stmt)
+                result = await session.execute(stmt)
                 queries = result.all()
                 users = []
 
@@ -53,11 +53,11 @@ async def crud_get_users() -> list[UserRead] | Exception:
 
 
 async def crud_get_user(id: int) -> UserRead | Exception:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             try:
                 stmt = select(User).where(User.id == id)
-                result = await s.execute(stmt)
+                result = await session.execute(stmt)
                 query = result.first()
                 data = query[0]
                 user = {
@@ -74,8 +74,8 @@ async def crud_get_user(id: int) -> UserRead | Exception:
 
 
 async def crud_update_user(id: int, data: UserUpdate) -> None | Exception:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             hpw = get_password_hash(data.password)
 
             try:
@@ -86,27 +86,27 @@ async def crud_update_user(id: int, data: UserUpdate) -> None | Exception:
                     is_superuser=data.is_superuser,
                     is_verified=data.is_verified
                 )
-                await s.execute(stmt)
+                await session.execute(stmt)
             except Exception as e:
                 raise e
 
 
 async def crud_delete_user(id: int) -> None | Exception:
-     async with async_session_maker() as s:
-        async with s.begin():
+     async with async_session_maker() as session:
+        async with session.begin():
             try:
                 stmt = delete(User).where(User.id == id)
-                await s.execute(stmt)
+                await session.execute(stmt)
             except Exception as e:
                 raise e
 
 
 async def crud_add_user_server(data: ActiveServerCreate) -> None | Exception:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             try:
                 stmt = select(User).where(User.id == data.user_id)
-                result = await s.execute(stmt)
+                result = await session.execute(stmt)
 
                 user = result.first()
 
@@ -114,7 +114,7 @@ async def crud_add_user_server(data: ActiveServerCreate) -> None | Exception:
                     raise Exception("user doesn't exist")
 
                 stmt = select(Server).where(Server.id == data.server_id)
-                result = await s.execute(stmt)
+                result = await session.execute(stmt)
                 server = result.first()
 
                 if server is None:
@@ -133,15 +133,15 @@ async def crud_add_user_server(data: ActiveServerCreate) -> None | Exception:
 
 
 async def crud_get_user_servers(id: int) -> list[Row]:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             try:
                 stmt = select(column("id")).select_from(ActiveServer).where(ActiveServer.user_id == id)
-                result = await s.execute(stmt)
+                result = await session.execute(stmt)
                 user_servers_id = [row[0] for row in result.all()]
  
                 stmt = select(Server).where(Server.id.in_(user_servers_id))
-                result = await s.execute(stmt)
+                result = await session.execute(stmt)
                 queries = result.all()
 
                 active_servers = []
@@ -166,11 +166,11 @@ async def crud_get_user_servers(id: int) -> list[Row]:
 
 
 async def crud_get_user_server(user_id: int, server_id: int) -> Row:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             try:
                 stmt = select(ActiveServer).where(ActiveServer.user_id == user_id).filter(ActiveServer.server_id == server_id)
-                result = await s.execute(stmt)
+                result = await session.execute(stmt)
                 query = result.first()
 
                 if query is not None:
@@ -184,8 +184,8 @@ async def crud_get_user_server(user_id: int, server_id: int) -> Row:
 
 
 async def crud_update_user_server(data: ActiveServerUpdate) -> None | Exception:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             try:
                 stmt = update(ActiveServer).where(ActiveServer.id == data.server_id).values(
                     user_id=data.user_id,
@@ -196,16 +196,16 @@ async def crud_update_user_server(data: ActiveServerUpdate) -> None | Exception:
                     start_at=data.start_at,
                     end_at=data.end_at
                 )
-                await s.execute(stmt)
+                await session.execute(stmt)
             except Exception as e:
                 raise e
 
 
 async def crud_delete_user_server(id: int) -> None | Exception:
-     async with async_session_maker() as s:
-        async with s.begin():
+     async with async_session_maker() as session:
+        async with session.begin():
             try:
                 stmt = delete(ActiveServer).where(ActiveServer.id == id)
-                await s.execute(stmt)
+                await session.execute(stmt)
             except Exception as e:
                 raise e

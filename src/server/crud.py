@@ -8,8 +8,8 @@ from src.auth.utils import get_password_hash
 
 
 async def crud_add_server(data: ServerCreate) -> None | Exception:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             server = Server()
             server.cores = data.cores
             server.ram = data.ram
@@ -19,12 +19,12 @@ async def crud_add_server(data: ServerCreate) -> None | Exception:
             server.avaible = data.avaible
             server.price = data.price
 
-            result = s.add(server)
+            result = session.add(server)
 
 
 async def crud_get_servers() -> list[Row]:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             stmt = select(Server)
             result = await s.execute(stmt)
             queries = result.all()
@@ -34,8 +34,8 @@ async def crud_get_servers() -> list[Row]:
 
 
 async def crud_get_server(id: int) -> Row:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             stmt = select(Server).where(Server.id == id)
             result = await s.execute(stmt)
             server = result.first()[0]
@@ -44,8 +44,8 @@ async def crud_get_server(id: int) -> Row:
 
 
 async def crud_update_server(id: int, data: ServerUpdate) -> None | Exception:
-    async with async_session_maker() as s:
-        async with s.begin():
+    async with async_session_maker() as session:
+        async with session.begin():
             stmt = update(Server).where(Server.id == id).values(
                 cores=data.cores,
                 ram=data.ram,
@@ -55,11 +55,11 @@ async def crud_update_server(id: int, data: ServerUpdate) -> None | Exception:
                 avaible=data.avaible,
                 price=data.price
             )
-            await s.execute(stmt)
+            await session.execute(stmt)
 
 
 async def crud_delete_server(id: int) -> None | Exception:
-     async with async_session_maker() as s:
-        async with s.begin():
+     async with async_session_maker() as session:
+        async with session.begin():
             stmt = delete(Server).where(Server.id == id)
-            await s.execute(stmt)
+            await session.execute(stmt)

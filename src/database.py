@@ -21,6 +21,9 @@ from src.config import (
     REDIS_PASSWORD
 )
 
+DATABASE_URL_TEST = "sqlite+aiosqlite:///:memory:"
+
+
 if DB_TYPE == "sqlite":
     DATABASE_URL = f"{DB_TYPE}+aiosqlite:///{DB_DATABASE}"
 elif DB_TYPE == "mariadb":

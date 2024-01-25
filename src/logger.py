@@ -1,10 +1,13 @@
 import logging
-from src.arguments import args
+from src.config import LOG_FILE
 
 logger = logging.getLogger('logger')
 logger.setLevel(logging.DEBUG)
 
-fh = logging.FileHandler(args.log)
+if LOG_FILE is None:
+    LOG_FILE = logs.log
+
+fh = logging.FileHandler(LOG_FILE)
 fh.setLevel(logging.INFO)
 
 ch = logging.StreamHandler()

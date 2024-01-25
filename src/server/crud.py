@@ -10,56 +10,71 @@ from src.auth.utils import get_password_hash
 async def crud_add_server(data: ServerCreate) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
-            server = Server()
-            server.cores = data.cores
-            server.ram = data.ram
-            server.disk = data.disk
-            server.traffic = data.traffic
-            server.location = data.location
-            server.avaible = data.avaible
-            server.price = data.price
+            try:
+                server = Server()
+                server.cores = data.cores
+                server.ram = data.ram
+                server.disk = data.disk
+                server.traffic = data.traffic
+                server.location = data.location
+                server.avaible = data.avaible
+                server.price = data.price
 
-            result = session.add(server)
+                result = session.add(server)
+            except Exception as e:
+                raise e
 
 
 async def crud_get_servers() -> list[Row]:
     async with async_session_maker() as session:
         async with session.begin():
-            stmt = select(Server)
-            result = await s.execute(stmt)
-            queries = result.all()
-            servers = [query[0] for query in queries]
+            try:
+                stmt = select(Server)
+                result = await s.execute(stmt)
+                queries = result.all()
+                servers = [query[0] for query in queries]
 
-            return servers
+                return servers
+            except Exception as e:
+                raise e
 
 
 async def crud_get_server(id: int) -> Row:
     async with async_session_maker() as session:
         async with session.begin():
-            stmt = select(Server).where(Server.id == id)
-            result = await s.execute(stmt)
-            server = result.first()[0]
+            try:
+                stmt = select(Server).where(Server.id == id)
+                result = await s.execute(stmt)
+                server = result.first()[0]
 
-            return server
+                return server
+            except Exception as e:
+                raise e
 
 
 async def crud_update_server(id: int, data: ServerUpdate) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
-            stmt = update(Server).where(Server.id == id).values(
-                cores=data.cores,
-                ram=data.ram,
-                disk=data.disk,
-                traffic=data.traffic,
-                location=data.location,
-                avaible=data.avaible,
-                price=data.price
-            )
-            await session.execute(stmt)
+            try:
+                stmt = update(Server).where(Server.id == id).values(
+                    cores=data.cores,
+                    ram=data.ram,
+                    disk=data.disk,
+                    traffic=data.traffic,
+                    location=data.location,
+                    avaible=data.avaible,
+                    price=data.price
+                )
+                await session.execute(stmt)
+            except Exception as e:
+                raise e
 
 
 async def crud_delete_server(id: int) -> None | Exception:
      async with async_session_maker() as session:
         async with session.begin():
-            stmt = delete(Server).where(Server.id == id)
-            await session.execute(stmt)
+            try:
+                stmt = delete(Server).where(Server.id == id)
+                await session.execute(stmt)
+            except Exception as e:
+                raise e

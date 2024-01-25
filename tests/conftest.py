@@ -35,9 +35,8 @@ async def prepare_database():
 
 @pytest.fixture(scope="session")
 def asyncio_loop(request):
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+    with asyncio.get_event_loop_policy().new_event_loop() as loop:
+        yield loop
 
 
 @pytest.fixture(scope="session")

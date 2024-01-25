@@ -9,6 +9,7 @@ MODE = environ.get("MODE")
 SOCKET = environ.get("SOCKET")
 HOST = environ.get("HOST")
 PORT = int_void_convertion(environ.get("PORT"))
+LOG_FILE = void_convertion(environ.get("LOG_FILE"))
 
 # Security
 SECRET = environ.get("SECRET")

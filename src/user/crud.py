@@ -16,15 +16,15 @@ async def crud_add_user(email: str, password: str) -> None | Exception:
                 stmt = select(User).where(User.email == email)
                 result = await session.execute(stmt)
                 user = result.first()
+
+                if user is not None:
+                    raise Exception("user already exist")
+                else:
+                    hpw = get_password_hash(password)
+                    session.add_all([User(email=email, hashed_password=hpw)])
+                    await session.commit()
             except Exception as e:
                 raise e
-
-            if user is not None:
-                raise Exception("user already exist")
-            else:
-                hpw = get_password_hash(password)
-                session.add_all([User(email=email, hashed_password=hpw)])
-                await session.commit()
 
 
 async def crud_get_users() -> list[UserRead] | Exception:
@@ -76,15 +76,39 @@ async def crud_get_user(id: int) -> UserRead | Exception:
 async def crud_update_user(id: int, data: UserUpdate) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
-            hpw = get_password_hash(data.password)
-
             try:
+                hpw = get_password_hash(data.password)
                 stmt = update(User).where(User.id == id).values(
                     email=data.email,
                     hashed_password=hpw,
                     is_active=data.is_active,
                     is_superuser=data.is_superuser,
                     is_verified=data.is_verified
+                )
+                await session.execute(stmt)
+            except Exception as e:
+                raise e
+
+
+async def crud_update_user_email(id: int, email: str) -> None | Exception:
+    async with async_session_maker() as session:
+        async with session.begin():
+            try:
+                stmt = update(User).where(User.id == id).values(
+                    email=email
+                )
+                await session.execute(stmt)
+            except Exception as e:
+                raise e
+
+
+async def crud_update_user_password(id: int, password: str) -> None | Exception:
+    async with async_session_maker() as session:
+        async with session.begin():
+            try:
+                hpw = get_password_hash(password)
+                stmt = update(User).where(User.id == id).values(
+                    hashed_password=hpw
                 )
                 await session.execute(stmt)
             except Exception as e:

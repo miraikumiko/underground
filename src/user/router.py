@@ -8,6 +8,8 @@ from src.user.crud import (
     crud_get_users,
     crud_get_user,
     crud_update_user,
+    crud_update_user_email,
+    crud_update_user_password,
     crud_delete_user,
     crud_add_user_server,
     crud_get_user_servers,
@@ -22,7 +24,8 @@ router = APIRouter(
     tags=["user"]
 )
 
-current_user = users.current_user()
+active_user = users.current_user(active=True)
+active_and_verified_user = users.current_user(active=True, verified=True)
 admin = users.current_user(active=True, superuser=True, verified=True)
 
 
@@ -65,7 +68,7 @@ async def get_users(user: User = Depends(admin)):
 
 
 @router.get("/{id}")
-async def get_user(id: int, user: User = Depends(current_user)):
+async def get_user(id: int, user: User = Depends(admin)):
     try:
         user = await crud_get_user(id)
 
@@ -83,7 +86,45 @@ async def get_user(id: int, user: User = Depends(current_user)):
         })
 
 
-@router.patch("/update/{id}")
+@router.post("/update/email")
+async def update_user_password(email: str, user: User = Depends(active_and_verified_user)):
+    try:
+        await crud_update_user_email(user.id, email)
+
+        return {
+            "status": "success",
+            "data": None,
+            "details": "email has been changed"
+        }
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail={
+            "status": "error",
+            "data": None,
+            "details": "server error"
+        })
+
+
+@router.post("/update/password")
+async def update_user_password(password: str, user: User = Depends(active_and_verified_user)):
+    try:
+        await crud_update_user_password(user.id, password)
+
+        return {
+            "status": "success",
+            "data": None,
+            "details": "password has been changed"
+        }
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail={
+            "status": "error",
+            "data": None,
+            "details": "server error"
+        })
+
+
+@router.post("/update/{id}")
 async def update_user(id: int, data: UserUpdate, user: User = Depends(admin)):
     try:
         await crud_update_user(id, data)
@@ -141,7 +182,7 @@ async def add_user_server(data: ActiveServerCreate, user: User = Depends(admin))
 
 
 @router.get("/server/all")
-async def get_user_servers(id: int, user: User = Depends(current_user)):
+async def get_user_servers(id: int, user: User = Depends(admin)):
     try:
         servers = await crud_get_user_servers(id)
 
@@ -159,7 +200,7 @@ async def get_user_servers(id: int, user: User = Depends(current_user)):
 
 
 @router.get("/server/get")
-async def get_user_server(user_id: int, server_id: int, user: User = Depends(current_user)):
+async def get_user_server(user_id: int, server_id: int, user: User = Depends(admin)):
     try:
         server = await crud_get_user_server(user_id, server_id)
 
@@ -177,7 +218,7 @@ async def get_user_server(user_id: int, server_id: int, user: User = Depends(cur
         })
 
 
-@router.patch("/server/update")
+@router.post("/server/update")
 async def update_user_server(id: int, data: ActiveServerUpdate, user: User = Depends(admin)):
     try:
         await crud_update_user_server(id, data)

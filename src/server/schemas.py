@@ -60,3 +60,13 @@ class ActiveServerUpdate(BaseModel):
     ipv6: str
     start_at: datetime
     end_at: datetime
+
+
+class ServerAction(BaseModel):
+    id: int
+    action: str
+
+
+class ServerCheckout(BaseModel):
+    id: int
+    method: str

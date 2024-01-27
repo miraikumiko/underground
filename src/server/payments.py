@@ -6,5 +6,5 @@ async def payment_checkout_with_xmr(id: int):
     pass
 
 
-async def payment_checkout_with_payment(id: int):
+async def payment_checkout_with_paypal(id: int):
     pass

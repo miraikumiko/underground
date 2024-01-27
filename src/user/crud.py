@@ -1,19 +1,29 @@
+from string import ascii_letters, digits
+from random import choices
+from json import JSONDecoder
 from sqlalchemy import select, update, delete, column
 from sqlalchemy.engine.row import Row
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.database import async_session_maker
+from src.database import r, async_session_maker
 from src.user.models import User
 from src.server.models import Server, ActiveServer
 from src.user.schemas import UserCreate, UserRead, UserUpdate
 from src.server.schemas import ActiveServerCreate, ActiveServerUpdate
 from src.auth.utils import get_password_hash
+from src.user.utils import sendmail
+from src.config import (
+    SERVICE_NAME,
+    DOMAIN,
+    ONION_DOMAIN,
+    I2P_DOMAIN
+)
 
 
-async def crud_add_user(email: str, password: str) -> None | Exception:
+async def crud_add_user(username: str, password: str) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = select(User).where(User.email == email)
+                stmt = select(User).where(User.username == username)
                 result = await session.execute(stmt)
                 user = result.first()
 
@@ -21,7 +31,13 @@ async def crud_add_user(email: str, password: str) -> None | Exception:
                     raise Exception("user already exist")
                 else:
                     hpw = get_password_hash(password)
-                    session.add_all([User(email=email, hashed_password=hpw)])
+                    session.add_all([
+                        User(
+                            username=username,
+                            hashed_password=hpw,
+                            settings='["email": {"notify_send", 1, "password_reset", 1}]'
+                        )
+                    ])
                     await session.commit()
             except Exception as e:
                 raise e
@@ -40,10 +56,12 @@ async def crud_get_users() -> list[UserRead] | Exception:
                     data = query[0]
                     user = {
                         "id": data.id,
+                        "username": data.username,
                         "email": data.email,
                         "is_active": data.is_active,
                         "is_superuser": data.is_superuser,
-                        "is_verified": data.is_verified
+                        "is_verified": data.is_verified,
+                        "settings": data.settings
                     }
                     users.append(user)
 
@@ -62,10 +80,12 @@ async def crud_get_user(id: int) -> UserRead | Exception:
                 data = query[0]
                 user = {
                     "id": data.id,
+                    "username": data.username,
                     "email": data.email,
                     "is_active": data.is_active,
                     "is_superuser": data.is_superuser,
-                    "is_verified": data.is_verified
+                    "is_verified": data.is_verified,
+                    "settings": data.settings
                 }
 
                 return user
@@ -83,34 +103,106 @@ async def crud_update_user(id: int, data: UserUpdate) -> None | Exception:
                     hashed_password=hpw,
                     is_active=data.is_active,
                     is_superuser=data.is_superuser,
-                    is_verified=data.is_verified
+                    is_verified=data.is_verified,
+                    "settings": data.settings
                 )
                 await session.execute(stmt)
             except Exception as e:
                 raise e
 
 
-async def crud_update_user_email(id: int, email: str) -> None | Exception:
+async def crud_update_user_email(user_id: int, email: str) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = update(User).where(User.id == id).values(
-                    email=email
+                stmt = update(User).where(User.id == user_id).values(
+                    email=email,
+                    is_verified=False
                 )
+
+                chars = ascii_letters + digits
+                length = 32
+                token = ''.join(choices(chars, k=length))
+
+                subject = f"[{SERVICE_NAME}] email verification"
+                body = f"""
+                Your verification link is:
+                https://{DOMAIN}/api/user/verify/{token}
+                http://{ONION_DOMAIN}/api/user/verify/{token}
+                http://{I2P_DOMAIN}/api/user/verify/{token}
+                """
+
+                await session.execute(stmt)
+                await r.set(user_id, token, 86400)
+                await sendmail(subject, body, email)
+            except Exception as e:
+                raise e
+
+
+async def crud_verify_user_email(user_id: int, user_token: str) -> None | Exception:
+    async with async_session_maker() as session:
+        async with session.begin():
+            try:
+                token = await r.get(user_id)
+
+                if user_token == token:
+                    stmt = update(User).where(User.id == id).values(is_verified=True)
+                    await session.execute(stmt)
+                else:
+                    raise Exception("token isn't valid")
+            except Exception as e:
+                raise e
+
+
+async def crud_update_user_password(user_id: int, old_password: str, new_password: str) -> None | Exception:
+    async with async_session_maker() as session:
+        async with session.begin():
+            try:
+                old_hpw = get_password_hash(old_password)
+
+                stmt = select(column("hashed_password")).select_from(User).where(User.user_id == user_id)
+                hashed_password = await session.execute(stmt)
+
+                if old_hpw != hashed_password:
+                    raise Exception("invalid old password")
+
+                new_hpw = get_password_hash(old_password)
+                
+                stmt = update(User).where(User.id == user_id).values(hashed_password=new_hpw)
+
                 await session.execute(stmt)
             except Exception as e:
                 raise e
 
 
-async def crud_update_user_password(id: int, password: str) -> None | Exception:
+async def crud_forgot_user_password(email: str) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
-                hpw = get_password_hash(password)
-                stmt = update(User).where(User.id == id).values(
-                    hashed_password=hpw
-                )
-                await session.execute(stmt)
+                stmt = select(User).where(User.email == email)
+                result = await session.execute(stmt)
+                user = result.first()
+
+                if user is not not:
+                    settings = JSONDecoder(user.settings)
+
+                    if settings["email"]["reset_password"]:
+                        stmt = update(User).where(User.email == email).values(hashed_password=hpw)
+
+                        chars = ascii_letters + digits
+                        length = 12
+                        rand_password = ''.join(choices(chars, k=length))
+                        hpw = get_password_hash(rand_password)
+
+                        subject = f"[{SERVICE_NAME}] password reset"
+                        body = f"Your password is: {rand_password}"
+
+                        await session.execute(stmt)
+                        await sendmail(subject, body, email)
+                    else:
+                        raise Exception("Email not exist or user turned off password reseting")
+                else:
+                    raise Exception("Email not exist or user turned off password reseting")
             except Exception as e:
                 raise e
 

@@ -1,4 +1,11 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException
+from fastapi import (
+    FastAPI,
+    APIRouter,
+    Depends,
+    UploadFile,
+    HTTPException
+)
+from fastapi.responses import Response
 from fastapi_cache.decorator import cache
 from src.auth.utils import users
 from src.user.models import User
@@ -16,16 +23,17 @@ from src.server.crud import (
     crud_update_server,
     crud_delete_server
 )
-from src.server.qemu import (
-    qemu_server_on,
-    qemu_server_reboot,
-    qemu_server_off
+from src.server.vps import (
+    vps_server_on,
+    vps_server_reboot,
+    vps_server_off
 )
 from src.server.payments import (
     payment_checkout_with_btc,
     payment_checkout_with_xmr,
     payment_checkout_with_paypal
 )
+from src.server.utils import upload_iso
 from src.logger import logger
 
 router = APIRouter(
@@ -41,11 +49,11 @@ admin = users.current_user(active=True, superuser=True, verified=True)
 async def action_of_server(data: ServerAction, user: User = Depends(active_and_verified_user)):
     try:
         if data.action == "on":
-            await qemu_server_on(data.id)
+            await vps_server_on(data.id)
         elif data.action == "reboot":
-            await qemu_server_reboot(data.id)
+            await vps_server_reboot(data.id)
         elif data.action == "off":
-            await qemu_server_off(data.id)
+            await vps_server_off(data.id)
         else:
             raise ValueError("invalid server action")
 
@@ -215,9 +223,15 @@ async def update_server(id: int, data: ServerUpdate, user: User = Depends(admin)
 
 
 @router.post("/upload/iso")
-async def upload_iso_server(data: ServerUploadIso, user: User = Depends(active_and_verified_user)):
+async def upload_iso_server(server_id: int, iso: UploadFile, user: User = Depends(active_and_verified_user)):
+    if iso.content_type != "application/octet-stream":
+        raise HTTPException(status_code=400, detail={
+            "status": "error",
+            "data": None,
+            "details": "this is not .iso file"
+        })
     try:
-        await crud_upload_iso_server(user.id, data)
+        await upload_iso(user.id, iso)
 
         return {
             "status": "success",

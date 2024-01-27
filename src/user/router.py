@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException
-from src.auth.utils import users
+from src.auth.utils import users as fastapi_users
 from src.user.models import User
 from src.user.schemas import UserCreate, UserRead, UserUpdate
 from src.server.schemas import ActiveServerCreate, ActiveServerUpdate
@@ -9,7 +9,9 @@ from src.user.crud import (
     crud_get_user,
     crud_update_user,
     crud_update_user_email,
+    crud_verify_user_email,
     crud_update_user_password,
+    crud_forgot_user_password,
     crud_delete_user,
     crud_add_user_server,
     crud_get_user_servers,
@@ -24,9 +26,9 @@ router = APIRouter(
     tags=["user"]
 )
 
-active_user = users.current_user(active=True)
-active_and_verified_user = users.current_user(active=True, verified=True)
-admin = users.current_user(active=True, superuser=True, verified=True)
+active_user = fastapi_users.current_user(active=True)
+active_and_verified_user = fastapi_users.current_user(active=True, verified=True)
+admin = fastapi_users.current_user(active=True, superuser=True, verified=True)
 
 
 @router.post("/add")
@@ -87,7 +89,7 @@ async def get_user(id: int, user: User = Depends(admin)):
 
 
 @router.post("/update/email")
-async def update_user_password(email: str, user: User = Depends(active_and_verified_user)):
+async def update_user_email(email: str, user: User = Depends(active_user)):
     try:
         await crud_update_user_email(user.id, email)
 
@@ -105,15 +107,53 @@ async def update_user_password(email: str, user: User = Depends(active_and_verif
         })
 
 
-@router.post("/update/password")
-async def update_user_password(password: str, user: User = Depends(active_and_verified_user)):
+@router.post("/verify/{token}")
+async def verify_email_user(token: str, user: User = Depends(active_user)):
     try:
-        await crud_update_user_password(user.id, password)
+        await crud_verify_user_email(user.id, token)
+
+        return {
+            "status": "success",
+            "data": None,
+            "details": f"server with id {id} has been updated"
+        }
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail={
+            "status": "error",
+            "data": None,
+            "details": "server error"
+        })
+
+
+@router.post("/update/password")
+async def update_user_password(old_password: str, new_password: str, user: User = Depends(active_user)):
+    try:
+        await crud_update_user_password(user.id, old_password, new_password)
 
         return {
             "status": "success",
             "data": None,
             "details": "password has been changed"
+        }
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail={
+            "status": "error",
+            "data": None,
+            "details": "server error"
+        })
+
+
+@router.post("/forgot/password")
+async def forgot_user_password(email: str):
+    try:
+        await crud_forgot_user_password(email)
+
+        return {
+            "status": "success",
+            "data": None,
+            "details": "email with reset password has been sent"
         }
     except Exception as e:
         logger.error(e)

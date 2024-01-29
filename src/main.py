@@ -6,8 +6,13 @@ from contextlib import asynccontextmanager
 from src.database import r
 from src.user.router import add_user_router
 from src.server.router import add_server_router
-from src.auth.router import add_auth_router, add_register_router
-
+from src.auth.router import (
+    add_auth_router,
+    add_register_router,
+    add_reset_password_router,
+    add_verify_router,
+    add_users_router
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,3 +34,6 @@ add_user_router(app)
 add_server_router(app)
 add_auth_router(app)
 add_register_router(app)
+add_reset_password_router(app)
+add_verify_router(app)
+add_users_router(app)

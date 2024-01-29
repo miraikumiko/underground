@@ -10,8 +10,14 @@ from src.config import MODE, SOCKET, HOST, PORT
 @db_commit
 async def main():
     if not (args.email is None or args.password is None):
-        await crud_add_user(args.email, args.password)
-        print(f'User "{email}" has been created')
+        await crud_add_user(
+            args.password,
+            args.email,
+            args.is_active,
+            args.is_superuser,
+            args.is_verified
+        )
+        print(f'User "{args.email}" has been created')
         exit(0)
 
     if MODE == "prod":

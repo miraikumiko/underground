@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import async_session_maker
 from src.server.models import Server
 from src.server.schemas import ServerCreate, ServerUpdate
-from src.auth.utils import get_password_hash
+from src.auth.password import get_password_hash
 
 
 async def crud_add_server(data: ServerCreate) -> None | Exception:

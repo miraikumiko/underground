@@ -50,6 +50,68 @@ active_user = users.current_user(active=True)
 admin = users.current_user(active=True, superuser=True, verified=True)
 
 
+@router.post("/buy")
+async def buy_server(data: ServerCheckout, user: User = Depends(active_user)):
+    try:
+        if data.action == "xmr":
+            await payment_checkout_with_xmr(data.server_id, user.id)
+        elif data.action == "paypal":
+            await payment_checkout_with_paypal(data.server_id, user.id)
+        else:
+            raise ValueError("invalid payment method")
+
+        return {
+            "status": "success",
+            "data": None,
+            "details": f"server has been bought with {data.method}"
+        }
+    except ValueError as e:
+        logger.error(e)
+        raise HTTPException(status_code=400, detail={
+            "status": "error",
+            "data": None,
+            "details": e
+        })
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail={
+            "status": "error",
+            "data": None,
+            "details": "server error"
+        })
+
+
+@router.post("/pay")
+async def pay_server(data: ServerCheckout, user: User = Depends(active_user)):
+    try:
+        if data.action == "xmr":
+            await payment_checkout_with_xmr(data.server_id, user.id)
+        elif data.action == "paypal":
+            await payment_checkout_with_paypal(data.server_id, user.id)
+        else:
+            raise ValueError("invalid payment method")
+
+        return {
+            "status": "success",
+            "data": None,
+            "details": f"server has been payed with {data.method}"
+        }
+    except ValueError as e:
+        logger.error(e)
+        raise HTTPException(status_code=400, detail={
+            "status": "error",
+            "data": None,
+            "details": e
+        })
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail={
+            "status": "error",
+            "data": None,
+            "details": "server error"
+        })
+
+
 @router.post("/add")
 async def add_server(data: ServerCreate, user: User = Depends(admin)):
     try:
@@ -203,32 +265,7 @@ async def update_active_server(id: int, data: ActiveServerUpdate, user: User = D
         })
 
 
-@router.post("/active/upload/iso")
-async def upload_iso_server(server_id: int, iso: UploadFile, user: User = Depends(active_user)):
-    if iso.content_type != "application/octet-stream":
-        raise HTTPException(status_code=400, detail={
-            "status": "error",
-            "data": None,
-            "details": "this is not .iso file"
-        })
-    try:
-        await upload_iso(user.id, iso)
-
-        return {
-            "status": "success",
-            "data": None,
-            "details": "iso has been uploaded"
-        }
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "server error"
-        })
-
-
-@router.post("/action")
+@router.post("/active/action")
 async def action_of_server(data: ServerAction, user: User = Depends(active_user)):
     try:
         if data.action == "on":
@@ -261,59 +298,22 @@ async def action_of_server(data: ServerAction, user: User = Depends(active_user)
         })
 
 
-@router.post("/buy")
-async def buy_server(data: ServerCheckout, user: User = Depends(active_user)):
+@router.post("/active/upload/iso")
+async def upload_iso_server(server_id: int, iso: UploadFile, user: User = Depends(active_user)):
+    if iso.content_type != "application/octet-stream":
+        raise HTTPException(status_code=400, detail={
+            "status": "error",
+            "data": None,
+            "details": "this is not .iso file"
+        })
     try:
-        if data.action == "xmr":
-            await payment_checkout_with_xmr(data.server_id, user.id)
-        elif data.action == "paypal":
-            await payment_checkout_with_paypal(data.server_id, user.id)
-        else:
-            raise ValueError("invalid payment method")
+        await upload_iso(user.id, iso)
 
         return {
             "status": "success",
             "data": None,
-            "details": f"server has been bought with {data.method}"
+            "details": "iso has been uploaded"
         }
-    except ValueError as e:
-        logger.error(e)
-        raise HTTPException(status_code=400, detail={
-            "status": "error",
-            "data": None,
-            "details": e
-        })
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "server error"
-        })
-
-
-@router.post("/pay")
-async def pay_server(data: ServerCheckout, user: User = Depends(active_user)):
-    try:
-        if data.action == "xmr":
-            await payment_checkout_with_xmr(data.server_id, user.id)
-        elif data.action == "paypal":
-            await payment_checkout_with_paypal(data.server_id, user.id)
-        else:
-            raise ValueError("invalid payment method")
-
-        return {
-            "status": "success",
-            "data": None,
-            "details": f"server has been payed with {data.method}"
-        }
-    except ValueError as e:
-        logger.error(e)
-        raise HTTPException(status_code=400, detail={
-            "status": "error",
-            "data": None,
-            "details": e
-        })
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={

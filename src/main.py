@@ -6,12 +6,13 @@ from contextlib import asynccontextmanager
 from src.database import r
 from src.server.router import add_server_router
 from src.auth.router import (
+    add_users_router,
     add_auth_router,
     add_register_router,
     add_reset_password_router,
-    add_verify_router,
-    add_users_router
+    add_verify_router
 )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

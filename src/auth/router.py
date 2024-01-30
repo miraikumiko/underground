@@ -32,7 +32,7 @@ def add_reset_password_router(app: FastAPI):
 def add_verify_router(app: FastAPI):
     app.include_router(
         users.get_verify_router(UserRead),
-        prefix="/auth",
+        prefix="/api/auth",
         tags=["auth"]
     )
 

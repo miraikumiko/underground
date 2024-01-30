@@ -4,7 +4,6 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from contextlib import asynccontextmanager
 from src.database import r
-from src.user.router import add_user_router
 from src.server.router import add_server_router
 from src.auth.router import (
     add_auth_router,
@@ -30,10 +29,9 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-add_user_router(app)
 add_server_router(app)
+add_users_router(app)
 add_auth_router(app)
 add_register_router(app)
 add_reset_password_router(app)
 add_verify_router(app)
-add_users_router(app)

@@ -4,8 +4,9 @@ from json import JSONDecoder
 from sqlalchemy import select, update, delete, column
 from sqlalchemy.engine.row import Row
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import EmailStr
 from src.database import async_session_maker
-from src.user.models import User
+from src.user.models import User, UserSettings, Discount
 from src.server.models import Server, ActiveServer
 from src.user.schemas import UserCreate, UserRead, UserUpdate
 from src.server.schemas import ActiveServerCreate, ActiveServerUpdate
@@ -33,20 +34,17 @@ async def crud_add_user(
                 result = await session.execute(stmt)
                 user = result.first()
 
-                if user is not None:
-                    raise Exception("user already exist")
+                if user is None:
+                    user = User()
+                    user.email = email
+                    user.hashed_password = get_password_hash(password)
+                    user.is_active = is_active
+                    user.is_superuser = is_superuser
+                    user.is_verified = is_verified
+
+                    session.add(user)
                 else:
-                    hpw = get_password_hash(password)
-                    session.add_all([
-                        User(
-                            email=email,
-                            hashed_password=hpw,
-                            is_active=is_active,
-                            is_superuser=is_superuser,
-                            is_verified=is_verified
-                        )
-                    ])
-                    await session.commit()
+                    raise Exception("user already exist")
             except Exception as e:
                 raise e
 
@@ -97,6 +95,20 @@ async def crud_get_user(id: int) -> UserRead | Exception:
                 raise e
 
 
+async def crud_get_user_by_email(email: EmailStr) -> UserRead | Exception:
+    async with async_session_maker() as session:
+        async with session.begin():
+            try:
+                stmt = select(User).where(User.email == args.email)
+                result = await session.execute(stmt)
+                query = result.first()
+                user = query[0]
+
+                return user
+            except Exception as e:
+                raise e
+
+
 async def crud_update_user(id: int, data: UserUpdate) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
@@ -114,7 +126,7 @@ async def crud_update_user(id: int, data: UserUpdate) -> None | Exception:
                 raise e
 
 
-async def crud_update_user_email(user_id: int, email: str) -> None | Exception:
+async def crud_update_user_email(user_id: int, email: EmailStr) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
@@ -142,7 +154,7 @@ async def crud_update_user_email(user_id: int, email: str) -> None | Exception:
                 raise e
 
 
-async def crud_verify_user_email(email: str, token: str) -> None | Exception:
+async def crud_verify_user_email(email: EmailStr, token: str) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
@@ -185,15 +197,19 @@ async def crud_update_user_password(user_id: int, old_password: str, new_passwor
                 raise e
 
 
-async def crud_forgot_user_password(email: str, token: str) -> None | Exception:
+async def crud_forgot_user_password(email: EmailStr, token: str) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
                 stmt = select(User).where(User.email == email)
                 result = await session.execute(stmt)
-                user = result.first()
+                user = result.first()[0]
 
-                if user is not None:
+                stmt = select(UserSettings).where(UserSettings.user_id == user.id)
+                result = await session.execute(stmt)
+                reset_password = result.first()[0]
+
+                if reset_password:
                     try:
                         subject = f"[{SERVICE_NAME}] password reset"
                         body = f"Your token for password reset: {token}"
@@ -217,111 +233,54 @@ async def crud_delete_user(id: int) -> None | Exception:
                 raise e
 
 
-async def crud_add_user_server(data: ActiveServerCreate) -> None | Exception:
+async def crud_add_user_settings(user_id: int) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = select(User).where(User.id == data.user_id)
+                stmt = select(User).where(User.id == user_id)
                 result = await session.execute(stmt)
-
                 user = result.first()
 
+                stmt = select(UserSettings).where(UserSettings.user_id == user_id)
+                result = await session.execute(stmt)
+                user_settings = result.first()
+
                 if user is None:
-                    raise Exception("user doesn't exist")
+                    raise Exception(f"user with id {user_id} doesn't exist")
 
-                stmt = select(Server).where(Server.id == data.server_id)
-                result = await session.execute(stmt)
-                server = result.first()
-
-                if server is None:
-                    raise Exception("server doesn't exist")
-
-                user_server = ActiveServer()
-                user_server.user_id = data.user_id
-                user_server.server_id = data.server_id
-                user_server.iso = data.iso
-                user_server.ipv4 = data.ipv4
-                user_server.ipv6 = data.ipv6
-                user_server.start_at = data.start_at
-                user_server.end_at = data.end_at
-            except Exception as e:
-                raise e
-
-
-async def crud_get_user_servers(id: int) -> list[Row]:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = select(column("id")).select_from(ActiveServer).where(ActiveServer.user_id == id)
-                result = await session.execute(stmt)
-                user_servers_id = [row[0] for row in result.all()]
- 
-                stmt = select(Server).where(Server.id.in_(user_servers_id))
-                result = await session.execute(stmt)
-                queries = result.all()
-
-                active_servers = []
-
-                for query in queries:
-                    data = query[0]
-                    server = {
-                        "id": data.id,
-                        "user_id": data.user_id,
-                        "server_id": data.server_id,
-                        "iso": data.iso,
-                        "ipv4": data.ipv4,
-                        "ipv6": data.ipv6,
-                        "start_at": data.start_at,
-                        "end_at": data.end_at
-                    }
-                    servers.append(server)
-
-                return active_servers
-            except Exception as e:
-                raise e
-
-
-async def crud_get_user_server(user_id: int, server_id: int) -> Row:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = select(ActiveServer).where(ActiveServer.user_id == user_id).filter(ActiveServer.server_id == server_id)
-                result = await session.execute(stmt)
-                query = result.first()
-
-                if query is not None:
-                    active_server = query[0]
+                if user_settings is None:
+                    session.add_all([
+                        UserSettings(user_id=user_id)
+                    ])
+                    await session.commit()
                 else:
-                    active_server = None
-
-                return active_server
+                    raise Exception("user settings already exist")
             except Exception as e:
                 raise e
 
 
-async def crud_update_user_server(data: ActiveServerUpdate) -> None | Exception:
+async def crud_add_discount(server_id: int, user_id: int) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = update(ActiveServer).where(ActiveServer.id == data.server_id).values(
-                    user_id=data.user_id,
-                    server_id=data.server_id,
-                    iso=data.iso,
-                    ipv4=data.ipv4,
-                    ipv6=data.ipv6,
-                    start_at=data.start_at,
-                    end_at=data.end_at
-                )
-                await session.execute(stmt)
-            except Exception as e:
-                raise e
+                stmt = select(Server).where(Server.id == server_id)
+                result = await s.execute(stmt)
+                server = result.first()[0]
 
+                stmt = select(Discount).where(Discount.user_id == user_id)
+                result = await session.execute(stmt)
+                discount = result.first()
 
-async def crud_delete_user_server(id: int) -> None | Exception:
-     async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = delete(ActiveServer).where(ActiveServer.id == id)
-                await session.execute(stmt)
+                if discount is None:
+                    discount = Discount()
+                    discount.user_id = user_id
+                    discount.discount = server.price / 5
+
+                    session.add(discount)
+                else:
+                    stmt = update(Discount).where(
+                        Discount.user_id == user_id
+                    ).values(discount=(discount[0] + server.price / 5))
+                    await session.execute(stmt)
             except Exception as e:
                 raise e

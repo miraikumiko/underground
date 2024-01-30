@@ -1,4 +1,5 @@
 from fastapi_users.schemas import BaseUser, BaseUserCreate, BaseUserUpdate
+from pydantic import EmailStr
 
 
 class UserCreate(BaseUserCreate):
@@ -9,7 +10,7 @@ class UserCreate(BaseUserCreate):
 
 
 class UserUpdate(BaseUserUpdate):
-    email: str
+    email: EmailStr
     password: str
     is_active: bool = True
     is_superuser: bool = False
@@ -18,7 +19,7 @@ class UserUpdate(BaseUserUpdate):
 
 class UserRead(BaseUser[int]):
     id: int
-    email: str
+    email: EmailStr
     is_active: bool
     is_superuser: bool
     is_verified: bool

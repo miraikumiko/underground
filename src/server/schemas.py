@@ -63,10 +63,10 @@ class ActiveServerUpdate(BaseModel):
 
 
 class ServerAction(BaseModel):
-    id: int
+    server_id: int
     action: str
 
 
 class ServerCheckout(BaseModel):
-    id: int
+    server_id: int
     method: str

@@ -17,7 +17,7 @@ def get_redis_strategy() -> RedisStrategy:
 cookie_transport = CookieTransport(cookie_max_age=TOKEN_LIFETIME)
 
 auth_backend = AuthenticationBackend(
-    name="cookie+redis",
+    name="Auth",
     transport=cookie_transport,
     get_strategy=get_redis_strategy
 )

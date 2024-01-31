@@ -63,7 +63,7 @@ class ActiveServerUpdate(BaseModel):
 
 
 class ServerAction(BaseModel):
-    server_id: int
+    active_server_id: int
     action: str
 
 

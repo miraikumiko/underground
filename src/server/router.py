@@ -269,11 +269,11 @@ async def update_active_server(id: int, data: ActiveServerUpdate, user: User = D
 async def action_of_server(data: ServerAction, user: User = Depends(active_user)):
     try:
         if data.action == "on":
-            await vps_server_on(data.id)
+            await vps_server_on(str(data.active_server_id))
         elif data.action == "reboot":
-            await vps_server_reboot(data.id)
+            await vps_server_reboot(str(data.active_server_id))
         elif data.action == "off":
-            await vps_server_off(data.id)
+            await vps_server_off(str(data.active_server_id))
         else:
             raise ValueError("invalid server action")
 

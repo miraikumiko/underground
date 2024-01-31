@@ -40,3 +40,6 @@ SMTP_PORT = int_void_convertion(environ.get("SMTP_PORT"))
 SMTP_USER = environ.get("SMTP_USER")
 SMTP_PASSWORD = environ.get("SMTP_PASSWORD")
 SMTP_SENDER = environ.get("SMTP_SENDER")
+
+# QEMU
+QEMU_URL = environ.get("QEMU_URL")

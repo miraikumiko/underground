@@ -1,0 +1,8 @@
+<disk type='file' device='cdrom'>
+  <driver name='qemu' type='raw'/>
+  <source file='/var/lib/libvirt/iso/${iso_file}'/>
+  <target dev='sdb' bus='sata'/>
+  <readonly/>
+  <boot order='1'/>
+  <address type='drive' controller='0' bus='0' target='0' unit='1'/>
+</disk>

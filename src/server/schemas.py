@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, IPvAnyAddress, FilePath
 from datetime import datetime
 
 
@@ -35,9 +35,9 @@ class ServerUpdate(BaseModel):
 class ActiveServerCreate(BaseModel):
     user_id: int
     server_id: int
-    iso: str
-    ipv4: str
-    ipv6: str
+    ipv4: IPvAnyAddress
+    ipv6: IPvAnyAddress
+    xml: str
     start_at: datetime
     end_at: datetime
 
@@ -45,28 +45,36 @@ class ActiveServerCreate(BaseModel):
 class ActiveServerRead(BaseModel):
     user_id: int
     server_id: int
-    iso: str
-    ipv4: str
-    ipv6: str
+    ipv4: IPvAnyAddress
+    ipv6: IPvAnyAddress
+    xml: str
     start_at: datetime
     end_at: datetime
 
 
 class ActiveServerUpdate(BaseModel):
+    id: int
     user_id: int
     server_id: int
-    iso: str
-    ipv4: str
-    ipv6: str
+    ipv4: IPvAnyAddress
+    ipv6: IPvAnyAddress
+    xml: str
     start_at: datetime
     end_at: datetime
 
 
-class ServerAction(BaseModel):
+class ActiveServerBuy(BaseModel):
+    server_id: int
+    month: int
+    method: str
+
+
+class ActiveServerPay(BaseModel):
+    active_server_id: int
+    month: int
+    method: str
+
+
+class ActiveServerAction(BaseModel):
     active_server_id: int
     action: str
-
-
-class ServerCheckout(BaseModel):
-    server_id: int
-    method: str

@@ -14,7 +14,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.ERROR)
 
 formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "%(asctime)s - %(filename)s:%(lineno)s - %(levelname)s - %(message)s",
     "%Y-%m-%d %H:%M:%S"
 )
 

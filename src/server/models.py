@@ -3,6 +3,7 @@ from sqlalchemy import (
     Integer,
     Boolean,
     String,
+    Text,
     DECIMAL,
     TIMESTAMP,
     ForeignKey
@@ -30,8 +31,8 @@ class ActiveServer(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('user.id'))
     server_id = Column(Integer, ForeignKey('server.id'))
-    iso = Column(String, nullable=True, index=True)
     ipv4 = Column(String, nullable=False, unique=True, index=True)
-    ipv6 = Column(String, nullable=True, unique=True, index=True)
-    start_at = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
+    ipv6 = Column(String, unique=True, index=True)
+    xml = Column(Text, unique=True)
+    start_at = Column(TIMESTAMP, nullable=False, default=datetime.now)
     end_at = Column(TIMESTAMP, nullable=False)

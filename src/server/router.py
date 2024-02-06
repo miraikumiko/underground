@@ -7,16 +7,7 @@ from fastapi import (
 )
 from fastapi.responses import Response
 from fastapi_cache.decorator import cache
-from src.auth.utils import users
-from src.user.models import User
-from src.server.models import Server
-from src.server.schemas import (
-    ServerCreate,
-    ServerUpdate,
-    ServerAction,
-    ServerCheckout
-)
-from src.server.schemas import ActiveServerCreate, ActiveServerUpdate
+from src.logger import logger
 from src.server.crud import (
     crud_add_server,
     crud_get_servers,
@@ -24,12 +15,23 @@ from src.server.crud import (
     crud_update_server,
     crud_delete_server,
     crud_add_active_server,
+    crud_buy_active_server,
     crud_get_active_servers,
     crud_get_active_server,
     crud_update_active_server,
     crud_delete_active_server
 )
+from src.server.schemas import (
+    ServerCreate,
+    ServerUpdate,
+    ActiveServerCreate,
+    ActiveServerUpdate,
+    ActiveServerBuy,
+    ActiveServerPay,
+    ActiveServerAction
+)
 from src.server.vps import (
+    vps_server_create,
     vps_server_on,
     vps_server_reboot,
     vps_server_off
@@ -39,7 +41,8 @@ from src.server.payments import (
     payment_checkout_with_paypal
 )
 from src.server.utils import upload_iso
-from src.logger import logger
+from src.user.models import User
+from src.auth.utils import users
 
 router = APIRouter(
     prefix="/api/server",
@@ -51,26 +54,29 @@ admin = users.current_user(active=True, superuser=True, verified=True)
 
 
 @router.post("/buy")
-async def buy_server(data: ServerCheckout, user: User = Depends(active_user)):
+async def buy_server(data: ActiveServerBuy, user: User = Depends(active_user)):
     try:
-        if data.action == "xmr":
-            await payment_checkout_with_xmr(data.server_id, user.id)
-        elif data.action == "paypal":
-            await payment_checkout_with_paypal(data.server_id, user.id)
+        if data.method == "xmr":
+            #await payment_checkout_with_xmr(data)
+
+            active_server = await crud_buy_active_server(data, user)
+            xml = await vps_server_create(active_server)
+            schema = {"id": active_server.id, "xml": xml}
+            await crud_update_active_server(schema)
         else:
             raise ValueError("invalid payment method")
 
         return {
             "status": "success",
             "data": None,
-            "details": f"server has been bought with {data.method}"
+            "details": f"server has been bought by user with id {user.id}"
         }
     except ValueError as e:
         logger.error(e)
         raise HTTPException(status_code=400, detail={
             "status": "error",
             "data": None,
-            "details": e
+            "details": e.__str__()
         })
     except Exception as e:
         logger.error(e)
@@ -82,19 +88,23 @@ async def buy_server(data: ServerCheckout, user: User = Depends(active_user)):
 
 
 @router.post("/pay")
-async def pay_server(data: ServerCheckout, user: User = Depends(active_user)):
+async def pay_server(data: ActiveServerPay, user: User = Depends(active_user)):
     try:
-        if data.action == "xmr":
-            await payment_checkout_with_xmr(data.server_id, user.id)
-        elif data.action == "paypal":
-            await payment_checkout_with_paypal(data.server_id, user.id)
+        if data.method == "xmr":
+            #await payment_checkout_with_xmr(data)
+
+            active_server = await crud_get_active_server(data.active_server_id)
+            end_at = active_server.start_at + timedelta(days=30 * data.month)
+            schema = ActiveServerUpdate()
+            schema.end_at = end_at
+            await crud_update_active_server(schema)
         else:
             raise ValueError("invalid payment method")
 
         return {
             "status": "success",
             "data": None,
-            "details": f"server has been payed with {data.method}"
+            "details": f"server has been payed by user with id {user.id}"
         }
     except ValueError as e:
         logger.error(e)
@@ -209,15 +219,34 @@ async def delete_server(id: int, user: User = Depends(admin)):
         })
 
 
-@router.get("/active/me")
-async def get_active_servers(user_id: int, user: User = Depends(active_user)):
+@router.post("/active/add")
+async def add_active_server(data: ActiveServerCreate, user: User = Depends(active_user)):
     try:
-        servers = await crud_get_active_servers(user_id)
+        await crud_add_active_server(data)
+
+        return {
+            "status": "success",
+            "data": None,
+            "details": "active server has been added"
+        }
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail={
+            "status": "error",
+            "data": None,
+            "details": "server error"
+        })
+
+
+@router.get("/active/me")
+async def get_active_servers(user: User = Depends(active_user)):
+    try:
+        servers = await crud_get_active_servers(user.id)
 
         return {
             "status": "success",
             "data": servers,
-            "details": f"info of all servers of user with id {id}"
+            "details": f"info of all servers of user with id {user.id}"
         }
     except Exception:
         raise HTTPException(status_code=500, detail={
@@ -266,7 +295,7 @@ async def update_active_server(id: int, data: ActiveServerUpdate, user: User = D
 
 
 @router.post("/active/action")
-async def action_of_server(data: ServerAction, user: User = Depends(active_user)):
+async def action_of_server(data: ActiveServerAction, user: User = Depends(active_user)):
     try:
         if data.action == "on":
             await vps_server_on(str(data.active_server_id))

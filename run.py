@@ -3,7 +3,11 @@ import asyncio
 from src.main import app
 from src.arguments import args
 from src.database import db_commit
-from src.user.crud import crud_add_user, crud_add_user_settings
+from src.user.crud import (
+    crud_add_user,
+    crud_add_user_settings,
+    crud_get_user_by_email
+)
 from src.config import HOST, PORT
 
 

@@ -99,7 +99,7 @@ async def crud_get_user_by_email(email: EmailStr) -> UserRead | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = select(User).where(User.email == args.email)
+                stmt = select(User).where(User.email == email)
                 result = await session.execute(stmt)
                 query = result.first()
                 user = query[0]

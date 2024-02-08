@@ -55,10 +55,10 @@ async def vps_server_off(name: str) -> None | Exception:
         raise e
 
 
-async def vps_server_status(name: str) -> str | Exception:
-    async with libvirt.open(QEMU_URL) as conn:
+async def vps_server_status(active_server_id: int) -> str | Exception:
+    with libvirt.open(QEMU_URL) as conn:
         try:
-            state, _ = conn.lookupByName(name).state()
+            state, _ = conn.lookupByName(str(active_server_id)).state()
 
             if state == libvirt.VIR_DOMAIN_RUNNING:
                 return "on"

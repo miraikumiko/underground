@@ -34,7 +34,8 @@ from src.server.vps import (
     vps_server_create,
     vps_server_on,
     vps_server_reboot,
-    vps_server_off
+    vps_server_off,
+    vps_server_status
 )
 from src.server.payments import (
     payment_checkout_with_xmr,
@@ -318,6 +319,25 @@ async def action_of_server(data: ActiveServerAction, user: User = Depends(active
             "data": None,
             "details": e
         })
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail={
+            "status": "error",
+            "data": None,
+            "details": "server error"
+        })
+
+
+@router.get("/active/status/{active_server_id}")
+async def status_of_server(active_server_id: int, user: User = Depends(active_user)):
+    try:
+        status = await vps_server_status(active_server_id)
+
+        return {
+            "status": "success",
+            "data": status,
+            "details": "server info"
+        }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={

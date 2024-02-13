@@ -1,32 +1,37 @@
 import libvirt
 from mako.template import Template
 from src.server.models import ActiveServer
-from src.server.crud import crud_get_server
-from src.server.rpc import get_avaible_cores_number
+from src.server.crud import crud_get_server, crud_get_server_ips
+from src.server.rpc import rpc_create_disk, rpc_get_avaible_cores_number
 from src.config import QEMU_URL
 
 
 async def vps_server_create(active_server: ActiveServer) -> str | Exception:
     try:
-        with libvirt.open(QEMU_URL) as conn:
-            avaible_cores = await get_avaible_cores_number()
+        server_addresses = await crud_get_server_ips()
 
-            server = await crud_get_server(active_server.server_id)
+        for ip in server_addresses.ip:
+            avaible_cores = await rpc_get_avaible_cores_number(ip)
 
             if avaible_cores <= server.cores:
                 raise Exception("Doesn't have avaible cores")
 
-            with open("src/server/xml/vps.xml", "r") as file:
-                template = Template(file.read())
-                xml = template.render(
-                    active_server_id=active_server.id,
-                    cores=server.cores,
-                    ram=server.ram
-                )
+            with libvirt.open(f"qemu+ssh:///{ip}:55055") as conn:
+                server = await crud_get_server(active_server.server_id)
 
-                conn.defineXML(xml)
+                with open("src/server/xml/vps.xml", "r") as file:
+                    template = Template(file.read())
+                    xml = template.render(
+                        active_server_id=active_server.id,
+                        cores=server.cores,
+                        ram=server.ram
+                    )
 
-                return xml
+                    conn.defineXML(xml)
+
+                    rpc_create_disk(str(active_server.id), server.disk)
+
+                    return xml
     except Exception as e:
         raise e
 

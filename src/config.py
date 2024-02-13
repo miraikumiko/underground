@@ -41,5 +41,5 @@ SMTP_USER = environ.get("SMTP_USER")
 SMTP_PASSWORD = environ.get("SMTP_PASSWORD")
 SMTP_SENDER = environ.get("SMTP_SENDER")
 
-# QEMU
-QEMU_URL = environ.get("QEMU_URL")
+# RPC
+RPC_KEY = environ.get("RPC_KEY")

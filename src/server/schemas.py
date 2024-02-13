@@ -53,7 +53,6 @@ class ActiveServerRead(BaseModel):
 
 
 class ActiveServerUpdate(BaseModel):
-    id: int
     user_id: int
     server_id: int
     ipv4: IPvAnyAddress

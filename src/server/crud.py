@@ -3,7 +3,7 @@ from sqlalchemy.engine.row import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 from src.database import async_session_maker
-from src.server.models import Server, ActiveServer
+from src.server.models import Server, ActiveServer, ServerIP
 from src.server.schemas import (
     ServerCreate,
     ServerUpdate,
@@ -12,7 +12,7 @@ from src.server.schemas import (
     ActiveServerBuy,
     ActiveServerPay
 )
-from src.server.rpc import get_ipv4, get_ipv6
+from src.server.rpc import rpc_get_ipv4, rpc_get_ipv6
 from src.user.models import User, Discount
 from src.auth.password import get_password_hash
 
@@ -116,10 +116,10 @@ async def crud_buy_active_server(data: ActiveServerBuy, user: User) -> ActiveSer
                 server = result.first()
 
                 if server is None:
-                    raise Exception("server doesn't exist")
+                    raise ValueError("server doesn't exist")
 
-                ipv4 = await get_ipv4()
-                ipv6 = await get_ipv6()
+                ipv4 = await rpc_get_ipv4()
+                ipv6 = await rpc_get_ipv6()
                 end_at = datetime.now() + timedelta(days=30 * data.month)
 
                 active_server = ActiveServer()
@@ -171,12 +171,12 @@ async def crud_get_active_server(active_server_id: int) -> Row:
                 raise e
 
 
-async def crud_update_active_server(data: ActiveServerUpdate) -> None | Exception:
+async def crud_update_active_server(active_server_id: int, data: ActiveServerUpdate) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
                 stmt = update(ActiveServer).where(
-                    ActiveServer.id == data["id"]
+                    ActiveServer.id == active_server_id
                 ).values(data)
                 await session.execute(stmt)
             except Exception as e:
@@ -189,5 +189,19 @@ async def crud_delete_active_server(id: int) -> None | Exception:
             try:
                 stmt = delete(ActiveServer).where(ActiveServer.id == id)
                 await session.execute(stmt)
+            except Exception as e:
+                raise e
+
+
+async def crud_get_server_ips(id: int) -> list[Row] | Exception:
+     async with async_session_maker() as session:
+        async with session.begin():
+            try:
+                stmt = select(ServerIP)
+                result = await session.execute(stmt)
+                queries = result.all()
+                servers_ips = [query[0] for query in queries]
+
+                return servers_ips
             except Exception as e:
                 raise e

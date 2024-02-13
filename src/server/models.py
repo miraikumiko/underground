@@ -36,3 +36,26 @@ class ActiveServer(Base):
     xml = Column(Text, unique=True)
     start_at = Column(TIMESTAMP, nullable=False, default=datetime.now)
     end_at = Column(TIMESTAMP, nullable=False)
+
+
+class ServerIP(Base):
+    __tablename__ = "server_ip"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ip = Column(String, nullable=False, unique=True, index=True)
+
+
+class IPv4(Base):
+    __tablename__ = "ipv4"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ip = Column(String, nullable=False, unique=True, index=True)
+    avaible = Column(Boolean, nullable=False, default=True)
+
+
+class IPv6(Base):
+    __tablename__ = "ipv6"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ip = Column(String, nullable=False, unique=True, index=True)
+    avaible = Column(Boolean, nullable=False, default=True)

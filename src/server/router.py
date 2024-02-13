@@ -37,6 +37,9 @@ from src.server.vps import (
     vps_server_off,
     vps_server_status
 )
+from src.server.rpc import (
+    rpc_get_avaible_cores_number
+)
 from src.server.payments import (
     payment_checkout_with_xmr,
     payment_checkout_with_paypal
@@ -62,8 +65,22 @@ async def buy_server(data: ActiveServerBuy, user: User = Depends(active_user)):
 
             active_server = await crud_buy_active_server(data, user)
             xml = await vps_server_create(active_server)
-            schema = {"id": active_server.id, "xml": xml}
-            await crud_update_active_server(schema)
+            await crud_update_active_server(active_server.id, {"xml": xml})
+
+            server_addresses = await crud_get_server_ips()
+            node_cores = []
+            node_id = 0
+
+            for ip in server_addresses.ip:
+                avaible_cores = await rpc_get_avaible_cores_number(ip)
+                node_cores += avaible_cores - 1
+                node_id += 1
+
+            servers = await crud_get_servers()
+
+            for server in servers:
+                if max(node_cores) < server.cores:
+                    await crud_update_server({"avaible": False})
         else:
             raise ValueError("invalid payment method")
 
@@ -74,7 +91,7 @@ async def buy_server(data: ActiveServerBuy, user: User = Depends(active_user)):
         }
     except ValueError as e:
         logger.error(e)
-        raise HTTPException(status_code=400, detail={
+        raise HTTPException(status_code=422, detail={
             "status": "error",
             "data": None,
             "details": e.__str__()
@@ -96,9 +113,7 @@ async def pay_server(data: ActiveServerPay, user: User = Depends(active_user)):
 
             active_server = await crud_get_active_server(data.active_server_id)
             end_at = active_server.start_at + timedelta(days=30 * data.month)
-            schema = ActiveServerUpdate()
-            schema.end_at = end_at
-            await crud_update_active_server(schema)
+            await crud_update_active_server(active_server.id, {"en end_at": end_at})
         else:
             raise ValueError("invalid payment method")
 

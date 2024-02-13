@@ -3,7 +3,6 @@ from mako.template import Template
 from src.server.models import ActiveServer
 from src.server.crud import crud_get_server, crud_get_server_ips
 from src.server.rpc import rpc_create_disk, rpc_get_avaible_cores_number
-from src.config import QEMU_URL
 
 
 async def vps_server_create(active_server: ActiveServer) -> str | Exception:

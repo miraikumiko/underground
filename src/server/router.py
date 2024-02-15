@@ -41,8 +41,7 @@ from src.server.rpc import (
     rpc_get_avaible_cores_number
 )
 from src.server.payments import (
-    payment_checkout_with_xmr,
-    payment_checkout_with_paypal
+    payment_checkout_with_xmr
 )
 from src.server.utils import upload_iso
 from src.user.models import User
@@ -55,6 +54,19 @@ router = APIRouter(
 
 active_user = users.current_user(active=True)
 admin = users.current_user(active=True, superuser=True, verified=True)
+
+
+@router.post("/checkout")
+async def checkout_server(data: ActiveServerBuy, user: User = Depends(active_user)):
+    try:
+        pass
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail={
+            "status": "error",
+            "data": None,
+            "details": "server error"
+        })       
 
 
 @router.post("/buy")
@@ -80,7 +92,7 @@ async def buy_server(data: ActiveServerBuy, user: User = Depends(active_user)):
 
             for server in servers:
                 if max(node_cores) < server.cores:
-                    await crud_update_server({"avaible": False})
+                    await crud_update_server(server.id, {"avaible": False})
         else:
             raise ValueError("invalid payment method")
 

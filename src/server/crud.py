@@ -62,11 +62,11 @@ async def crud_get_server(id: int) -> Row | Exception:
                 raise e
 
 
-async def crud_update_server(id: int, data: ServerUpdate) -> None | Exception:
+async def crud_update_server(server_id: int, data: ServerUpdate) -> None | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = update(Server).where(Server.id == id).values(
+                stmt = update(Server).where(Server.id == server_id).values(
                     cores=data.cores,
                     ram=data.ram,
                     disk=data.disk,

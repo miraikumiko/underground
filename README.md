@@ -32,6 +32,10 @@ pip install -U pip
 pip install -r requirements/base.txt
 ```
 
+Or you can build Docker image:
+
+`docker buildx build -t underground-be .`
+
 ### OpenRC
 
 `cp contrib/openrc/underground.pm-be /etc/init.d/underground.pm-be`
@@ -66,7 +70,3 @@ rc-service nginx start
 ### Systemd
 
 `systemctl enable --now postgresql redis underground.pm-be nginx`
-
-## Docker
-
-`docker buildx build -t underground-be .`

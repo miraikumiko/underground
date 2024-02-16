@@ -66,3 +66,7 @@ rc-service nginx start
 ### Systemd
 
 `systemctl enable --now postgresql redis underground.pm-be nginx`
+
+## Docker
+
+`docker buildx build -t underground-be .`

@@ -34,7 +34,7 @@ pip install -r requirements/base.txt
 
 Or you can build Docker image:
 
-`docker buildx build -t underground-be .`
+`docker buildx build -t underground.pm-be .`
 
 ### OpenRC
 

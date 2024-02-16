@@ -1,0 +1,17 @@
+[Unit]
+Description=underground.pm BE
+Wants=network-online.target
+Wants=postgresql.service
+Wants=redis.service
+After=network-online.target
+Wants=postgresql.service
+After=redis.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/underground.pm-be
+ExecStart=/var/www/underground.pm-be/venv/bin/python /var/www/underground.pm-be/run.py
+
+[Install]
+WantedBy=multi-user.target

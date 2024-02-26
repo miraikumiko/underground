@@ -41,5 +41,13 @@ args_parser.add_argument(
     dest='is_verified',
     help='verified user'
 )
+args_parser.add_argument(
+    '-c',
+    '--checkout',
+    type=str,
+    default=None,
+    dest='checkout',
+    help='payment checkout'
+)
 
 args = args_parser.parse_args()

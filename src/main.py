@@ -4,13 +4,14 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from contextlib import asynccontextmanager
 from src.database import r
-from src.server.router import add_server_router
+from src.server.router import router as server_router
+from src.payment.router import router as payment_router
 from src.auth.router import (
-    add_users_router,
-    add_auth_router,
-    add_register_router,
-    add_reset_password_router,
-    add_verify_router
+    users_router,
+    auth_router,
+    register_router,
+    reset_password_router,
+    verify_router
 )
 
 
@@ -30,9 +31,10 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-add_server_router(app)
-add_users_router(app)
-add_auth_router(app)
-add_register_router(app)
-add_reset_password_router(app)
-add_verify_router(app)
+app.include_router(server_router)
+app.include_router(payment_router)
+app.include_router(users_router, prefix="/api/users", tags=["users"])
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(register_router, prefix="/api/auth", tags=["auth"])
+app.include_router(reset_password_router, prefix="/api/auth", tags=["auth"])
+app.include_router(verify_router, prefix="/api/auth", tags=["auth"])

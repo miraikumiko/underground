@@ -1,11 +1,12 @@
-from pydantic import BaseModel, IPvAnyAddress, FilePath
+from pydantic import BaseModel, IPvAnyAddress
 from datetime import datetime
 
 
 class ServerCreate(BaseModel):
     cores: int
     ram: int
-    disk: int
+    disk_type: str
+    disk_size: int
     traffic: int
     location: str
     avaible: bool
@@ -15,7 +16,8 @@ class ServerCreate(BaseModel):
 class ServerRead(BaseModel):
     cores: int
     ram: int
-    disk: int
+    disk_type: str
+    disk_size: int
     traffic: int
     location: str
     avaible: bool
@@ -25,7 +27,8 @@ class ServerRead(BaseModel):
 class ServerUpdate(BaseModel):
     cores: int
     ram: int
-    disk: int
+    disk_type: str
+    disk_size: int
     traffic: int
     location: str
     avaible: bool
@@ -64,14 +67,14 @@ class ActiveServerUpdate(BaseModel):
 
 class ActiveServerBuy(BaseModel):
     server_id: int
+    payment_id: int
     month: int
-    method: str
 
 
 class ActiveServerPay(BaseModel):
     active_server_id: int
+    payment_id: int
     month: int
-    method: str
 
 
 class ActiveServerAction(BaseModel):

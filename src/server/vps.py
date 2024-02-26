@@ -1,4 +1,4 @@
-import libvirt
+#import libvirt
 from mako.template import Template
 from src.server.models import ActiveServer
 from src.server.crud import crud_get_server, crud_get_server_ips
@@ -28,7 +28,7 @@ async def vps_server_create(active_server: ActiveServer) -> str | Exception:
 
                     conn.defineXML(xml)
 
-                    rpc_create_disk(str(active_server.id), server.disk)
+                    rpc_create_disk(str(active_server.id), server.disk_size)
 
                     return xml
     except Exception as e:

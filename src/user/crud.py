@@ -1,15 +1,11 @@
 from string import ascii_letters, digits
 from random import choices
-from json import JSONDecoder
 from sqlalchemy import select, update, delete, column
-from sqlalchemy.engine.row import Row
-from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import EmailStr
-from src.database import async_session_maker
-from src.user.models import User, UserSettings, Discount
-from src.server.models import Server, ActiveServer
-from src.user.schemas import UserCreate, UserRead, UserUpdate
-from src.server.schemas import ActiveServerCreate, ActiveServerUpdate
+from src.database import async_session_maker, r
+from src.user.models import User, UserSettings
+from src.server.models import Server
+from src.user.schemas import UserRead, UserUpdate
 from src.auth.password import get_password_hash
 from src.mail import sendmail
 from src.config import (
@@ -255,32 +251,5 @@ async def crud_add_user_settings(user_id: int) -> None | Exception:
                     await session.commit()
                 else:
                     raise Exception("user settings already exist")
-            except Exception as e:
-                raise e
-
-
-async def crud_add_discount(server_id: int, user_id: int) -> None | Exception:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = select(Server).where(Server.id == server_id)
-                result = await s.execute(stmt)
-                server = result.first()[0]
-
-                stmt = select(Discount).where(Discount.user_id == user_id)
-                result = await session.execute(stmt)
-                discount = result.first()
-
-                if discount is None:
-                    discount = Discount()
-                    discount.user_id = user_id
-                    discount.discount = server.price / 5
-
-                    session.add(discount)
-                else:
-                    stmt = update(Discount).where(
-                        Discount.user_id == user_id
-                    ).values(discount=(discount[0] + server.price / 5))
-                    await session.execute(stmt)
             except Exception as e:
                 raise e

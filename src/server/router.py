@@ -1,11 +1,9 @@
 from fastapi import (
-    FastAPI,
     APIRouter,
-    Depends,
     UploadFile,
-    HTTPException
+    HTTPException,
+    Depends
 )
-from fastapi.responses import Response
 from fastapi_cache.decorator import cache
 from src.logger import logger
 from src.server.crud import (
@@ -15,139 +13,31 @@ from src.server.crud import (
     crud_update_server,
     crud_delete_server,
     crud_add_active_server,
-    crud_buy_active_server,
     crud_get_active_servers,
     crud_get_active_server,
-    crud_update_active_server,
-    crud_delete_active_server
+    crud_update_active_server
 )
 from src.server.schemas import (
     ServerCreate,
     ServerUpdate,
     ActiveServerCreate,
     ActiveServerUpdate,
-    ActiveServerBuy,
-    ActiveServerPay,
     ActiveServerAction
 )
 from src.server.vps import (
-    vps_server_create,
     vps_server_on,
     vps_server_reboot,
     vps_server_off,
     vps_server_status
 )
-from src.server.rpc import (
-    rpc_get_avaible_cores_number
-)
-from src.server.payments import (
-    payment_checkout_with_xmr
-)
 from src.server.utils import upload_iso
 from src.user.models import User
-from src.auth.utils import users
+from src.auth.utils import active_user, admin
 
 router = APIRouter(
     prefix="/api/server",
     tags=["servers"]
 )
-
-active_user = users.current_user(active=True)
-admin = users.current_user(active=True, superuser=True, verified=True)
-
-
-@router.post("/checkout")
-async def checkout_server(data: ActiveServerBuy, user: User = Depends(active_user)):
-    try:
-        pass
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "server error"
-        })       
-
-
-@router.post("/buy")
-async def buy_server(data: ActiveServerBuy, user: User = Depends(active_user)):
-    try:
-        if data.method == "xmr":
-            #await payment_checkout_with_xmr(data)
-
-            active_server = await crud_buy_active_server(data, user)
-            xml = await vps_server_create(active_server)
-            await crud_update_active_server(active_server.id, {"xml": xml})
-
-            server_addresses = await crud_get_server_ips()
-            node_cores = []
-            node_id = 0
-
-            for ip in server_addresses.ip:
-                avaible_cores = await rpc_get_avaible_cores_number(ip)
-                node_cores += avaible_cores - 1
-                node_id += 1
-
-            servers = await crud_get_servers()
-
-            for server in servers:
-                if max(node_cores) < server.cores:
-                    await crud_update_server(server.id, {"avaible": False})
-        else:
-            raise ValueError("invalid payment method")
-
-        return {
-            "status": "success",
-            "data": None,
-            "details": f"server has been bought by user with id {user.id}"
-        }
-    except ValueError as e:
-        logger.error(e)
-        raise HTTPException(status_code=422, detail={
-            "status": "error",
-            "data": None,
-            "details": e.__str__()
-        })
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "server error"
-        })
-
-
-@router.post("/pay")
-async def pay_server(data: ActiveServerPay, user: User = Depends(active_user)):
-    try:
-        if data.method == "xmr":
-            #await payment_checkout_with_xmr(data)
-
-            active_server = await crud_get_active_server(data.active_server_id)
-            end_at = active_server.start_at + timedelta(days=30 * data.month)
-            await crud_update_active_server(active_server.id, {"en end_at": end_at})
-        else:
-            raise ValueError("invalid payment method")
-
-        return {
-            "status": "success",
-            "data": None,
-            "details": f"server has been payed by user with id {user.id}"
-        }
-    except ValueError as e:
-        logger.error(e)
-        raise HTTPException(status_code=400, detail={
-            "status": "error",
-            "data": None,
-            "details": e
-        })
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "server error"
-        })
 
 
 @router.post("/add")
@@ -194,6 +84,13 @@ async def get_servers():
 async def get_server(id: int):
     try:
         server = await crud_get_server(id)
+
+        if server is None:
+            raise HTTPException(status_code=400, detail={
+                "status": "error",
+                "data": None,
+                "details": "server doesn't exist"
+            })
 
         return {
             "status": "success",
@@ -397,7 +294,3 @@ async def upload_iso_server(server_id: int, iso: UploadFile, user: User = Depend
             "data": None,
             "details": "server error"
         })
-
-
-def add_server_router(app: FastAPI):
-    app.include_router(router)

@@ -1,20 +1,23 @@
 from sqlalchemy import select, update, delete
 from sqlalchemy.engine.row import Row
-from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 from src.database import async_session_maker
-from src.server.models import Server, ActiveServer, ServerIP
+from src.server.models import (
+    Server,
+    ActiveServer,
+    ServerIP
+)
 from src.server.schemas import (
     ServerCreate,
     ServerUpdate,
     ActiveServerCreate,
     ActiveServerUpdate,
-    ActiveServerBuy,
-    ActiveServerPay
+    ActiveServerBuy
 )
 from src.server.rpc import rpc_get_ipv4, rpc_get_ipv6
-from src.user.models import User, Discount
-from src.auth.password import get_password_hash
+from src.user.models import User
+from src.payment.schemas import PaymentRead
+
 
 
 async def crud_add_server(data: ServerCreate) -> None | Exception:
@@ -24,7 +27,8 @@ async def crud_add_server(data: ServerCreate) -> None | Exception:
                 server = Server()
                 server.cores = data.cores
                 server.ram = data.ram
-                server.disk = data.disk
+                server.disk_type = data.disk_type
+                server.disk_size = data.disk_size
                 server.traffic = data.traffic
                 server.location = data.location
                 server.avaible = data.avaible
@@ -69,7 +73,8 @@ async def crud_update_server(server_id: int, data: ServerUpdate) -> None | Excep
                 stmt = update(Server).where(Server.id == server_id).values(
                     cores=data.cores,
                     ram=data.ram,
-                    disk=data.disk,
+                    disk_type=data.disk_type,
+                    disk_size = data.disk_size,
                     traffic=data.traffic,
                     location=data.location,
                     avaible=data.avaible,
@@ -107,7 +112,7 @@ async def crud_add_active_server(data: ActiveServerCreate, user: User) -> None |
                 raise e
 
 
-async def crud_buy_active_server(data: ActiveServerBuy, user: User) -> ActiveServer | Exception:
+async def crud_buy_active_server(data: PaymentRead) -> ActiveServer | Exception:
     async with async_session_maker() as session:
         async with session.begin():
             try:
@@ -116,14 +121,14 @@ async def crud_buy_active_server(data: ActiveServerBuy, user: User) -> ActiveSer
                 server = result.first()
 
                 if server is None:
-                    raise ValueError("server doesn't exist")
+                    raise ValueError("Server doesn't exist")
 
                 ipv4 = await rpc_get_ipv4()
                 ipv6 = await rpc_get_ipv6()
                 end_at = datetime.now() + timedelta(days=30 * data.month)
 
                 active_server = ActiveServer()
-                active_server.user_id = user.id
+                active_server.user_id = data.user_id
                 active_server.server_id = data.server_id
                 active_server.ipv4 = ipv4
                 active_server.ipv6 = ipv6
@@ -193,7 +198,7 @@ async def crud_delete_active_server(id: int) -> None | Exception:
                 raise e
 
 
-async def crud_get_server_ips(id: int) -> list[Row] | Exception:
+async def crud_get_server_ips() -> list[Row] | Exception:
      async with async_session_maker() as session:
         async with session.begin():
             try:

@@ -26,3 +26,6 @@ users = FastAPIUsers[User, int](
     get_user_manager,
     [auth_backend]
 )
+
+active_user = users.current_user(active=True)
+admin = users.current_user(active=True, superuser=True, verified=True)

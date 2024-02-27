@@ -22,4 +22,9 @@ class PaymentRead(BaseModel):
 
 
 class PaymentUpdate(BaseModel):
+    payment_id: int
     active: bool
+
+
+class PaymentDelete(BaseModel):
+    id: int

@@ -16,7 +16,7 @@ from src.auth.router import (
 
 
 @asynccontextmanager
-async def lifespan():
+async def lifespan(app: FastAPI):
     FastAPICache.init(RedisBackend(r), prefix="fastapi-cache")
     yield
 

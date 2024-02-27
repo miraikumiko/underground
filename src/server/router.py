@@ -48,14 +48,14 @@ async def add_server(data: ServerCreate, user: User = Depends(admin)):
         return {
             "status": "success",
             "data": None,
-            "details": "server info has been added"
+            "details": "Server info has been added"
         }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
@@ -68,14 +68,14 @@ async def get_servers():
         return {
             "status": "success",
             "data": servers,
-            "details": "info of all servers"
+            "details": "Info of all servers"
         }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
@@ -89,20 +89,20 @@ async def get_server(id: int):
             raise HTTPException(status_code=400, detail={
                 "status": "error",
                 "data": None,
-                "details": "server doesn't exist"
+                "details": "Server doesn't exist"
             })
 
         return {
             "status": "success",
             "data": server,
-            "details": "server info"
+            "details": "Server info"
         }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
@@ -114,14 +114,14 @@ async def update_server(id: int, data: ServerUpdate, user: User = Depends(admin)
         return {
             "status": "success",
             "data": None,
-            "details": f"server with id {id} has been updated"
+            "details": f"Server with id {id} has been updated"
         }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
@@ -133,14 +133,14 @@ async def delete_server(id: int, user: User = Depends(admin)):
         return {
             "status": "success",
             "data": None,
-            "details": f"server with id {id} has been deleted"
+            "details": f"Server with id {id} has been deleted"
         }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
@@ -152,14 +152,14 @@ async def add_active_server(data: ActiveServerCreate, user: User = Depends(activ
         return {
             "status": "success",
             "data": None,
-            "details": "active server has been added"
+            "details": "Active server has been added"
         }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
@@ -171,13 +171,13 @@ async def get_active_servers(user: User = Depends(active_user)):
         return {
             "status": "success",
             "data": servers,
-            "details": f"info of all servers of user with id {user.id}"
+            "details": f"Info of all servers of user with id {user.id}"
         }
     except Exception:
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
@@ -189,33 +189,33 @@ async def get_active_server(id: int, user: User = Depends(active_user)):
         return {
             "status": "success",
             "data": server,
-            "details": "user server info"
+            "details": "User server info"
         }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
 @router.patch("/active/me/{id}")
-async def update_active_server(id: int, data: ActiveServerUpdate, user: User = Depends(active_user)):
+async def update_active_server(data: ActiveServerUpdate, user: User = Depends(active_user)):
     try:
-        await crud_update_active_server(id, data)
+        await crud_update_active_server(data)
 
         return {
             "status": "success",
             "data": None,
-            "details": f"user server with id {id} has been updated"
+            "details": f"User server with id {id} has been updated"
         }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
@@ -229,12 +229,12 @@ async def action_of_server(data: ActiveServerAction, user: User = Depends(active
         elif data.action == "off":
             await vps_server_off(str(data.active_server_id))
         else:
-            raise ValueError("invalid server action")
+            raise ValueError("Invalid server action")
 
         return {
             "status": "success",
             "data": None,
-            "details": f"server has been {data.action}"
+            "details": f"Server has been {data.action}"
         }
     except ValueError as e:
         logger.error(e)
@@ -248,7 +248,7 @@ async def action_of_server(data: ActiveServerAction, user: User = Depends(active
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
@@ -260,14 +260,14 @@ async def status_of_server(active_server_id: int, user: User = Depends(active_us
         return {
             "status": "success",
             "data": status,
-            "details": "server info"
+            "details": "Server info"
         }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })
 
 
@@ -277,7 +277,7 @@ async def upload_iso_server(server_id: int, iso: UploadFile, user: User = Depend
         raise HTTPException(status_code=400, detail={
             "status": "error",
             "data": None,
-            "details": "this is not .iso file"
+            "details": "This is not .iso file"
         })
     try:
         await upload_iso(user.id, iso)
@@ -285,12 +285,12 @@ async def upload_iso_server(server_id: int, iso: UploadFile, user: User = Depend
         return {
             "status": "success",
             "data": None,
-            "details": "iso has been uploaded"
+            "details": "Image has been uploaded"
         }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail={
             "status": "error",
             "data": None,
-            "details": "server error"
+            "details": "Server error"
         })

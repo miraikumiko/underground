@@ -14,6 +14,7 @@ class ServerCreate(BaseModel):
 
 
 class ServerRead(BaseModel):
+    id: int
     cores: int
     ram: int
     disk_type: str
@@ -25,6 +26,7 @@ class ServerRead(BaseModel):
 
 
 class ServerUpdate(BaseModel):
+    id: int
     cores: int
     ram: int
     disk_type: str
@@ -33,6 +35,10 @@ class ServerUpdate(BaseModel):
     location: str
     avaible: bool
     price: float
+
+
+class ServerDelete(BaseModel):
+    id: int
 
 
 class ActiveServerCreate(BaseModel):
@@ -46,6 +52,7 @@ class ActiveServerCreate(BaseModel):
 
 
 class ActiveServerRead(BaseModel):
+    id: int
     user_id: int
     server_id: int
     ipv4: IPvAnyAddress
@@ -56,6 +63,7 @@ class ActiveServerRead(BaseModel):
 
 
 class ActiveServerUpdate(BaseModel):
+    id: int
     user_id: int
     server_id: int
     ipv4: IPvAnyAddress
@@ -65,18 +73,22 @@ class ActiveServerUpdate(BaseModel):
     end_at: datetime
 
 
-class ActiveServerBuy(BaseModel):
-    server_id: int
-    payment_id: int
-    month: int
-
-
-class ActiveServerPay(BaseModel):
-    active_server_id: int
-    payment_id: int
-    month: int
+class ActiveServerDelete(BaseModel):
+    id: int
 
 
 class ActiveServerAction(BaseModel):
     active_server_id: int
     action: str
+
+
+class ServerIPCreate(BaseModel):
+    ip: IPvAnyAddress
+
+
+class ServerIPRead(BaseModel):
+    ip: IPvAnyAddress
+
+
+class ServerIPUpdate(BaseModel):
+    ip: IPvAnyAddress

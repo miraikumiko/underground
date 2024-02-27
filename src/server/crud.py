@@ -1,5 +1,4 @@
 from sqlalchemy import select, update, delete
-from sqlalchemy.engine.row import Row
 from datetime import datetime, timedelta
 from src.database import async_session_maker
 from src.server.models import (
@@ -9,16 +8,21 @@ from src.server.models import (
 )
 from src.server.schemas import (
     ServerCreate,
+    ServerRead,
     ServerUpdate,
+    ServerDelete,
     ActiveServerCreate,
-    ActiveServerUpdate
+    ActiveServerRead,
+    ActiveServerUpdate,
+    ActiveServerDelete,
+    ServerIPRead
 )
 from src.server.rpc import rpc_get_ipv4, rpc_get_ipv6
 from src.user.models import User
 from src.payment.schemas import PaymentRead
 
 
-async def crud_add_server(data: ServerCreate) -> None | Exception:
+async def crud_add_server(data: ServerCreate) -> None:
     async with async_session_maker() as session:
         async with session.begin():
             try:
@@ -37,7 +41,7 @@ async def crud_add_server(data: ServerCreate) -> None | Exception:
                 raise e
 
 
-async def crud_get_servers() -> list[Row] | Exception:
+async def crud_get_servers() -> list[ServerRead]:
     async with async_session_maker() as session:
         async with session.begin():
             try:
@@ -51,11 +55,11 @@ async def crud_get_servers() -> list[Row] | Exception:
                 raise e
 
 
-async def crud_get_server(id: int) -> Row | Exception:
+async def crud_get_server(data: ServerRead) -> ServerRead:
     async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = select(Server).where(Server.id == id)
+                stmt = select(Server).where(Server.id == data.id)
                 result = await session.execute(stmt)
                 server = result.first()[0]
 
@@ -64,11 +68,11 @@ async def crud_get_server(id: int) -> Row | Exception:
                 raise e
 
 
-async def crud_update_server(server_id: int, data: ServerUpdate) -> None | Exception:
+async def crud_update_server(data: ServerUpdate) -> None:
     async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = update(Server).where(Server.id == server_id).values(
+                stmt = update(Server).where(Server.id == data.id).values(
                     cores=data.cores,
                     ram=data.ram,
                     disk_type=data.disk_type,
@@ -83,17 +87,17 @@ async def crud_update_server(server_id: int, data: ServerUpdate) -> None | Excep
                 raise e
 
 
-async def crud_delete_server(id: int) -> None | Exception:
+async def crud_delete_server(data: ServerDelete) -> None:
      async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = delete(Server).where(Server.id == id)
+                stmt = delete(Server).where(Server.id == data.id)
                 await session.execute(stmt)
             except Exception as e:
                 raise e
 
 
-async def crud_add_active_server(data: ActiveServerCreate, user: User) -> None | Exception:
+async def crud_add_active_server(data: ActiveServerCreate) -> None:
     async with async_session_maker() as session:
         async with session.begin():
             try:
@@ -110,7 +114,7 @@ async def crud_add_active_server(data: ActiveServerCreate, user: User) -> None |
                 raise e
 
 
-async def crud_buy_active_server(data: PaymentRead) -> ActiveServer | Exception:
+async def crud_buy_active_server(data: PaymentRead) -> ActiveServer:
     async with async_session_maker() as session:
         async with session.begin():
             try:
@@ -143,7 +147,7 @@ async def crud_buy_active_server(data: PaymentRead) -> ActiveServer | Exception:
                 raise e
 
 
-async def crud_get_active_servers(user_id: int) -> list[Row]:
+async def crud_get_active_servers(user_id: int) -> list[ActiveServerRead]:
     async with async_session_maker() as session:
         async with session.begin():
             try:
@@ -156,11 +160,11 @@ async def crud_get_active_servers(user_id: int) -> list[Row]:
                 raise e
 
 
-async def crud_get_active_server(active_server_id: int) -> Row:
+async def crud_get_active_server(data: ActiveServerRead) -> ActiveServerRead:
     async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = select(ActiveServer).where(ActiveServer.id == active_server_id)
+                stmt = select(ActiveServer).where(ActiveServer.id == data.id)
                 result = await session.execute(stmt)
                 query = result.first()
 
@@ -174,29 +178,29 @@ async def crud_get_active_server(active_server_id: int) -> Row:
                 raise e
 
 
-async def crud_update_active_server(active_server_id: int, data: ActiveServerUpdate) -> None | Exception:
+async def crud_update_active_server(data: ActiveServerUpdate) -> None:
     async with async_session_maker() as session:
         async with session.begin():
             try:
                 stmt = update(ActiveServer).where(
-                    ActiveServer.id == active_server_id
+                    ActiveServer.id == data.id
                 ).values(data)
                 await session.execute(stmt)
             except Exception as e:
                 raise e
 
 
-async def crud_delete_active_server(id: int) -> None | Exception:
+async def crud_delete_active_server(data: ActiveServerDelete) -> None:
      async with async_session_maker() as session:
         async with session.begin():
             try:
-                stmt = delete(ActiveServer).where(ActiveServer.id == id)
+                stmt = delete(ActiveServer).where(ActiveServer.id == data.id)
                 await session.execute(stmt)
             except Exception as e:
                 raise e
 
 
-async def crud_get_server_ips() -> list[Row] | Exception:
+async def crud_get_server_ips() -> list[ServerIPRead]:
      async with async_session_maker() as session:
         async with session.begin():
             try:

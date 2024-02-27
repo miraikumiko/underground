@@ -64,7 +64,7 @@ async def payment_checkout(txid: str) -> None | Exception:
                 await crud_update_payment(payment_id, {"active": False})
                 await crud_add_discount(payment.server_id, payment.user_id)
 
-                if payment.active_server_id is None:
+                if payment.active_server_id is None or payment.active_server_id == 0:
                     active_server = await crud_buy_active_server({
                         "user_id": payment.user_id,
                         "server_id": payment.server_id,

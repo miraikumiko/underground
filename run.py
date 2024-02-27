@@ -28,7 +28,7 @@ async def main():
         exit(0)
     elif args.checkout is not None:
         await payment_checkout(args.checkout)
-        logger.info(f"Start payment checkout with txid = {args.checkout}")
+        logger.info(f"Start payment checkout with txid {args.checkout}")
         exit(0)
 
     uvicorn.run("run:app", host=HOST, port=PORT, reload=True)

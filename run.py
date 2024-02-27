@@ -1,7 +1,6 @@
 import uvicorn
 import asyncio
 from src.main import app
-from src.database import db_commit
 from src.arguments import args
 from src.logger import logger
 from src.config import HOST, PORT
@@ -13,7 +12,6 @@ from src.user.crud import (
 from src.payment.payments import payment_checkout
 
 
-@db_commit
 async def main():
     if not (args.email is None and args.password is None):
         await crud_add_user(

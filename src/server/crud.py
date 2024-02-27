@@ -11,13 +11,11 @@ from src.server.schemas import (
     ServerCreate,
     ServerUpdate,
     ActiveServerCreate,
-    ActiveServerUpdate,
-    ActiveServerBuy
+    ActiveServerUpdate
 )
 from src.server.rpc import rpc_get_ipv4, rpc_get_ipv6
 from src.user.models import User
 from src.payment.schemas import PaymentRead
-
 
 
 async def crud_add_server(data: ServerCreate) -> None | Exception:

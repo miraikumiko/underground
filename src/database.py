@@ -1,13 +1,12 @@
+from typing import AsyncGenerator
 import redis
-from fastapi import Depends
-from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine
 )
-from typing import AsyncGenerator
-from src.user.models import User
+from fastapi import Depends
+from fastapi_users.db import SQLAlchemyUserDatabase
 from src.logger import logger
 from src.config import (
     DB_TYPE,
@@ -20,6 +19,7 @@ from src.config import (
     REDIS_PORT,
     REDIS_PASSWORD
 )
+from src.user.models import User
 
 DATABASE_URL_TEST = "sqlite+aiosqlite:///:memory:"
 
@@ -55,10 +55,3 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
 async def get_user_db(session: AsyncSession = Depends(get_async_session)):
     yield SQLAlchemyUserDatabase(session, User)
-
-
-def db_commit(function: any):
-    async def wrapper():
-        async with engine.begin():
-            await function()
-    return wrapper

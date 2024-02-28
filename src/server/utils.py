@@ -2,7 +2,7 @@ from os import makedirs
 from fastapi import UploadFile
 
 
-async def upload_iso(user_id: int, iso: UploadFile) -> None | Exception:
+async def upload_iso(user_id: int, iso: UploadFile) -> None:
     try:
         iso_path = f"/var/lib/libvirt/iso/{user_id}"
 

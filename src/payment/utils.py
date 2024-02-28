@@ -20,7 +20,7 @@ async def monero_request(method: str, params: dict = {}) -> dict:
     return response.json()
 
 
-async def usd_to_xmr(usd: float) -> int | Exception:
+async def usd_to_xmr(usd: float) -> int:
     try:
         response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
         xmr_course = response.json()["monero"]["usd"]

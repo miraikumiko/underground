@@ -272,14 +272,15 @@ async def status_of_server(active_server_id: int, user: User = Depends(active_us
 
 
 @router.post("/active/upload/iso")
-async def upload_iso_server(server_id: int, iso: UploadFile, user: User = Depends(active_user)):
-    if iso.content_type != "application/octet-stream":
-        raise HTTPException(status_code=400, detail={
-            "status": "error",
-            "data": None,
-            "details": "This is not .iso file"
-        })
+async def upload_iso_server(iso: UploadFile, user: User = Depends(active_user)):
     try:
+        if iso.content_type != "application/octet-stream":
+            raise HTTPException(status_code=400, detail={
+                "status": "error",
+                "data": None,
+                "details": "This is not .iso file"
+            })
+
         await upload_iso(user.id, iso)
 
         return {

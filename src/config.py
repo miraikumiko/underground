@@ -41,7 +41,11 @@ SMTP_USER = environ.get("SMTP_USER")
 SMTP_PASSWORD = environ.get("SMTP_PASSWORD")
 SMTP_SENDER = environ.get("SMTP_SENDER")
 
+# QEMU
+QEMU_PORT = int_void_convertion(environ.get("QEMU_PORT"))
+
 # RPC
+RPC_SERVER_PORT = int_void_convertion(environ.get("RPC_SERVER_PORT"))
 RPC_SERVER_KEY = environ.get("RPC_SERVER_KEY")
 
 # Monero

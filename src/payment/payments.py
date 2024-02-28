@@ -50,7 +50,7 @@ async def payment_request(data: PaymentCreate, amount_usd: int) -> str:
         raise e
 
 
-async def payment_checkout(txid: str) -> None | Exception:
+async def payment_checkout(txid: str) -> None:
     try:
         response = await monero_request("get_transfer_by_txid", {"txid": txid})
 

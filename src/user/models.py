@@ -1,11 +1,9 @@
 from fastapi_users.db import SQLAlchemyBaseUserTable
 from sqlalchemy import (
     Column,
-    CheckConstraint,
     Integer,
     Boolean,
     String,
-    JSON,
     ForeignKey
 )
 from src.models import Base

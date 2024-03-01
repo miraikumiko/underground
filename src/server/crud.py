@@ -1,6 +1,9 @@
-from sqlalchemy import select, update, delete
-from datetime import datetime, timedelta
-from src.database import async_session_maker
+from src.crud import (
+    crud_create,
+    crud_read,
+    crud_update,
+    crud_delete
+)
 from src.server.models import (
     Server,
     ActiveServer,
@@ -17,198 +20,78 @@ from src.server.schemas import (
     ActiveServerDelete,
     ServerIPRead
 )
-from src.server.rpc import rpc_get_ipv4, rpc_get_ipv6
-from src.user.models import User
-from src.payment.schemas import PaymentRead
 
 
-async def crud_add_server(data: ServerCreate) -> None:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                server = Server()
-                server.cores = data.cores
-                server.ram = data.ram
-                server.disk_type = data.disk_type
-                server.disk_size = data.disk_size
-                server.traffic = data.traffic
-                server.location = data.location
-                server.avaible = data.avaible
-                server.price = data.price
+async def crud_create_server(Schema: ServerCreate) -> int:
+    id = await crud_create(Server, Schema)
 
-                session.add(server)
-            except Exception as e:
-                raise e
+    return id
 
 
-async def crud_get_servers() -> list[ServerRead]:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = select(Server)
-                result = await session.execute(stmt)
-                queries = result.all()
-                servers = [query[0] for query in queries]
+async def crud_read_servers() -> list[ServerRead]:
+    servers = await crud_read(Server, all=True)
 
-                return servers
-            except Exception as e:
-                raise e
+    return servers
 
 
-async def crud_get_server(data: ServerRead) -> ServerRead:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = select(Server).where(Server.id == data.id)
-                result = await session.execute(stmt)
-                server = result.first()[0]
+async def crud_read_server(Schema: ServerRead) -> ServerRead:
+    server = await crud_read(Server, Schema)
 
-                return server
-            except Exception as e:
-                raise e
+    return server
 
 
-async def crud_update_server(data: ServerUpdate) -> None:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = update(Server).where(Server.id == data.id).values(
-                    cores=data.cores,
-                    ram=data.ram,
-                    disk_type=data.disk_type,
-                    disk_size = data.disk_size,
-                    traffic=data.traffic,
-                    location=data.location,
-                    avaible=data.avaible,
-                    price=data.price
-                )
-                await session.execute(stmt)
-            except Exception as e:
-                raise e
+async def crud_update_server(Schema: ServerUpdate) -> None:
+    await crud_update(Server, Schema)
 
 
-async def crud_delete_server(data: ServerDelete) -> None:
-     async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = delete(Server).where(Server.id == data.id)
-                await session.execute(stmt)
-            except Exception as e:
-                raise e
+async def crud_delete_server(Schema: ServerDelete) -> None:
+    await crud_delete(Server, Schema)
 
 
-async def crud_add_active_server(data: ActiveServerCreate) -> None:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                active_server = ActiveServer()
-                active_server.user_id = data.user_id
-                active_server.server_id = data.server_id
-                active_server.ipv4 = data.ipv4
-                active_server.ipv6 = data.ipv6
-                active_server.start_at = data.start_at
-                active_server.end_at = data.end_at
+async def crud_create_active_server(Schema: ActiveServerCreate) -> int:
+    id = await crud_create(ActiveServer, Schema)
 
-                session.add(active_server)
-            except Exception as e:
-                raise e
+    return id
 
 
-async def crud_buy_active_server(data: PaymentRead) -> ActiveServer:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = select(Server).where(Server.id == data.server_id)
-                result = await session.execute(stmt)
-                server = result.first()
+async def crud_read_active_servers(Schema: ActiveServerRead) -> list[ActiveServerRead]:
+    if Schema.id is None:
+        active_servers = await crud_read(
+            ActiveServer,
+            Schema,
+            attr1=ActiveServer.user_id,
+            attr2=Schema.user_id,
+            all=True
+        )
+    else:
+        active_servers = await crud_read(ActiveServer, Schema, all=True)
 
-                if server is None:
-                    raise ValueError("Server doesn't exist")
-
-                ipv4 = await rpc_get_ipv4()
-                ipv6 = await rpc_get_ipv6()
-                end_at = datetime.now() + timedelta(days=30 * data.month)
-
-                active_server = ActiveServer()
-                active_server.user_id = data.user_id
-                active_server.server_id = data.server_id
-                active_server.ipv4 = ipv4
-                active_server.ipv6 = ipv6
-                active_server.end_at = end_at
-
-                session.add(active_server)
-
-                stmt = select(ActiveServer).where(ActiveServer.ipv4 == ipv4)
-                result = await session.execute(stmt)
-                active_server = result.first()[0]
-
-                return active_server
-            except Exception as e:
-                raise e
+    return active_servers
 
 
-async def crud_get_active_servers(user_id: int) -> list[ActiveServerRead]:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = select(ActiveServer).where(ActiveServer.user_id == user_id)
-                result = await session.execute(stmt)
-                active_servers = result.all()
+async def crud_read_active_server(Schema: ActiveServerRead) -> ActiveServerRead:
+    if Schema.id is None:
+        active_server = await crud_read(
+            ActiveServer,
+            Schema,
+            attr1=ActiveServer.user_id,
+            attr2=Schema.user_id
+        )
+    else:
+        active_server = await crud_read(ActiveServer, Schema)
 
-                return active_servers
-            except Exception as e:
-                raise e
-
-
-async def crud_get_active_server(data: ActiveServerRead) -> ActiveServerRead:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = select(ActiveServer).where(ActiveServer.id == data.id)
-                result = await session.execute(stmt)
-                query = result.first()
-
-                if query is not None:
-                    active_server = query[0]
-                else:
-                    active_server = None
-
-                return active_server
-            except Exception as e:
-                raise e
+    return active_server
 
 
-async def crud_update_active_server(data: ActiveServerUpdate) -> None:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = update(ActiveServer).where(
-                    ActiveServer.id == data.id
-                ).values(data)
-                await session.execute(stmt)
-            except Exception as e:
-                raise e
+async def crud_update_active_server(Schema: ActiveServerUpdate) -> None:
+    await crud_update(ActiveServer, Schema)
 
 
-async def crud_delete_active_server(data: ActiveServerDelete) -> None:
-     async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = delete(ActiveServer).where(ActiveServer.id == data.id)
-                await session.execute(stmt)
-            except Exception as e:
-                raise e
+async def crud_delete_active_server(Schema: ActiveServerDelete) -> None:
+    await crud_delete(ActiveServer, Schema)
 
 
-async def crud_get_server_ips() -> list[ServerIPRead]:
-     async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = select(ServerIP)
-                result = await session.execute(stmt)
-                queries = result.all()
-                servers_ips = [query[0] for query in queries]
+async def crud_read_server_ips() -> list[ServerIPRead]:
+    server_ips = await crud_read(ServerIP)
 
-                return servers_ips
-            except Exception as e:
-                raise e
+    return server_ips

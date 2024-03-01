@@ -1,94 +1,85 @@
-from sqlalchemy import select, update, delete
-from src.database import async_session_maker
-from src.payment.models import Discount, Payment
-from src.server.models import Server
+from src.crud import (
+    crud_create,
+    crud_read,
+    crud_update,
+    crud_delete
+)
+from src.payment.models import Payment, Discount
 from src.payment.schemas import (
     PaymentCreate,
     PaymentRead,
     PaymentUpdate,
-    PaymentDelete
+    PaymentDelete,
+    DiscountCreate,
+    DiscountRead,
+    DiscountUpdate,
+    DiscountDelete
 )
 
 
-async def crud_add_discount(server_id: int, user_id: int) -> None:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = select(Server).where(Server.id == server_id)
-                result = await session.execute(stmt)
-                server = result.first()[0]
+async def crud_create_payment(Schema: PaymentCreate) -> int:
+    id = await crud_create(Payment, Schema)
 
-                stmt = select(Discount).where(Discount.user_id == user_id)
-                result = await session.execute(stmt)
-                discount = result.first()
-
-                if discount is None:
-                    discount = Discount()
-                    discount.user_id = user_id
-                    discount.discount = server.price / 5
-
-                    session.add(discount)
-                else:
-                    stmt = update(Discount).where(
-                        Discount.user_id == user_id
-                    ).values(discount=(discount[0] + server.price / 5))
-                    await session.execute(stmt)
-            except Exception as e:
-                raise e
+    return id
 
 
-async def crud_add_payment(data: PaymentCreate) -> None:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                payment = Payment()
-                payment.user_id = data.user_id
-                payment.server_id = data.server_id
-                payment.active_server_id = data.active_server_id
-                payment.payment_id = data.payment_id
-                payment.amount = data.amount
-                payment.month = data.month
-                payment.active = data.active
+async def crud_read_payments() -> list[PaymentRead]:
+    payments = crud_read(Payment, all=True)
 
-                session.add(payment)
-            except Exception as e:
-                raise e
+    return payments
 
 
-async def crud_get_payment(payment_id: str, user_id: int = None) -> PaymentRead:
-     async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                if user_id is not None:
-                    stmt = select(Payment).where(Payment.user_id == user_id)
-                else:
-                    stmt = select(Payment).where(Payment.payment_id == payment_id)
+async def crud_read_payment(Schema: PaymentRead) -> PaymentRead:
+    if Schema.id is None:
+        server = await crud_read(
+            Payment,
+            Schema,
+            attr1=Payment.user_id,
+            attr2=Schema.user_id
+        )
+    else:
+        server = await crud_read(Payment, Schema)
 
-                result = await session.execute(stmt)
-                payment = result.first()[0]
-
-                return payment
-            except Exception as e:
-                raise e
+    return server
 
 
-async def crud_update_payment(data: PaymentUpdate) -> None:
-    async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = update(Payment).where(
-                    Payment.payment_id == data.payment_id
-                ).values(data)
-                await session.execute(stmt)
-            except Exception as e:
-                raise e
+async def crud_update_payment(Schema: PaymentUpdate) -> None:
+    await crud_update(Payment, Schema)
 
 
-async def crud_delete_payment(data: PaymentDelete) -> None:
-     async with async_session_maker() as session:
-        async with session.begin():
-            try:
-                stmt = delete(Payment).where(Payment.id == data.id)
-                await session.execute(stmt)
-            except Exception as e:
-                raise e
+async def crud_delete_payment(Schema: PaymentDelete) -> None:
+    await crud_delete(Payment, Schema)
+
+
+async def crud_create_discount(Schema: DiscountCreate) -> int:
+    id = await crud_create(Discount, Schema)
+
+    return id
+
+
+async def crud_read_discounts() -> list[DiscountRead]:
+    discounts = crud_read(Discount, all=True)
+
+    return discounts
+
+
+async def crud_read_discount(Schema: DiscountRead) -> DiscountRead:
+    if Schema.id is None:
+        discount = await crud_read(
+            Discount,
+            Schema,
+            attr1=Discount.user_id,
+            attr2=Schema.user_id
+        )
+    else:
+        discount = await crud_read(Discount, Schema)
+
+    return discount
+
+
+async def crud_update_discount(Schema: DiscountUpdate) -> None:
+    await crud_update(Discount, Schema)
+
+
+async def crud_delete_discount(Schema: DiscountDelete) -> None:
+    await crud_delete(Discount, Schema)

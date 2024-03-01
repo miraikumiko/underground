@@ -12,6 +12,7 @@ class PaymentCreate(BaseModel):
 
 
 class PaymentRead(BaseModel):
+    id: int = None
     user_id: int
     server_id: int
     active_server_id: int = None
@@ -22,9 +23,30 @@ class PaymentRead(BaseModel):
 
 
 class PaymentUpdate(BaseModel):
+    id: int
     payment_id: int
     active: bool
 
 
 class PaymentDelete(BaseModel):
+    id: int
+
+
+class DiscountCreate(BaseModel):
+    user_id: int
+    discount: int
+
+
+class DiscountRead(BaseModel):
+    id: int = None
+    user_id: int
+    discount: int
+
+
+class DiscountUpdate(BaseModel):
+    id: int
+    discount: int
+
+
+class DiscountDelete(BaseModel):
     id: int

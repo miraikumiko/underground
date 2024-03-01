@@ -2,7 +2,6 @@ import asyncio
 from typing import AsyncGenerator
 import pytest
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from src.main import app
@@ -34,12 +33,6 @@ async def prepare_database():
 
 
 @pytest.fixture(scope="session")
-def asyncio_loop(request):
+def asyncio_loop():
     with asyncio.get_event_loop_policy().new_event_loop() as loop:
         yield loop
-
-
-@pytest.fixture(scope="session")
-async def ac() -> AsyncGenerator[AsyncClient, None]:
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        yield ac

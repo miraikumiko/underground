@@ -1,6 +1,5 @@
-from fastapi import FastAPI
 from src.auth.utils import users, auth_backend
-from src.user.schemas import UserCreate, UserUpdate, UserRead
+from src.user.schemas import UserCreate, UserRead, UserUpdate
 
 
 users_router = users.get_users_router(UserRead, UserUpdate)

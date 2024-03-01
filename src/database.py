@@ -36,7 +36,7 @@ else:
     raise RuntimeError(error_message)
 
 
-if REDIS_PASSWORD is None:
+if REDIS_PASSWORD == '':
     REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
 else:
     REDIS_URL = f"redis://{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}"

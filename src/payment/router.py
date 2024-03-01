@@ -4,10 +4,10 @@ from fastapi import (
     Depends
 )
 from src.logger import logger
-from src.payment.crud import crud_get_payment
+from src.payment.crud import crud_read_payment
 from src.payment.schemas import PaymentCreate
 from src.payment.payments import payment_request
-from src.server.crud import crud_get_server
+from src.server.crud import crud_read_server
 from src.user.models import User
 from src.auth.utils import active_user
 
@@ -20,7 +20,7 @@ router = APIRouter(
 @router.post("/checkout")
 async def checkout_server(data: PaymentCreate, user: User = Depends(active_user)):
     try:
-        server = await crud_get_server(data.server_id)
+        server = await crud_read_server({"id": data.server_id})
 
         if server is None:
             raise HTTPException(status_code=400, detail={
@@ -29,7 +29,7 @@ async def checkout_server(data: PaymentCreate, user: User = Depends(active_user)
                 "details": "Server doesn't exist"
             })
 
-        payment = await crud_get_payment(user_id=user.id)
+        payment = await crud_read_payment({"user_id": user.id})
 
         if payment is not None:
             if payment.active == True:

@@ -1,6 +1,7 @@
 from decimal import Decimal
 import requests
 from requests.auth import HTTPDigestAuth
+from src.utils import err_catch
 from src.config import (
     MONERO_RPC_IP,
     MONERO_RPC_PORT,
@@ -9,6 +10,7 @@ from src.config import (
 )
 
 
+@err_catch
 async def monero_request(method: str, params: dict = {}) -> dict:
     response = requests.post(f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}", {
         "jsonrpc": "2.0",
@@ -20,15 +22,13 @@ async def monero_request(method: str, params: dict = {}) -> dict:
     return response.json()
 
 
+@err_catch
 async def usd_to_xmr(usd: float) -> int:
-    try:
-        response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
-        xmr_course = response.json()["monero"]["usd"]
-        xmr = str(round(Decimal(usd) / Decimal(xmr_course), 12))
+    response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
+    xmr_course = response.json()["monero"]["usd"]
+    xmr = str(round(Decimal(usd) / Decimal(xmr_course), 12))
 
-        while xmr[0:1] == '0' or xmr[0:1] == '.':
-            xmr = xmr[1:]
+    while xmr[0:1] == '0' or xmr[0:1] == '.':
+        xmr = xmr[1:]
 
-        return int(xmr)
-    except Exception as e:
-        raise e
+    return int(xmr)

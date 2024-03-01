@@ -8,14 +8,6 @@ from sqlalchemy import (
 from src.models import Base
 
 
-class Discount(Base):
-    __tablename__ = "discount"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('user.id'), index=True)
-    discount = Column(Integer, nullable=False)
-
-
 class Payment(Base):
     __tablename__ = "payment"
 
@@ -27,3 +19,11 @@ class Payment(Base):
     amount = Column(Integer, nullable=False)
     month = Column(Integer, nullable=False)
     active = Column(Boolean, nullable=False, index=True, default=True)
+
+
+class Discount(Base):
+    __tablename__ = "discount"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('user.id'), index=True)
+    discount = Column(Integer, nullable=False)

@@ -1,14 +1,11 @@
-def int_void_convertion(value: str) -> int | None:
-    if value == '':
-        return None
-    elif value.isdigit():
-        return int(value)
-    else:
-        raise RuntimeError("Failed parsing .env")
+from src.logger import logger
 
 
-def void_convertion(value: str) -> str | None:
-    if value == '':
-        return None
-    else:
-        return value
+def err_catch(func):
+    async def wrapper(*args, **kwargs):
+        try:
+            await func(*args, **kwargs)
+        except Exception as e:
+            logger.error(e)
+            raise e
+    return wrapper

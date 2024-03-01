@@ -7,20 +7,22 @@ from fastapi import (
 from fastapi_cache.decorator import cache
 from src.logger import logger
 from src.server.crud import (
-    crud_add_server,
-    crud_get_servers,
-    crud_get_server,
+    crud_create_server,
+    crud_read_servers,
+    crud_read_server,
     crud_update_server,
     crud_delete_server,
-    crud_add_active_server,
-    crud_get_active_servers,
-    crud_get_active_server,
+    crud_create_active_server,
+    crud_read_active_servers,
+    crud_read_active_server,
     crud_update_active_server
 )
 from src.server.schemas import (
     ServerCreate,
+    ServerRead,
     ServerUpdate,
     ActiveServerCreate,
+    ActiveServerRead,
     ActiveServerUpdate,
     ActiveServerAction
 )
@@ -40,14 +42,14 @@ router = APIRouter(
 )
 
 
-@router.post("/add")
-async def add_server(data: ServerCreate, user: User = Depends(admin)):
+@router.post("/create")
+async def create_server(Schema: ServerCreate, user: User = Depends(admin)):
     try:
-        await crud_add_server(data)
+        id = await crud_create_server(Schema)
 
         return {
             "status": "success",
-            "data": None,
+            "data": {"id": id},
             "details": "Server info has been added"
         }
     except Exception as e:
@@ -61,9 +63,9 @@ async def add_server(data: ServerCreate, user: User = Depends(admin)):
 
 @router.get("/all")
 @cache(expire=3600)
-async def get_servers():
+async def read_servers():
     try:
-        servers = await crud_get_servers()
+        servers = await crud_read_servers()
 
         return {
             "status": "success",
@@ -81,9 +83,9 @@ async def get_servers():
 
 @router.get("/{id}")
 @cache(expire=3600)
-async def get_server(id: int):
+async def read_server(Schema: ServerRead):
     try:
-        server = await crud_get_server(id)
+        server = await crud_read_server({"id": Schema.id})
 
         if server is None:
             raise HTTPException(status_code=400, detail={
@@ -107,9 +109,9 @@ async def get_server(id: int):
 
 
 @router.post("/update/{id}")
-async def update_server(id: int, data: ServerUpdate, user: User = Depends(admin)):
+async def update_server(Schema: ServerUpdate, user: User = Depends(admin)):
     try:
-        await crud_update_server(id, data)
+        await crud_update_server(Schema)
 
         return {
             "status": "success",
@@ -128,7 +130,7 @@ async def update_server(id: int, data: ServerUpdate, user: User = Depends(admin)
 @router.delete("/delete/{id}")
 async def delete_server(id: int, user: User = Depends(admin)):
     try:
-        await crud_delete_server(id)
+        await crud_delete_server({"id": id})
 
         return {
             "status": "success",
@@ -144,14 +146,14 @@ async def delete_server(id: int, user: User = Depends(admin)):
         })
 
 
-@router.post("/active/add")
-async def add_active_server(data: ActiveServerCreate, user: User = Depends(active_user)):
+@router.post("/active/create")
+async def create_active_server(Schema: ActiveServerCreate, user: User = Depends(active_user)):
     try:
-        await crud_add_active_server(data)
+        id = await crud_create_active_server(Schema)
 
         return {
             "status": "success",
-            "data": None,
+            "data": {"id": id},
             "details": "Active server has been added"
         }
     except Exception as e:
@@ -164,9 +166,9 @@ async def add_active_server(data: ActiveServerCreate, user: User = Depends(activ
 
 
 @router.get("/active/me")
-async def get_active_servers(user: User = Depends(active_user)):
+async def read_active_servers(user: User = Depends(active_user)):
     try:
-        servers = await crud_get_active_servers(user.id)
+        servers = await crud_read_active_servers({"user_id": user.id})
 
         return {
             "status": "success",
@@ -181,10 +183,10 @@ async def get_active_servers(user: User = Depends(active_user)):
         })
 
 
-@router.get("/active/me/{id}")
-async def get_active_server(id: int, user: User = Depends(active_user)):
+@router.get("/active/{id}")
+async def read_active_server(id: int, user: User = Depends(active_user)):
     try:
-        server = await crud_get_active_server(id)
+        server = await crud_read_active_server({"id": id})
 
         return {
             "status": "success",
@@ -200,10 +202,10 @@ async def get_active_server(id: int, user: User = Depends(active_user)):
         })
 
 
-@router.patch("/active/me/{id}")
-async def update_active_server(data: ActiveServerUpdate, user: User = Depends(active_user)):
+@router.patch("/active/{id}")
+async def update_active_server(Schema: ActiveServerUpdate, user: User = Depends(active_user)):
     try:
-        await crud_update_active_server(data)
+        await crud_update_active_server(Schema)
 
         return {
             "status": "success",
@@ -220,21 +222,21 @@ async def update_active_server(data: ActiveServerUpdate, user: User = Depends(ac
 
 
 @router.post("/active/action")
-async def action_of_server(data: ActiveServerAction, user: User = Depends(active_user)):
+async def server_action(Schema: ActiveServerAction, user: User = Depends(active_user)):
     try:
-        if data.action == "on":
-            await vps_server_on(str(data.active_server_id))
-        elif data.action == "reboot":
-            await vps_server_reboot(str(data.active_server_id))
-        elif data.action == "off":
-            await vps_server_off(str(data.active_server_id))
+        if Schema.action == "on":
+            await vps_server_on(str(Schema.active_server_id))
+        elif Schema.action == "reboot":
+            await vps_server_reboot(str(Schema.active_server_id))
+        elif Schema.action == "off":
+            await vps_server_off(str(Schema.active_server_id))
         else:
             raise ValueError("Invalid server action")
 
         return {
             "status": "success",
             "data": None,
-            "details": f"Server has been {data.action}"
+            "details": f"Server has been {Schema.action}"
         }
     except ValueError as e:
         logger.error(e)

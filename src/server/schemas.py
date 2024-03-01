@@ -14,7 +14,7 @@ class ServerCreate(BaseModel):
 
 
 class ServerRead(BaseModel):
-    id: int
+    id: int = None
     cores: int
     ram: int
     disk_type: str
@@ -46,8 +46,8 @@ class ActiveServerCreate(BaseModel):
     server_id: int
     ipv4: IPvAnyAddress
     ipv6: IPvAnyAddress
-    xml: str
-    start_at: datetime
+    xml: str = None
+    start_at: datetime = datetime.now()
     end_at: datetime
 
 

@@ -4,10 +4,10 @@ from fastapi_users.authentication import (
     RedisStrategy,
     AuthenticationBackend
 )
-from src.auth.manager import get_user_manager
 from src.database import r
-from src.user.models import User
 from src.config import TOKEN_LIFETIME
+from src.auth.manager import get_user_manager
+from src.user.models import User
 
 
 def get_redis_strategy() -> RedisStrategy:

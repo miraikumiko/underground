@@ -1,14 +1,15 @@
-from fastapi import Depends, Request
-from fastapi_users import BaseUserManager, IntegerIDMixin
 from typing import Optional
+from fastapi import Request, Depends
+from fastapi_users import BaseUserManager, IntegerIDMixin
 from src.database import User, get_user_db
-from src.user.crud import (
-    crud_add_user_settings,
-    crud_forgot_user_password,
-    crud_verify_user_email
-)
-from src.config import SECRET
+from src.mail import sendmail
 from src.logger import logger
+from src.config import SERVICE_NAME, SECRET
+from src.user.crud import (
+    crud_create_user_settings,
+    crud_read_user_settings
+)
+from src.user.schemas import UserCreate
 
 
 class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
@@ -16,30 +17,41 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
     verification_token_secret = SECRET
 
 
-    async def on_after_register(self, user: User, request: Optional[Request] = None):
+    async def on_after_register(self, user: User, _: Optional[Request] = None):
         logger.info(f"User {user.id} has registered.")
-        await crud_add_user_settings(user.id)
+        await crud_create_user_settings(UserCreate({"user_id": user.id}))
 
 
-    async def on_after_forgot_password(self, user: User, token: str, request: Optional[Request] = None):
-        logger.info(f"User {user.id} has forgot their password. Reset token: {token}")
-        await crud_forgot_user_password(user.email, token)
+    async def on_after_forgot_password(self, user: User, token: str):
+        user_settings = await crud_read_user_settings({"user_id": user.id})
+
+        if user_settings.reset_password:
+            subject = f"[{SERVICE_NAME}] password reset"
+            body = f"Your token for password reset: {token}"
+
+            await sendmail(subject, body, user.email)
+
+            logger.info(f"User {user.id} has forgot their password. Reset token: {token}")
 
 
-    async def on_after_reset_password(self, user: User, request: Optional[Request] = None):
+    async def on_after_reset_password(self, user: User):
         logger.info(f"User {user.id} has reset their password.")
 
 
-    async def on_after_request_verify(self, user: User, token: str, request: Optional[Request] = None):
+    async def on_after_request_verify(self, user: User, token: str):
+        subject = f"[{SERVICE_NAME}] verification"
+        body = f"Your token for verification: {token}"
+
+        await sendmail(subject, body, user.email)
+
         logger.info(f"Verification requested for user {user.id}. Verification token: {token}")
-        await crud_verify_user_email(user.email, token)
 
 
-    async def on_after_verify(self, user: User, request: Optional[Request] = None):
+    async def on_after_verify(self, user: User):
         logger.info(f"User {user.id} has been verified")
 
 
-    async def on_after_delete(self, user: User, request: Optional[Request] = None):
+    async def on_after_delete(self, user: User):
         logger.info(f"User {user.id} is successfully deleted")
 
 

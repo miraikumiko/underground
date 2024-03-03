@@ -1,5 +1,5 @@
 from typing import AsyncGenerator
-import redis
+from redis.asyncio import from_url
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -45,7 +45,7 @@ else:
 engine = create_async_engine(DATABASE_URL)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
-r = redis.asyncio.from_url(REDIS_URL, decode_responses=True)
+r = from_url(REDIS_URL, decode_responses=True)
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:

@@ -4,7 +4,6 @@ from fastapi import (
     HTTPException,
     Depends
 )
-from fastapi_cache.decorator import cache
 from src.logger import logger
 from src.server.crud import (
     crud_create_server,
@@ -19,18 +18,15 @@ from src.server.crud import (
 )
 from src.server.schemas import (
     ServerCreate,
-    ServerRead,
     ServerUpdate,
     ActiveServerCreate,
-    ActiveServerRead,
-    ActiveServerUpdate,
-    ActiveServerAction
+    ActiveServerUpdate
 )
 from src.server.vps import (
-    vps_server_on,
-    vps_server_reboot,
-    vps_server_off,
-    vps_server_status
+    vps_on,
+    vps_reboot,
+    vps_off,
+    vps_status
 )
 from src.server.utils import upload_iso
 from src.user.models import User
@@ -43,257 +39,140 @@ router = APIRouter(
 
 
 @router.post("/create")
-async def create_server(Schema: ServerCreate, user: User = Depends(admin)):
+async def create_server(data: ServerCreate, _: User = Depends(admin)):
     try:
-        id = await crud_create_server(Schema)
+        server_id = await crud_create_server(data)
 
-        return {
-            "status": "success",
-            "data": {"id": id},
-            "details": "Server info has been added"
-        }
+        return {"id": server_id}
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)
 
 
 @router.get("/all")
-@cache(expire=3600)
 async def read_servers():
     try:
         servers = await crud_read_servers()
 
-        return {
-            "status": "success",
-            "data": servers,
-            "details": "Info of all servers"
-        }
+        return servers
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)
 
 
-@router.get("/{id}")
-@cache(expire=3600)
-async def read_server(Schema: ServerRead):
+@router.get("/{server_id}")
+async def read_server(server_id: int):
     try:
-        server = await crud_read_server({"id": Schema.id})
+        server = await crud_read_server(server_id)
 
         if server is None:
-            raise HTTPException(status_code=400, detail={
-                "status": "error",
-                "data": None,
-                "details": "Server doesn't exist"
-            })
+            raise ValueError(f"Server with id {server_id} doesn't exist")
 
-        return {
-            "status": "success",
-            "data": server,
-            "details": "Server info"
-        }
+        return server
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)
 
 
-@router.post("/update/{id}")
-async def update_server(Schema: ServerUpdate, user: User = Depends(admin)):
+@router.patch("/update/{server_id}")
+async def update_server(server_id: int, data: ServerUpdate, _: User = Depends(admin)):
     try:
-        await crud_update_server(Schema)
-
-        return {
-            "status": "success",
-            "data": None,
-            "details": f"Server with id {id} has been updated"
-        }
+        await crud_update_server(data, server_id)
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)
 
 
-@router.delete("/delete/{id}")
-async def delete_server(id: int, user: User = Depends(admin)):
+@router.delete("/delete/{server_id}")
+async def delete_server(server_id: int, _: User = Depends(admin)):
     try:
-        await crud_delete_server({"id": id})
-
-        return {
-            "status": "success",
-            "data": None,
-            "details": f"Server with id {id} has been deleted"
-        }
+        await crud_delete_server(server_id)
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)
 
 
 @router.post("/active/create")
-async def create_active_server(Schema: ActiveServerCreate, user: User = Depends(active_user)):
+async def create_active_server(data: ActiveServerCreate, _: User = Depends(admin)):
     try:
-        id = await crud_create_active_server(Schema)
+        active_server_id = await crud_create_active_server(data)
 
-        return {
-            "status": "success",
-            "data": {"id": id},
-            "details": "Active server has been added"
-        }
+        return {"id": active_server_id}
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)
 
 
 @router.get("/active/me")
 async def read_active_servers(user: User = Depends(active_user)):
     try:
-        servers = await crud_read_active_servers({"user_id": user.id})
+        active_servers = await crud_read_active_servers(user.id)
 
-        return {
-            "status": "success",
-            "data": servers,
-            "details": f"Info of all servers of user with id {user.id}"
-        }
-    except Exception:
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
-
-
-@router.get("/active/{id}")
-async def read_active_server(id: int, user: User = Depends(active_user)):
-    try:
-        server = await crud_read_active_server({"id": id})
-
-        return {
-            "status": "success",
-            "data": server,
-            "details": "User server info"
-        }
+        return active_servers
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)
 
 
-@router.patch("/active/{id}")
-async def update_active_server(Schema: ActiveServerUpdate, user: User = Depends(active_user)):
+@router.get("/active/{active_server_id}")
+async def read_active_server(active_server_id: int, _: User = Depends(admin)):
     try:
-        await crud_update_active_server(Schema)
+        active_server = await crud_read_active_server(active_server_id)
 
-        return {
-            "status": "success",
-            "data": None,
-            "details": f"User server with id {id} has been updated"
-        }
+        return active_server
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)
 
 
-@router.post("/active/action")
-async def server_action(Schema: ActiveServerAction, user: User = Depends(active_user)):
+@router.patch("/active/{active_server_id}")
+async def update_active_server(active_server_id: int, data: ActiveServerUpdate, _: User = Depends(admin)):
     try:
-        if Schema.action == "on":
-            await vps_server_on(str(Schema.active_server_id))
-        elif Schema.action == "reboot":
-            await vps_server_reboot(str(Schema.active_server_id))
-        elif Schema.action == "off":
-            await vps_server_off(str(Schema.active_server_id))
+        await crud_update_active_server(data, active_server_id)
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail=None)
+
+
+@router.post("/active/action/me")
+async def server_action(active_server_id: int, action: str, _: User = Depends(active_user)):
+    try:
+        if action == "on":
+            await vps_on(active_server_id)
+        elif action == "reboot":
+            await vps_reboot(active_server_id)
+        elif action == "off":
+            await vps_off(active_server_id)
         else:
             raise ValueError("Invalid server action")
-
-        return {
-            "status": "success",
-            "data": None,
-            "details": f"Server has been {Schema.action}"
-        }
     except ValueError as e:
         logger.error(e)
-        raise HTTPException(status_code=400, detail={
-            "status": "error",
-            "data": None,
-            "details": e
-        })
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)
 
 
 @router.get("/active/status/{active_server_id}")
-async def status_of_server(active_server_id: int, user: User = Depends(active_user)):
+async def status_of_server(active_server_id: int, _: User = Depends(active_user)):
     try:
-        status = await vps_server_status(active_server_id)
+        status = await vps_status(active_server_id)
 
-        return {
-            "status": "success",
-            "data": status,
-            "details": "Server info"
-        }
+        return status
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)
 
 
 @router.post("/active/upload/iso")
 async def upload_iso_server(iso: UploadFile, user: User = Depends(active_user)):
     try:
         if iso.content_type != "application/octet-stream":
-            raise HTTPException(status_code=400, detail={
-                "status": "error",
-                "data": None,
-                "details": "This is not .iso file"
-            })
+            raise HTTPException(status_code=400, detail="This is not .iso file")
 
         await upload_iso(user.id, iso)
-
-        return {
-            "status": "success",
-            "data": None,
-            "details": "Image has been uploaded"
-        }
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)

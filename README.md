@@ -70,3 +70,11 @@ rc-service nginx start
 ### Systemd
 
 `systemctl enable --now postgresql redis underground.pm-be nginx`
+
+## Testing
+
+Install dependencies:
+`pip install -r requirements/dev.txt`
+
+And run tests:
+`pytest`

@@ -4,7 +4,7 @@ from fastapi import (
     Depends
 )
 from src.logger import logger
-from src.payment.crud import crud_read_payment
+from src.payment.crud import crud_read_payments
 from src.payment.schemas import PaymentCreate
 from src.payment.payments import payment_request
 from src.server.crud import crud_read_server
@@ -18,40 +18,24 @@ router = APIRouter(
 
 
 @router.post("/checkout")
-async def checkout_server(data: PaymentCreate, user: User = Depends(active_user)):
+async def checkout(data: PaymentCreate, user: User = Depends(active_user)):
     try:
-        server = await crud_read_server({"id": data.server_id})
+        server = await crud_read_server(data.server_id)
 
         if server is None:
-            raise HTTPException(status_code=400, detail={
-                "status": "error",
-                "data": None,
-                "details": "Server doesn't exist"
-            })
+            raise HTTPException(status_code=400, detail="Server doesn't exist")
 
-        payment = await crud_read_payment({"user_id": user.id})
+        payments = await crud_read_payments(user.id)
 
-        if payment is not None:
-            if payment.active == True:
-                raise HTTPException(status_code=400, detail={
-                    "status": "error",
-                    "data": payment,
-                    "details": "You have active payment"
-                })
-
-        payment_uri = await payment_request(data.server_id, server.price)
+        if payments:
+            for payment in payments:
+                if payment.active:
+                    raise HTTPException(status_code=400, detail="You have active payment")
 
         data.user_id = user.id
+        payment_uri = await payment_request(data, server.price)
 
-        return {
-            "status": "success",
-            "data": payment_uri,
-            "details": "Image has been uploaded"
-        }
+        return {"payment_uri": payment_uri}
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail={
-            "status": "error",
-            "data": None,
-            "details": "Server error"
-        })
+        raise HTTPException(status_code=500, detail=None)

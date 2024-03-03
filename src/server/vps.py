@@ -6,22 +6,21 @@ from src.server.crud import (
     crud_read_active_server,
     crud_read_server_ips
 )
-from src.server.rpc import rpc_create_disk, rpc_get_avaible_cores_number
+from src.server.rpc import rpc_create_disk, rpc_get_available_cores_number
 
 
-async def vps_server_create(active_server_id: int, server_id: int) -> str:
+async def vps_create(active_server_id: int, server_id: int) -> str:
     try:
         server_addresses = await crud_read_server_ips()
+        server = await crud_read_server(server_id)
 
-        for ip in server_addresses.ip:
-            avaible_cores = await rpc_get_avaible_cores_number(ip)
+        for server_address in server_addresses:
+            available_cores = await rpc_get_available_cores_number(server_address.ip)
 
-            if avaible_cores <= server.cores:
-                raise Exception("Doesn't have avaible cores")
+            if available_cores <= server.cores:
+                raise Exception("Doesn't have available cores")
 
-            with libvirt.open(f"qemu+ssh:///{ip}:{QEMU_PORT}") as conn:
-                server = await crud_read_server({"id": server_id})
-
+            with libvirt.open(f"qemu+ssh:///{server_address.ip}:{QEMU_PORT}") as conn:
                 with open("src/server/xml/vps.xml", "r") as file:
                     template = Template(file.read())
                     xml = template.render(
@@ -32,16 +31,16 @@ async def vps_server_create(active_server_id: int, server_id: int) -> str:
 
                     conn.defineXML(xml)
 
-                    rpc_create_disk(ip, str(active_server_id), server.disk_size)
+                    await rpc_create_disk(server_address.ip, str(active_server_id), server.disk_size)
 
                     return xml
     except Exception as e:
         raise e
 
 
-async def vps_server_on(active_server_id: int) -> None:
+async def vps_on(active_server_id: int) -> None:
     try:
-        active_server = await crud_read_active_server({"id": active_server_id})
+        active_server = await crud_read_active_server(active_server_id)
 
         async with libvirt.open(f"qemu+ssh:///{active_server.ip}:{QEMU_PORT}") as conn:
             conn.lookupByName(str(active_server_id)).create()
@@ -49,9 +48,9 @@ async def vps_server_on(active_server_id: int) -> None:
         raise e
 
 
-async def vps_server_reboot(active_server_id: int) -> None:
+async def vps_reboot(active_server_id: int) -> None:
     try:
-        active_server = await crud_read_active_server({"id": active_server_id})
+        active_server = await crud_read_active_server(active_server_id)
 
         async with libvirt.open(f"qemu+ssh:///{active_server.ip}:{QEMU_PORT}") as conn:
             conn.lookupByName(str(active_server_id)).reboot()
@@ -59,9 +58,9 @@ async def vps_server_reboot(active_server_id: int) -> None:
         raise e
 
 
-async def vps_server_off(active_server_id: int) -> None:
+async def vps_off(active_server_id: int) -> None:
     try:
-        active_server = await crud_read_active_server({"id": active_server_id})
+        active_server = await crud_read_active_server(active_server_id)
 
         async with libvirt.open(f"qemu+ssh:///{active_server.ip}:{QEMU_PORT}") as conn:
             conn.lookupByName(str(active_server_id)).destroy()
@@ -69,9 +68,9 @@ async def vps_server_off(active_server_id: int) -> None:
         raise e
 
 
-async def vps_server_status(active_server_id: int) -> str:
+async def vps_status(active_server_id: int) -> str:
     try:
-        active_server = await crud_read_active_server({"id": active_server_id})
+        active_server = await crud_read_active_server(active_server_id)
 
         with libvirt.open(f"qemu+ssh:///{active_server.ip}:{QEMU_PORT}") as conn:
             state, _ = conn.lookupByName(str(active_server_id)).state()

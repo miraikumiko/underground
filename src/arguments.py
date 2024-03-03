@@ -1,6 +1,6 @@
 import argparse
 
-args_parser = argparse.ArgumentParser(description='Avaible command line arguments')
+args_parser = argparse.ArgumentParser(description='Available command line arguments')
 args_parser.add_argument(
     '-e',
     '--email',

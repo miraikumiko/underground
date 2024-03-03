@@ -8,19 +8,19 @@ from src.config import (
 )
 
 email_config = ConnectionConfig(
-    MAIL_USERNAME = SMTP_USER,
-    MAIL_PASSWORD = SMTP_PASSWORD,
-    MAIL_FROM = SMTP_SENDER,
-    MAIL_PORT = SMTP_PORT,
-    MAIL_SERVER = SMTP_HOST,
-    MAIL_STARTTLS = False,
-    MAIL_SSL_TLS = True,
-    USE_CREDENTIALS = True,
-    VALIDATE_CERTS = True
+    MAIL_USERNAME=SMTP_USER,
+    MAIL_PASSWORD=SMTP_PASSWORD,
+    MAIL_FROM=SMTP_SENDER,
+    MAIL_PORT=SMTP_PORT,
+    MAIL_SERVER=SMTP_HOST,
+    MAIL_STARTTLS=False,
+    MAIL_SSL_TLS=True,
+    USE_CREDENTIALS=True,
+    VALIDATE_CERTS=True
 )
 
 
-async def sendmail(subject: str, body: str, email: str) -> None | Exception:
+async def sendmail(subject: str, body: str, email: str) -> None:
     message = MessageSchema(
         subject=subject,
         recipients={email},

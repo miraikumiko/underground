@@ -5,6 +5,7 @@ from alembic import context
 from src.models import Base
 from src.user.models import *
 from src.server.models import *
+from src.payment.models import *
 from src.config import (
     DB_TYPE,
     DB_HOST,

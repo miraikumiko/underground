@@ -1,5 +1,6 @@
 from src.crud import (
     crud_create,
+    crud_reads,
     crud_read,
     crud_update,
     crud_delete
@@ -9,77 +10,59 @@ from src.payment.schemas import (
     PaymentCreate,
     PaymentRead,
     PaymentUpdate,
-    PaymentDelete,
     DiscountCreate,
     DiscountRead,
-    DiscountUpdate,
-    DiscountDelete
+    DiscountUpdate
 )
 
 
-async def crud_create_payment(Schema: PaymentCreate) -> int:
-    id = await crud_create(Payment, Schema)
+async def crud_create_payment(schema: PaymentCreate) -> int:
+    payment_id = await crud_create(Payment, schema)
 
-    return id
+    return payment_id
 
 
-async def crud_read_payments() -> list[PaymentRead]:
-    payments = crud_read(Payment, all=True)
+async def crud_read_payments(user_id: int) -> list[PaymentRead]:
+    payments = await crud_reads(Payment, attr1=Payment.user_id, attr2=user_id)
 
     return payments
 
 
-async def crud_read_payment(Schema: PaymentRead) -> PaymentRead:
-    if Schema.id is None:
-        server = await crud_read(
-            Payment,
-            Schema,
-            attr1=Payment.user_id,
-            attr2=Schema.user_id
-        )
-    else:
-        server = await crud_read(Payment, Schema)
+async def crud_read_payment(payment_id: int) -> PaymentRead:
+    payment = await crud_read(Payment, attr1=Payment.id, attr2=payment_id)
 
-    return server
+    return payment
 
 
-async def crud_update_payment(Schema: PaymentUpdate) -> None:
-    await crud_update(Payment, Schema)
+async def crud_update_payment(schema: PaymentUpdate, payment_id: int) -> None:
+    await crud_update(Payment, schema, attr1=Payment.id, attr2=payment_id)
 
 
-async def crud_delete_payment(Schema: PaymentDelete) -> None:
-    await crud_delete(Payment, Schema)
+async def crud_delete_payment(payment_id: int) -> None:
+    await crud_delete(Payment, attr1=Payment.id, attr2=payment_id)
 
 
-async def crud_create_discount(Schema: DiscountCreate) -> int:
-    id = await crud_create(Discount, Schema)
+async def crud_create_discount(schema: DiscountCreate) -> int:
+    discount_id = await crud_create(Discount, schema)
 
-    return id
+    return discount_id
 
 
 async def crud_read_discounts() -> list[DiscountRead]:
-    discounts = crud_read(Discount, all=True)
+    discounts = await crud_reads(Discount)
 
     return discounts
 
 
-async def crud_read_discount(Schema: DiscountRead) -> DiscountRead:
-    if Schema.id is None:
-        discount = await crud_read(
-            Discount,
-            Schema,
-            attr1=Discount.user_id,
-            attr2=Schema.user_id
-        )
-    else:
-        discount = await crud_read(Discount, Schema)
+async def crud_read_discount(user_id: int) -> DiscountRead:
+    discount = await crud_read(Discount, attr1=Discount.user_id, attr2=user_id)
 
     return discount
 
 
-async def crud_update_discount(Schema: DiscountUpdate) -> None:
-    await crud_update(Discount, Schema)
+async def crud_update_discount(schema: DiscountUpdate, user_id: int) -> None:
+    await crud_update(Discount, schema, attr1=Discount.user_id, attr2=user_id)
 
 
-async def crud_delete_discount(Schema: DiscountDelete) -> None:
-    await crud_delete(Discount, Schema)
+async def crud_delete_discount(user_id: int) -> None:
+    await crud_delete(Discount, attr1=Discount.user_id, attr2=user_id)

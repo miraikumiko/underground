@@ -22,7 +22,7 @@ class Server(Base):
     disk_size = Column(Integer, nullable=False)
     traffic = Column(Integer, nullable=False)
     location = Column(String, nullable=False)
-    avaible = Column(Boolean, nullable=False, default=True)
+    available = Column(Boolean, nullable=False, default=True)
     price = Column(DECIMAL(precision=12, scale=2), nullable=False)
 
 
@@ -51,7 +51,7 @@ class IPv4(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     ip = Column(String, nullable=False, unique=True, index=True)
-    avaible = Column(Boolean, nullable=False, default=True)
+    available = Column(Boolean, nullable=False, default=True)
 
 
 class IPv6(Base):
@@ -59,4 +59,4 @@ class IPv6(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     ip = Column(String, nullable=False, unique=True, index=True)
-    avaible = Column(Boolean, nullable=False, default=True)
+    available = Column(Boolean, nullable=False, default=True)

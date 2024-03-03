@@ -9,21 +9,19 @@ from src.user.crud import (
     crud_create_user_settings,
     crud_read_user_settings
 )
-from src.user.schemas import UserCreate
+from src.user.schemas import UserSettingsCreate
 
 
 class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
     reset_password_token_secret = SECRET
     verification_token_secret = SECRET
 
-
     async def on_after_register(self, user: User, _: Optional[Request] = None):
         logger.info(f"User {user.id} has registered.")
-        await crud_create_user_settings(UserCreate({"user_id": user.id}))
+        await crud_create_user_settings(UserSettingsCreate(**{"user_id": user.id}))
 
-
-    async def on_after_forgot_password(self, user: User, token: str):
-        user_settings = await crud_read_user_settings({"user_id": user.id})
+    async def on_after_forgot_password(self, user: User, token: str, _: Optional[Request] = None):
+        user_settings = await crud_read_user_settings(user.id)
 
         if user_settings.reset_password:
             subject = f"[{SERVICE_NAME}] password reset"
@@ -33,12 +31,10 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
 
             logger.info(f"User {user.id} has forgot their password. Reset token: {token}")
 
-
-    async def on_after_reset_password(self, user: User):
+    async def on_after_reset_password(self, user: User, _: Optional[Request] = None):
         logger.info(f"User {user.id} has reset their password.")
 
-
-    async def on_after_request_verify(self, user: User, token: str):
+    async def on_after_request_verify(self, user: User, token: str, _: Optional[Request] = None):
         subject = f"[{SERVICE_NAME}] verification"
         body = f"Your token for verification: {token}"
 
@@ -46,12 +42,10 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
 
         logger.info(f"Verification requested for user {user.id}. Verification token: {token}")
 
-
-    async def on_after_verify(self, user: User):
+    async def on_after_verify(self, user: User, _: Optional[Request] = None):
         logger.info(f"User {user.id} has been verified")
 
-
-    async def on_after_delete(self, user: User):
+    async def on_after_delete(self, user: User, _: Optional[Request] = None):
         logger.info(f"User {user.id} is successfully deleted")
 
 

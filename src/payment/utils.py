@@ -1,7 +1,6 @@
 from decimal import Decimal
 import requests
 from requests.auth import HTTPDigestAuth
-from src.utils import err_catch
 from src.config import (
     MONERO_RPC_IP,
     MONERO_RPC_PORT,
@@ -10,8 +9,10 @@ from src.config import (
 )
 
 
-@err_catch
-async def monero_request(method: str, params: dict = {}) -> dict:
+async def monero_request(method: str, params: dict = None) -> dict:
+    if params is None:
+        params = {}
+
     response = requests.post(f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}", {
         "jsonrpc": "2.0",
         "id": "0",
@@ -22,7 +23,6 @@ async def monero_request(method: str, params: dict = {}) -> dict:
     return response.json()
 
 
-@err_catch
 async def usd_to_xmr(usd: float) -> int:
     response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
     xmr_course = response.json()["monero"]["usd"]

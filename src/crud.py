@@ -41,9 +41,9 @@ async def crud_read(model, attr1: ColumnElement = None, attr2: any = None) -> an
                 stmt = select(model)
                 result = await session.execute(stmt)
 
-            obj = result.first()
+            obj = result.scalar_one()
 
-            return obj[0]
+            return obj
 
 
 async def crud_update(model, schema: BaseModel, attr1: ColumnElement, attr2: any) -> None:

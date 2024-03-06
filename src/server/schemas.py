@@ -44,6 +44,7 @@ class ActiveServerCreate(BaseModel):
     xml: str = None
     start_at: datetime = datetime.now()
     end_at: datetime
+    active: bool = True
 
 
 class ActiveServerRead(BaseModel):
@@ -54,6 +55,7 @@ class ActiveServerRead(BaseModel):
     xml: str
     start_at: datetime
     end_at: datetime
+    active: bool
 
 
 class ActiveServerUpdate(BaseModel):
@@ -64,6 +66,7 @@ class ActiveServerUpdate(BaseModel):
     xml: str = None
     start_at: datetime = None
     end_at: datetime = None
+    active: bool = None
 
 
 class ServerIPCreate(BaseModel):

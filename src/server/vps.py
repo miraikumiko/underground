@@ -38,12 +38,17 @@ async def vps_create(active_server_id: int, server_id: int) -> str:
         raise e
 
 
+async def vps_delete(active_server_id: int):
+    print(active_server_id)
+
+
 async def vps_on(active_server_id: int) -> None:
     try:
         active_server = await crud_read_active_server(active_server_id)
 
-        async with libvirt.open(f"qemu+ssh:///{active_server.ip}:{QEMU_PORT}") as conn:
-            conn.lookupByName(str(active_server_id)).create()
+        if active_server.active:
+            async with libvirt.open(f"qemu+ssh:///{active_server.ipv4}:{QEMU_PORT}") as conn:
+                conn.lookupByName(str(active_server_id)).create()
     except Exception as e:
         raise e
 
@@ -52,8 +57,9 @@ async def vps_reboot(active_server_id: int) -> None:
     try:
         active_server = await crud_read_active_server(active_server_id)
 
-        async with libvirt.open(f"qemu+ssh:///{active_server.ip}:{QEMU_PORT}") as conn:
-            conn.lookupByName(str(active_server_id)).reboot()
+        if active_server.active:
+            async with libvirt.open(f"qemu+ssh:///{active_server.ipv4}:{QEMU_PORT}") as conn:
+                conn.lookupByName(str(active_server_id)).reboot()
     except Exception as e:
         raise e
 
@@ -62,8 +68,9 @@ async def vps_off(active_server_id: int) -> None:
     try:
         active_server = await crud_read_active_server(active_server_id)
 
-        async with libvirt.open(f"qemu+ssh:///{active_server.ip}:{QEMU_PORT}") as conn:
-            conn.lookupByName(str(active_server_id)).destroy()
+        if active_server.active:
+            async with libvirt.open(f"qemu+ssh:///{active_server.ipv4}:{QEMU_PORT}") as conn:
+                conn.lookupByName(str(active_server_id)).destroy()
     except Exception as e:
         raise e
 
@@ -72,7 +79,7 @@ async def vps_status(active_server_id: int) -> str:
     try:
         active_server = await crud_read_active_server(active_server_id)
 
-        with libvirt.open(f"qemu+ssh:///{active_server.ip}:{QEMU_PORT}") as conn:
+        with libvirt.open(f"qemu+ssh:///{active_server.ipv4}:{QEMU_PORT}") as conn:
             state, _ = conn.lookupByName(str(active_server_id)).state()
 
             if state == libvirt.VIR_DOMAIN_RUNNING:

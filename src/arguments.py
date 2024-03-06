@@ -44,10 +44,16 @@ args_parser.add_argument(
 args_parser.add_argument(
     '-c',
     '--checkout',
-    type=str,
-    default=None,
+    action='store_true',
     dest='checkout',
     help='payment checkout'
+)
+args_parser.add_argument(
+    '-E',
+    '--expire',
+    action='store_true',
+    dest='expire',
+    help='expire check'
 )
 
 args = args_parser.parse_args()

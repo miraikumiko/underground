@@ -77,10 +77,7 @@ async def payment_checkout(txid: str) -> None:
 
                 xml = await vps_create(active_server_id, payment.server_id)
 
-                await crud_update_active_server(
-                    ActiveServerUpdate(**{"xml": xml}),
-                    active_server_id
-                )
+                await crud_update_active_server(ActiveServerUpdate(**{"xml": xml}), active_server_id)
 
                 # Checking resource availability
                 server_addresses = await crud_read_server_ips()

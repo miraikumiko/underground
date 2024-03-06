@@ -10,6 +10,7 @@ from src.user.crud import (
     crud_create_user_settings
 )
 from src.payment.payments import payment_checkout
+from src.server.utils import active_servers_expired_check
 
 
 async def main():
@@ -30,9 +31,12 @@ async def main():
 
         print(f'User "{args.email}" has been created')
         exit(0)
-    elif args.checkout is not None:
-        await payment_checkout(args.checkout)
+    elif args.checkout:
         logger.info(f"Start processing checkout with txid {args.checkout}")
+        await payment_checkout(args.checkout)
+        exit(0)
+    elif args.expire:
+        await active_servers_expired_check()
         exit(0)
 
     uvicorn.run("run:app", host=HOST, port=PORT, reload=True)

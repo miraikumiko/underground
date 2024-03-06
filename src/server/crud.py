@@ -53,8 +53,11 @@ async def crud_create_active_server(schema: ActiveServerCreate) -> int:
     return active_server_id
 
 
-async def crud_read_active_servers(user_id: int) -> list[ActiveServerRead]:
-    active_servers = await crud_reads(ActiveServer, attr1=ActiveServer.user_id, attr2=user_id)
+async def crud_read_active_servers(user_id: int = None) -> list[ActiveServerRead]:
+    if user_id is not None:
+        active_servers = await crud_reads(ActiveServer, attr1=ActiveServer.user_id, attr2=user_id)
+    else:
+        active_servers = await crud_reads(ActiveServer)
 
     return active_servers
 

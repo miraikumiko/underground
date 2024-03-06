@@ -37,6 +37,7 @@ class ActiveServer(Base):
     xml = Column(Text, unique=True)
     start_at = Column(TIMESTAMP, nullable=False, default=datetime.now)
     end_at = Column(TIMESTAMP, nullable=False)
+    active = Column(Boolean, nullable=False, index=True, default=True)
 
 
 class ServerIP(Base):

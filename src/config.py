@@ -55,6 +55,12 @@ MONERO_RPC_PORT = environ.get("MONERO_RPC_PORT")
 MONERO_RPC_USER = environ.get("MONERO_RPC_USER")
 MONERO_RPC_PASSWORD = environ.get("MONERO_RPC_PASSWORD")
 
+# Specs prices
+
+PRICE_CPU = environ.get("PRICE_CPU")
+PRICE_RAM = environ.get("PRICE_RAM")
+PRICE_DISK = environ.get("PRICE_DISK")
+PRICE_IPV4 = environ.get("PRICE_IPV4")
 
 # Type correction
 
@@ -66,3 +72,7 @@ SMTP_PORT = int(SMTP_PORT)
 QEMU_PORT = int(QEMU_PORT)
 RPC_SERVER_PORT = int(RPC_SERVER_PORT)
 MONERO_RPC_PORT = int(MONERO_RPC_PORT)
+PRICE_CPU = float(PRICE_CPU)
+PRICE_RAM = float(PRICE_RAM)
+PRICE_DISK = float(PRICE_DISK)
+PRICE_IPV4 = float(PRICE_IPV4)

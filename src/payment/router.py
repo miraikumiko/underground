@@ -3,6 +3,12 @@ from fastapi import (
     HTTPException,
     Depends
 )
+from src.config import (
+    PRICE_CPU,
+    PRICE_RAM,
+    PRICE_DISK,
+    PRICE_IPV4
+)
 from src.logger import logger
 from src.payment.crud import crud_read_payments
 from src.payment.schemas import PaymentCreate
@@ -36,6 +42,20 @@ async def checkout(data: PaymentCreate, user: User = Depends(active_user)):
         payment_uri = await payment_request(data, server.price)
 
         return {"payment_uri": payment_uri}
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail=None)
+
+
+@router.get("/prices")
+async def checkout():
+    try:
+        return {
+            "cpu": PRICE_CPU,
+            "ram": PRICE_RAM,
+            "disk": PRICE_DISK,
+            "ipv4": PRICE_IPV4
+        }
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail=None)

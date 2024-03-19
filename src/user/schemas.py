@@ -3,6 +3,8 @@ from fastapi_users.schemas import BaseUserCreate, BaseUser, BaseUserUpdate
 
 
 class UserCreate(BaseUserCreate):
+    username: str
+    email: EmailStr | None = None
     password: str
     hashed_password: str = None
     is_active: bool = True
@@ -12,6 +14,7 @@ class UserCreate(BaseUserCreate):
 
 class UserRead(BaseUser[int]):
     id: int
+    username: str
     email: EmailStr
     is_active: bool
     is_superuser: bool
@@ -19,6 +22,7 @@ class UserRead(BaseUser[int]):
 
 
 class UserUpdate(BaseUserUpdate):
+    username: str
     email: EmailStr
     password: str
     hashed_password: str = None

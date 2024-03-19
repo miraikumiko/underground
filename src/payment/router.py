@@ -17,10 +17,7 @@ from src.server.crud import crud_read_server
 from src.user.models import User
 from src.auth.utils import active_user
 
-router = APIRouter(
-    prefix="/api/payment",
-    tags=["payments"]
-)
+router = APIRouter(prefix="/api/payment", tags=["payments"])
 
 
 @router.post("/checkout")

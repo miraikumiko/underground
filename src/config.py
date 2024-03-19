@@ -1,9 +1,7 @@
 from dotenv import load_dotenv
 from os import environ
 
-
 load_dotenv()
-
 
 # Main
 SERVICE_NAME = environ.get("SERVICE_NAME")
@@ -19,6 +17,7 @@ PORT = environ.get("PORT")
 LOG_FILE = environ.get("LOG_FILE")
 
 # Security
+AUTH_TRANSPORT = environ.get("AUTH_TRANSPORT")
 SECRET = environ.get("SECRET")
 TOKEN_LIFETIME = environ.get("TOKEN_LIFETIME")
 

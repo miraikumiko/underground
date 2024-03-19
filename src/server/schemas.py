@@ -48,6 +48,7 @@ class ActiveServerCreate(BaseModel):
 
 
 class ActiveServerRead(BaseModel):
+    id: int
     user_id: int
     server_id: int
     ipv4: str

@@ -14,12 +14,12 @@ from src.user.schemas import (
     UserSettingsRead,
     UserSettingsUpdate,
 )
-from src.auth.password import get_password_hash
+from src.auth.password import password_helper
 
 
 async def crud_create_user(schema: UserCreate) -> int:
     try:
-        schema.hashed_password = get_password_hash(schema.password)
+        schema.hashed_password = password_helper.hash(schema.password)
         user_id = await crud_create(User, schema)
 
         return user_id
@@ -40,7 +40,7 @@ async def crud_read_user(user_id: int) -> UserRead:
 
 
 async def crud_update_user(schema: UserUpdate, user_id: int) -> None:
-    schema.hashed_password = get_password_hash(schema.password)
+    schema.hashed_password = password_helper(schema.password)
 
     await crud_update(User, schema, attr1=User.id, attr2=user_id)
 

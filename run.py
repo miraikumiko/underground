@@ -14,9 +14,10 @@ from src.server.utils import active_servers_expired_check
 
 
 async def main():
-    if not (args.email is None and args.password is None):
+    if not (args.username is None and args.password is None):
         user = UserCreate(
-            email=args.email,
+            username=args.username,
+            email=args.email if args.email else None,
             password=args.password,
             is_active=args.is_active,
             is_superuser=args.is_superuser,
@@ -24,12 +25,10 @@ async def main():
         )
 
         user_id = await crud_create_user(user)
-
         user_settings = UserSettingsCreate(user_id=user_id)
-
         await crud_create_user_settings(user_settings)
 
-        print(f'User "{args.email}" has been created')
+        print(f'User "{args.username}" has been created')
         exit(0)
     elif args.checkout:
         logger.info(f"Start processing checkout with txid {args.checkout}")

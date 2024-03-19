@@ -5,6 +5,7 @@ from src.database import User, get_user_db
 from src.mail import sendmail
 from src.logger import logger
 from src.config import SERVICE_NAME, SECRET
+from src.auth.password import password_helper
 from src.user.crud import (
     crud_create_user_settings,
     crud_read_user_settings
@@ -15,10 +16,6 @@ from src.user.schemas import UserSettingsCreate
 class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
     reset_password_token_secret = SECRET
     verification_token_secret = SECRET
-
-    async def on_after_register(self, user: User, _: Optional[Request] = None):
-        logger.info(f"User {user.id} has registered.")
-        await crud_create_user_settings(UserSettingsCreate(**{"user_id": user.id}))
 
     async def on_after_forgot_password(self, user: User, token: str, _: Optional[Request] = None):
         user_settings = await crud_read_user_settings(user.id)
@@ -50,4 +47,4 @@ class UserManager(IntegerIDMixin, BaseUserManager[User, int]):
 
 
 async def get_user_manager(user_db=Depends(get_user_db)):
-    yield UserManager(user_db)
+    yield UserManager(user_db, password_helper)

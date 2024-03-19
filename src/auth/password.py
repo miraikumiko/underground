@@ -1,7 +1,6 @@
-from passlib.context import CryptContext
+from fastapi_users.password import PasswordHelper
+from pwdlib import PasswordHash
+from pwdlib.hashers.argon2 import Argon2Hasher
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+password_hash = PasswordHash((Argon2Hasher(),))
+password_helper = PasswordHelper(password_hash)

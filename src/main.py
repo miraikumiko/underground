@@ -6,10 +6,9 @@ from contextlib import asynccontextmanager
 from src.database import r
 from src.server.router import router as server_router
 from src.payment.router import router as payment_router
+from src.user.router import router as user_router
 from src.auth.router import (
-    users_router,
-    auth_router,
-    register_router,
+    router as auth_router,
     reset_password_router,
     verify_router
 )
@@ -25,7 +24,7 @@ app = FastAPI(lifespan=lifespan, docs_url="/api/docs", openapi_url="/api/openapi
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
@@ -33,8 +32,7 @@ app.add_middleware(
 
 app.include_router(server_router)
 app.include_router(payment_router)
-app.include_router(users_router, prefix="/api/users", tags=["users"])
-app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
-app.include_router(register_router, prefix="/api/auth", tags=["auth"])
+app.include_router(user_router)
+app.include_router(auth_router)
 app.include_router(reset_password_router, prefix="/api/auth", tags=["auth"])
 app.include_router(verify_router, prefix="/api/auth", tags=["auth"])

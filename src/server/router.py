@@ -32,10 +32,7 @@ from src.server.utils import upload_iso
 from src.user.models import User
 from src.auth.utils import active_user, admin
 
-router = APIRouter(
-    prefix="/api/server",
-    tags=["servers"]
-)
+router = APIRouter(prefix="/api/server", tags=["servers"])
 
 
 @router.post("/create")

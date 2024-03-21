@@ -1,4 +1,6 @@
-from fastapi_mail import FastMail, MessageSchema, MessageType, ConnectionConfig
+from email.message import EmailMessage
+from email.utils import formatdate
+from aiosmtplib import send
 from src.config import (
     SMTP_HOST,
     SMTP_PORT,
@@ -6,30 +8,26 @@ from src.config import (
     SMTP_PASSWORD,
     SMTP_SENDER
 )
-
-email_config = ConnectionConfig(
-    MAIL_USERNAME=SMTP_USER,
-    MAIL_PASSWORD=SMTP_PASSWORD,
-    MAIL_FROM=SMTP_SENDER,
-    MAIL_PORT=SMTP_PORT,
-    MAIL_SERVER=SMTP_HOST,
-    MAIL_STARTTLS=False,
-    MAIL_SSL_TLS=True,
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True
-)
+from src.logger import logger
 
 
 async def sendmail(subject: str, body: str, email: str) -> None:
-    message = MessageSchema(
-        subject=subject,
-        recipients={email},
-        body=body,
-        subtype=MessageType.plain
-    )
-
     try:
-        fm = FastMail(email_config)
-        await fm.send_message(message)
+        message = EmailMessage()
+        message["From"] = SMTP_SENDER
+        message["To"] = email
+        message["Subject"] = subject
+        message["Date"] = formatdate()
+        message.set_content(body)
+
+        await send(
+            message,
+            hostname=SMTP_HOST,
+            port=SMTP_PORT,
+            username=SMTP_USER,
+            password=SMTP_PASSWORD,
+            use_tls=True
+        )
     except Exception as e:
+        logger.info(e)
         raise e

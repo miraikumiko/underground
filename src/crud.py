@@ -41,15 +41,18 @@ async def crud_read(model, attr1: ColumnElement = None, attr2: any = None) -> an
                 stmt = select(model)
                 result = await session.execute(stmt)
 
-            obj = result.scalar_one()
+            obj = result.scalar_one_or_none()
 
             return obj
 
 
-async def crud_update(model, schema: BaseModel, attr1: ColumnElement, attr2: any) -> None:
+async def crud_update(model, schema: BaseModel | dict, attr1: ColumnElement, attr2: any) -> None:
     async with async_session_maker() as session:
         async with session.begin():
-            stmt = update(model).where(attr1 == attr2).values(schema.model_dump())
+            if type(schema) is not dict:
+                schema = schema.model_dump()
+
+            stmt = update(model).where(attr1 == attr2).values(schema)
 
             await session.execute(stmt)
 

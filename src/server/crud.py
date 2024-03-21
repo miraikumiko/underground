@@ -22,9 +22,9 @@ from src.server.schemas import (
 
 
 async def crud_create_server(schema: ServerCreate) -> int:
-    id = await crud_create(Server, schema)
+    server_id = await crud_create(Server, schema)
 
-    return id
+    return server_id
 
 
 async def crud_read_servers() -> list[ServerRead]:
@@ -74,6 +74,10 @@ async def crud_update_active_server(schema: ActiveServerUpdate, active_server_id
 
 async def crud_delete_active_server(active_server_id: int) -> None:
     await crud_delete(ActiveServer, attr1=ActiveServer.id, attr2=active_server_id)
+
+
+async def crud_delete_active_servers(user_id: int) -> None:
+    await crud_delete(ActiveServer, attr1=ActiveServer.user_id, attr2=user_id)
 
 
 async def crud_read_server_ips() -> list[ServerIPRead]:

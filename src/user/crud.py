@@ -40,7 +40,14 @@ async def crud_read_user(user_id: int) -> UserRead:
 
 
 async def crud_update_user(schema: UserUpdate, user_id: int) -> None:
-    schema.hashed_password = password_helper(schema.password)
+    if schema.password is not None:
+        schema.hashed_password = password_helper.hash(schema.password)
+
+    schema = schema.model_dump()
+    schema = {key: value for key, value in schema.items() if value is not None}
+
+    if "password" in schema:
+        del schema["password"]
 
     await crud_update(User, schema, attr1=User.id, attr2=user_id)
 

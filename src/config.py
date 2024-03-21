@@ -16,11 +16,6 @@ HOST = environ.get("HOST")
 PORT = environ.get("PORT")
 LOG_FILE = environ.get("LOG_FILE")
 
-# Security
-AUTH_TRANSPORT = environ.get("AUTH_TRANSPORT")
-SECRET = environ.get("SECRET")
-TOKEN_LIFETIME = environ.get("TOKEN_LIFETIME")
-
 # Database
 DB_TYPE = environ.get("DB_TYPE")
 DB_HOST = environ.get("DB_HOST")
@@ -64,7 +59,6 @@ PRICE_IPV4 = environ.get("PRICE_IPV4")
 # Type correction
 
 PORT = int(PORT)
-TOKEN_LIFETIME = None if TOKEN_LIFETIME == '' else int(TOKEN_LIFETIME)
 DB_PORT = int(DB_PORT)
 REDIS_PORT = int(REDIS_PORT)
 SMTP_PORT = int(SMTP_PORT)

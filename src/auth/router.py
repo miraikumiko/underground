@@ -12,7 +12,8 @@ from src.user.schemas import UserCreate, UserUpdate, UserSettingsCreate
 from src.user.crud import (
     crud_create_user,
     crud_update_user,
-    crud_create_user_settings
+    crud_create_user_settings,
+    crud_read_user_settings
 )
 from src.auth.utils import active_user
 from src.auth.password import password_helper
@@ -132,6 +133,44 @@ async def verify(token: str):
 
         await crud_update_user(schema, int(user_id))
         await r.delete(token)
+
+        return Response(status_code=204)
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500)
+
+
+@router.post("/recovery")
+async def recovery(username: str, email: str):
+    try:
+        user = await crud_read(User, attr1=User.username, attr2=username)
+
+        if user is None:
+            return Response(status_code=400)
+
+        if not user.is_verified or user.email != email:
+            return Response(status_code=400)
+
+        user_settings = await crud_read_user_settings(user.id)
+
+        if not user_settings.reset_password:
+            return Response(status_code=400)
+
+        password = str(uuid4())
+
+        schema = UserUpdate()
+        schema.password = password
+
+        await crud_update_user(schema, user.id)
+
+        subject = f"[{SERVICE_NAME}] recovery"
+        body = f"""
+Your new password is: {password}
+
+If you received this letter by mistake, please write to the administrator: admin@{DOMAIN}
+        """
+
+        await sendmail(subject, body, email)
 
         return Response(status_code=204)
     except Exception as e:

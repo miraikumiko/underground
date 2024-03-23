@@ -48,8 +48,6 @@ class UserSettingsRead(BaseModel):
 
 
 class UserSettingsUpdate(BaseModel):
-    id: int
-    user_id: int
     notifications: bool
     reset_password: bool
 

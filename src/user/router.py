@@ -6,11 +6,13 @@ from fastapi import (
 from fastapi.responses import Response
 from src.logger import logger
 from src.user.models import User
-from src.user.schemas import UserUpdate
+from src.user.schemas import UserUpdate, UserSettingsUpdate
 from src.user.crud import (
     crud_read_user,
     crud_update_user,
     crud_delete_user,
+    crud_read_user_settings,
+    crud_update_user_settings,
     crud_delete_user_settings
 )
 from src.server.crud import crud_delete_active_servers
@@ -88,6 +90,28 @@ async def delete_user(user_id: int, _: User = Depends(admin)):
         await crud_delete_active_servers(user_id)
         await crud_delete_user_settings(user_id)
         await crud_delete_user(user_id)
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500)
+
+
+@router.get("/settings/me")
+async def read_my_settings(user: User = Depends(active_user)):
+    try:
+        user_settings = await crud_read_user_settings(user.id)
+
+        return user_settings
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500)
+
+
+@router.patch("/settings/update/me")
+async def update_my_settings(data: UserSettingsUpdate, user: User = Depends(active_user)):
+    try:
+        await crud_update_user_settings(data, user.id)
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500)

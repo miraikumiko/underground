@@ -146,15 +146,15 @@ async def recovery(username: str, email: str):
         user = await crud_read(User, attr1=User.username, attr2=username)
 
         if user is None:
-            return Response(status_code=400)
+            return Response(status_code=401)
 
         if not user.is_verified or user.email != email:
-            return Response(status_code=400)
+            return Response(status_code=401)
 
         user_settings = await crud_read_user_settings(user.id)
 
         if not user_settings.reset_password:
-            return Response(status_code=400)
+            return Response(status_code=401)
 
         password = str(uuid4())
 

@@ -1,10 +1,4 @@
-from sqlalchemy import (
-    Column,
-    Integer,
-    Boolean,
-    String,
-    ForeignKey
-)
+from sqlalchemy import Column, Integer, Boolean, String, ForeignKey
 from src.models import Base
 
 

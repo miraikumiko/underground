@@ -10,7 +10,7 @@ from src.user.crud import (
     crud_create_user_settings
 )
 from src.payment.payments import payment_checkout
-from src.server.utils import active_servers_expired_check
+from src.server.utils import servers_expired_check
 
 
 async def main():
@@ -35,7 +35,7 @@ async def main():
         await payment_checkout(args.checkout)
         exit(0)
     elif args.expire:
-        await active_servers_expired_check()
+        await servers_expired_check()
         exit(0)
 
     uvicorn.run("run:app", host=HOST, port=PORT, reload=True)

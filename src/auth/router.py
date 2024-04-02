@@ -28,11 +28,11 @@ async def login(username: str, password: str):
 
         if password_helper.verify_and_update(password, user.hashed_password)[0]:
             token = uuid4()
-            await r.set(f"auth:{token}", user.id, ex=(60 * 60 * 24 * 7))
+            await r.set(f"auth:{token}", user.id, ex=604800)
 
             return Response(status_code=204, headers={
                 "Content-Type": "application/x-www-form-urlencoded",
-                "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Secure"
+                "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Secure; Max-Age=604800"
             })
         else:
             raise HTTPException(status_code=400, detail="Invalid password")

@@ -3,9 +3,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 from src.models import Base
-from src.user.models import *
-from src.server.models import *
-from src.payment.models import *
+from src.logger import logger
 from src.config import (
     DB_TYPE,
     DB_HOST,
@@ -14,6 +12,8 @@ from src.config import (
     DB_USERNAME,
     DB_PASSWORD
 )
+from src.user.models import *
+from src.server.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

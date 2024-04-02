@@ -1,8 +1,4 @@
-from fastapi import (
-    APIRouter,
-    HTTPException,
-    Depends
-)
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import Response
 from src.logger import logger
 from src.user.models import User
@@ -15,7 +11,7 @@ from src.user.crud import (
     crud_update_user_settings,
     crud_delete_user_settings
 )
-from src.server.crud import crud_delete_active_servers
+from src.server.crud import crud_delete_servers
 from src.auth.utils import active_user, admin
 from src.auth.password import password_helper
 
@@ -35,7 +31,7 @@ async def read_me(user: User = Depends(active_user)):
         raise HTTPException(status_code=500)
 
 
-@router.patch("/update/me")
+@router.patch("/me")
 async def update_me(data: UserUpdate, user: User = Depends(active_user)):
     try:
         await crud_update_user(data, user.id)
@@ -44,10 +40,10 @@ async def update_me(data: UserUpdate, user: User = Depends(active_user)):
         raise HTTPException(status_code=500)
 
 
-@router.delete("/delete/me")
+@router.delete("/me")
 async def delete_me(password: str, user: User = Depends(active_user)):
     if password_helper.verify_and_update(password, user.hashed_password)[0]:
-        await crud_delete_active_servers(user.id)
+        await crud_delete_servers(user.id)
         await crud_delete_user_settings(user.id)
         await crud_delete_user(user.id)
 
@@ -75,7 +71,7 @@ async def read_user(user_id: int, _: User = Depends(admin)):
         raise HTTPException(status_code=500)
 
 
-@router.patch("/update/{user_id}")
+@router.patch("/{user_id}")
 async def update_user(user_id: int, data: UserUpdate, _: User = Depends(admin)):
     try:
         await crud_update_user(data, user_id)
@@ -84,10 +80,10 @@ async def update_user(user_id: int, data: UserUpdate, _: User = Depends(admin)):
         raise HTTPException(status_code=500)
 
 
-@router.delete("/delete/{user_id}")
+@router.delete("/{user_id}")
 async def delete_user(user_id: int, _: User = Depends(admin)):
     try:
-        await crud_delete_active_servers(user_id)
+        await crud_delete_servers(user_id)
         await crud_delete_user_settings(user_id)
         await crud_delete_user(user_id)
     except Exception as e:
@@ -108,7 +104,7 @@ async def read_my_settings(user: User = Depends(active_user)):
         raise HTTPException(status_code=500)
 
 
-@router.patch("/settings/update/me")
+@router.patch("/settings/me")
 async def update_my_settings(data: UserSettingsUpdate, user: User = Depends(active_user)):
     try:
         await crud_update_user_settings(data, user.id)

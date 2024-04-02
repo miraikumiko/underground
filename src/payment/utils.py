@@ -13,12 +13,15 @@ async def monero_request(method: str, params: dict = None) -> dict:
     if params is None:
         params = {}
 
-    response = requests.post(f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}", {
-        "jsonrpc": "2.0",
-        "id": "0",
-        "method": method,
-        "params": params
-    }, auth=HTTPDigestAuth(MONERO_RPC_USER, MONERO_RPC_PASSWORD))
+    response = requests.post(f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}/json_rpc",
+        json={
+            "jsonrpc": "2.0",
+            "id": "0",
+            "method": method,
+            "params": params
+        }, headers={"Content-Type": "application/json"},
+        auth=HTTPDigestAuth(MONERO_RPC_USER, MONERO_RPC_PASSWORD)
+    )
 
     return response.json()
 

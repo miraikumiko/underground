@@ -29,15 +29,17 @@ async def rpc_get_available_cores_number(ip: str) -> int:
 
 @err_catch
 async def rpc_get_ipv4(ip: str) -> str:
-    response = requests.get(f"https://{ip}:{RPC_SERVER_PORT}", {
-        "key": RPC_SERVER_KEY,
-        "operation": "get_ipv4"
-    }).json()
+    import random
+    return f"111.111.111.{random.randint(1, 255)}"
+    #response = requests.get(f"https://{ip}:{RPC_SERVER_PORT}", {
+    #    "key": RPC_SERVER_KEY,
+    #    "operation": "get_ipv4"
+    #}).json()
 
-    if response is not None:
-        ipv4 = response["ipv4"]
+    #if response is not None:
+    #    ipv4 = response["ipv4"]
 
-        return ipv4
+    #    return ipv4
 
 
 @err_catch

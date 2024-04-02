@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class ServerCreate(BaseModel):
@@ -9,8 +9,12 @@ class ServerCreate(BaseModel):
     disk_size: int
     traffic: int
     location: str
-    available: bool
-    price: float
+    ipv4: str | None
+    ipv6: str | None
+    start_at: datetime = datetime.utcnow()
+    end_at: datetime = datetime.utcnow() + timedelta(days=30)
+    active: bool = True
+    user_id: int
 
 
 class ServerRead(BaseModel):
@@ -21,8 +25,12 @@ class ServerRead(BaseModel):
     disk_size: int
     traffic: int
     location: str
-    available: bool
-    price: float
+    ipv4: str
+    ipv6: str
+    start_at: datetime
+    end_at: datetime
+    active: bool
+    user_id: int
 
 
 class ServerUpdate(BaseModel):
@@ -32,51 +40,17 @@ class ServerUpdate(BaseModel):
     disk_size: int = None
     traffic: int = None
     location: str = None
-    available: bool = None
-    price: float = None
-
-
-class ActiveServerCreate(BaseModel):
-    user_id: int
-    server_id: int
-    ipv4: str
-    ipv6: str
-    xml: str = None
-    start_at: datetime = datetime.now()
-    end_at: datetime
-    active: bool = True
-
-
-class ActiveServerRead(BaseModel):
-    id: int
-    user_id: int
-    server_id: int
-    ipv4: str
-    ipv6: str
-    xml: str
-    start_at: datetime
-    end_at: datetime
-    active: bool
-
-
-class ActiveServerUpdate(BaseModel):
-    user_id: int = None
-    server_id: int = None
     ipv4: str = None
     ipv6: str = None
-    xml: str = None
     start_at: datetime = None
     end_at: datetime = None
     active: bool = None
+    user_id: int = None
 
 
-class ServerIPCreate(BaseModel):
-    ip: str
-
-
-class ServerIPRead(BaseModel):
-    ip: str
-
-
-class ServerIPUpdate(BaseModel):
-    ip: str
+class Specs(BaseModel):
+    cores: int = 1
+    ram: int = 1024
+    disk_size: int = 32
+    ipv4: bool = True
+    month: int = 1

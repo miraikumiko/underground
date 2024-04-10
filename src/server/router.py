@@ -83,23 +83,20 @@ async def delete_server(server_id: int, _: User = Depends(admin)):
         raise HTTPException(status_code=500, detail=None)
 
 
-@router.post("/action/me")
-async def action(server_id: int, command: str, user: User = Depends(active_user)):
+@router.post("/action")
+async def action(server_id: int, cmd: str, user: User = Depends(active_user)):
     try:
         server = await crud_read_server(server_id)
 
         if server is None:
             raise HTTPException(status_code=400)
-
-        if server.user_id != user.id:
+        elif not server.active:
+            raise HTTPException(status_code=400, detail=f"Server {server_id} is not active")
+        elif server.user_id != user.id or not user.is_superuser:
             raise HTTPException(status_code=400)
 
-        if command == "on":
-            await vps_action(server_id, command)
-        elif command == "reboot":
-            await vps_action(server_id, command)
-        elif command == "off":
-            await vps_action(server_id, command)
+        if cmd in ("on", "reboot", "off"):
+            await vps_action(server_id, cmd)
         else:
             raise ValueError("Invalid server action")
     except ValueError as e:
@@ -108,23 +105,20 @@ async def action(server_id: int, command: str, user: User = Depends(active_user)
 
 
 @router.get("/status/{server_id}")
-async def status(server_id: int, _: User = Depends(active_user)):
+async def status(server_id: int, user: User = Depends(active_user)):
     try:
+        server = await crud_read_server(server_id)
+
+        if server is None:
+            raise HTTPException(status_code=400)
+        elif not server.active:
+            raise HTTPException(status_code=400)
+        elif server.user_id != user.id or not user.is_superuser:
+            raise HTTPException(status_code=400)
+
         stat = await vps_status(server_id)
 
         return stat
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail=None)
-
-
-@router.post("/upload/iso")
-async def upload_iso(iso: UploadFile, user: User = Depends(active_user)):
-    try:
-        if iso.content_type != "application/octet-stream":
-            raise HTTPException(status_code=400, detail="This is not .iso file")
-
-        await upload_iso(user.id, iso)
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail=None)

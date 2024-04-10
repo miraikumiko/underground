@@ -55,6 +55,7 @@ PRICE_CPU = environ.get("PRICE_CPU")
 PRICE_RAM = environ.get("PRICE_RAM")
 PRICE_DISK = environ.get("PRICE_DISK")
 PRICE_IPV4 = environ.get("PRICE_IPV4")
+RECOVERY_XMR_COURSE = environ.get("RECOVERY_XMR_COURSE")
 
 # Type correction
 
@@ -69,3 +70,4 @@ PRICE_CPU = float(PRICE_CPU)
 PRICE_RAM = float(PRICE_RAM)
 PRICE_DISK = float(PRICE_DISK)
 PRICE_IPV4 = float(PRICE_IPV4)
+RECOVERY_XMR_COURSE = float(RECOVERY_XMR_COURSE)

@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 from datetime import datetime, timedelta
 from src.database import r
 from src.logger import logger
 from src.config import PRICE_CPU, PRICE_RAM, PRICE_DISK, PRICE_IPV4
 from src.payment.payments import payment_request
+from src.payment.utils import xmr_course
 from src.server.schemas import ServerCreate, Specs
 from src.server.crud import crud_create_server, crud_read_server
 from src.user.models import User
@@ -20,8 +21,11 @@ async def buy(data: Specs, user: User = Depends(active_user)):
     payment_uri = await r.get(f"payment_uri:{user.id}")
 
     if payment_uri is not None:
+        ttl = await r.ttl(f"payment_uri:{user.id}")
+
         return JSONResponse({
             "payment_uri": payment_uri,
+            "ttl": ttl,
             "detail": "You already have payment"
         }, status_code=203)
 
@@ -35,7 +39,7 @@ async def buy(data: Specs, user: User = Depends(active_user)):
     if data.disk_size not in (32, 64, 128, 256, 512, 1024):
         raise HTTPException(status_code=400, detail="Invalid disk size")
 
-    if data.month < 1 or data.month > 12:
+    if data.month not in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
         raise HTTPException(status_code=400, detail="Invalid month count")
 
     # Make payment request and return it uri
@@ -70,8 +74,9 @@ async def buy(data: Specs, user: User = Depends(active_user)):
     ) * data.month
 
     payment_uri = await payment_request(payment_data, float(amount))
+    ttl = await r.ttl(f"payment_uri:{user.id}")
 
-    return {"payment_uri": payment_uri}
+    return {"payment_uri": payment_uri, "ttl": ttl}
 
 
 @router.post("/pay")
@@ -115,10 +120,11 @@ async def pay(server_id: int, month: int, user: User = Depends(active_user)):
 
 @router.post("/close")
 async def close(user: User = Depends(active_user)):
-    payment_uri = await r.get("payment_uri:{user.id}")
+    payment_uri = await r.get(f"payment_uri:{user.id}")
 
     if payment_uri is not None:
         await r.delete(f"payment_uri:{user.id}")
+        return Response(status_code=204)
     else:
         return "You haven't active payments"
 
@@ -129,5 +135,6 @@ async def checkout():
         "cpu": PRICE_CPU,
         "ram": PRICE_RAM,
         "disk": PRICE_DISK,
-        "ipv4": PRICE_IPV4
+        "ipv4": PRICE_IPV4,
+        "xmr": await xmr_course()
     }

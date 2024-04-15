@@ -82,11 +82,14 @@ async def buy(data: Specs, user: User = Depends(active_user)):
 @router.post("/pay")
 async def pay(server_id: int, month: int, user: User = Depends(active_user)):
     # Check user's active payments
-    payment_uri = await r.get("payment_uri:{user.id}")
+    payment_uri = await r.get(f"payment_uri:{user.id}")
 
     if payment_uri is not None:
+        ttl = await r.ttl(f"payment_uri:{user.id}")
+
         return JSONResponse({
             "payment_uri": payment_uri,
+            "ttl": ttl,
             "detail": "You already have payment"
         }, status_code=203)
 
@@ -97,7 +100,7 @@ async def pay(server_id: int, month: int, user: User = Depends(active_user)):
     # Make payment request and return it uri
     server = await crud_read_server(server_id)
 
-    if server is not None:
+    if server is None:
         raise HTTPException(status_code=400)
 
     payment_data = {
@@ -110,12 +113,13 @@ async def pay(server_id: int, month: int, user: User = Depends(active_user)):
         (1 / server.cores * PRICE_CPU) +
         (1024 / server.ram * PRICE_RAM) +
         (32 / server.disk_size * PRICE_DISK) +
-        (server.ipv4 if PRICE_IPV4 else 0)
-    ) * server.month
+        (server.ipv4 is not None if PRICE_IPV4 else 0)
+    ) * month
 
     payment_uri = await payment_request(payment_data, float(amount))
+    ttl = await r.ttl(f"payment_uri:{user.id}")
 
-    return {"payment_uri": payment_uri}
+    return {"payment_uri": payment_uri, "ttl": ttl}
 
 
 @router.post("/close")

@@ -37,14 +37,14 @@ async def xmr_course() -> float:
             response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
             usd = response.json()["monero"]["usd"]
 
-            await r.set("xmr_course", usd)
+            await r.set("xmr_course", usd, ex=86400)
 
-        return usd
+            return usd
+        else:
+            return usd
     except Exception as e:
         logger.error(e)
-
-        await r.set("xmr_course", RECOVERY_XMR_COURSE)
-
+        await r.set("xmr_course", RECOVERY_XMR_COURSE, ex=86400)
         return RECOVERY_XMR_COURSE
 
 

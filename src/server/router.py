@@ -9,7 +9,6 @@ from src.server.crud import (
 )
 from src.server.schemas import ServerCreate, ServerUpdate
 from src.server.vps import vps_action, vps_status
-from src.server.utils import upload_iso
 from src.user.models import User
 from src.auth.utils import active_user, admin
 
@@ -95,7 +94,7 @@ async def action(server_id: int, cmd: str, user: User = Depends(active_user)):
         elif server.user_id != user.id or not user.is_superuser:
             raise HTTPException(status_code=400)
 
-        if cmd in ("on", "reboot", "off"):
+        if cmd in ("on", "reboot", "off", "delete"):
             await vps_action(server_id, cmd)
         else:
             raise ValueError("Invalid server action")

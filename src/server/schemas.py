@@ -54,3 +54,13 @@ class Specs(BaseModel):
     disk_size: int = 32
     ipv4: bool = True
     month: int = 1
+
+
+class IPv4(BaseModel):
+    ip: str
+    available: bool
+
+
+class IPv6(BaseModel):
+    ip: str
+    available: bool

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from src.database import r
 from src.logger import logger
 from src.config import PRICE_CPU, PRICE_RAM, PRICE_DISK, PRICE_IPV4
+from src.payment.schemas import Pay
 from src.payment.payments import payment_request
 from src.payment.utils import xmr_course
 from src.server.schemas import ServerCreate, Specs
@@ -80,7 +81,7 @@ async def buy(data: Specs, user: User = Depends(active_user)):
 
 
 @router.post("/pay")
-async def pay(server_id: int, month: int, user: User = Depends(active_user)):
+async def pay(data: Pay, user: User = Depends(active_user)):
     # Check user's active payments
     payment_uri = await r.get(f"payment_uri:{user.id}")
 
@@ -94,19 +95,19 @@ async def pay(server_id: int, month: int, user: User = Depends(active_user)):
         }, status_code=203)
 
     # Validate params
-    if month < 1 or month > 12:
+    if data.month < 1 or data.month > 12:
         raise HTTPException(status_code=400, detail="Invalid month count")
 
     # Make payment request and return it uri
-    server = await crud_read_server(server_id)
+    server = await crud_read_server(data.server_id)
 
     if server is None:
         raise HTTPException(status_code=400)
 
     payment_data = {
         "user_id": user.id,
-        "server_id": server_id,
-        "month": month
+        "server_id": data.server_id,
+        "month": data.month
     }
 
     amount = (
@@ -114,7 +115,7 @@ async def pay(server_id: int, month: int, user: User = Depends(active_user)):
         (1024 / server.ram * PRICE_RAM) +
         (32 / server.disk_size * PRICE_DISK) +
         (server.ipv4 is not None if PRICE_IPV4 else 0)
-    ) * month
+    ) * data.month
 
     payment_uri = await payment_request(payment_data, float(amount))
     ttl = await r.ttl(f"payment_uri:{user.id}")

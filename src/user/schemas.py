@@ -31,7 +31,7 @@ class UserUpdate(BaseModel):
 
 
 class UserDelete(BaseModel):
-    id: int
+    password: str
 
 
 class UserSettingsCreate(BaseModel):

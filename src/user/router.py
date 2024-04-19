@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import Response
 from src.logger import logger
 from src.user.models import User
-from src.user.schemas import UserUpdate, UserSettingsUpdate
+from src.user.schemas import UserUpdate, UserDelete, UserSettingsUpdate
 from src.user.crud import (
     crud_read_user,
     crud_update_user,
@@ -41,14 +41,14 @@ async def update_me(data: UserUpdate, user: User = Depends(active_user)):
 
 
 @router.delete("/me")
-async def delete_me(password: str, user: User = Depends(active_user)):
-    if password_helper.verify_and_update(password, user.hashed_password)[0]:
+async def delete_me(data: UserDelete, user: User = Depends(active_user)):
+    if password_helper.verify_and_update(data.password, user.hashed_password)[0]:
         await crud_delete_servers(user.id)
         await crud_delete_user_settings(user.id)
         await crud_delete_user(user.id)
 
         return Response(status_code=204, headers={
-            "Content-Type": "application/x-www-form-urlencoded",
+            "content-type": "application/x-www-form-urlencoded",
             "set-cookie": 'fastapiusersauth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax; Secure'
         })
     else:

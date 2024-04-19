@@ -1,12 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import Response
-from pydantic import EmailStr
 from uuid import uuid4
+from random import choice, randint
+from pydantic import EmailStr
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import (
+    Response,
+    JSONResponse,
+    StreamingResponse,
+    RedirectResponse
+)
+from captcha.image import ImageCaptcha
 from src.database import r
 from src.crud import crud_read
 from src.mail import sendmail
 from src.config import SERVICE_NAME, DOMAIN, ONION_DOMAIN, I2P_DOMAIN
 from src.logger import logger
+from src.auth.schemas import (
+    Login,
+    Register,
+    ResetPassword,
+    ResetEmail,
+    Recovery,
+    Captcha
+)
+from src.auth.utils import active_user
+from src.auth.password import password_helper
 from src.user.models import User
 from src.user.schemas import UserCreate, UserUpdate, UserSettingsCreate
 from src.user.crud import (
@@ -15,27 +32,67 @@ from src.user.crud import (
     crud_create_user_settings,
     crud_read_user_settings
 )
-from src.auth.utils import active_user
-from src.auth.password import password_helper
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/login")
-async def login(username: str, password: str):
+async def login(data: Login):
+    user = await crud_read(User, attr1=User.username, attr2=data.username)
+
+    if user is None:
+        raise HTTPException(status_code=400, detail="User doesn't exist")
+
+    if password_helper.verify_and_update(data.password, user.hashed_password)[0]:
+        token = uuid4()
+        await r.set(f"auth:{token}", user.id, ex=604800)
+
+        return Response(status_code=204, headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+            "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Secure; Max-Age=604800"
+        })
+    else:
+        raise HTTPException(status_code=401, detail="Invalid password")
+
+
+@router.post("/register")
+async def register(data: Register):
+    captcha = await r.get(f"captcha:{data.captcha_id}")
+    await r.delete(f"captcha:{data.captcha_id}")
+
+    if captcha is None:
+        raise HTTPException(status_code=400, detail="Captcha was expired")
+
+    if captcha != data.captcha_text:
+        raise HTTPException(status_code=400, detail="Captcha didn't match")
+
+    user = await crud_read(User, attr1=User.username, attr2=data.username)
+
+    if user is None:
+        user = UserCreate(username=data.username, password=data.password)
+        user_id = await crud_create_user(user)
+
+        user_settings = UserSettingsCreate(user_id=user_id)
+        await crud_create_user_settings(user_settings)
+
+        return JSONResponse({"user_id": user_id}, status_code=201)
+    else:
+        raise HTTPException(status_code=400, detail="User already exist")
+
+
+@router.get("/captcha")
+async def get_captcha():
     try:
-        user = await crud_read(User, attr1=User.username, attr2=username)
+        chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        text = ''.join(choice(chars) for _ in range(randint(5, 7)))
+        captcha_id = randint(10000000, 99999999)
 
-        if password_helper.verify_and_update(password, user.hashed_password)[0]:
-            token = uuid4()
-            await r.set(f"auth:{token}", user.id, ex=604800)
+        image = ImageCaptcha(width=218, height=50)
+        captcha = image.generate(text)
 
-            return Response(status_code=204, headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-                "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Secure; Max-Age=604800"
-            })
-        else:
-            raise HTTPException(status_code=400, detail="Invalid password")
+        await r.set(f"captcha:{captcha_id}", text, ex=180)
+
+        return StreamingResponse(captcha, headers={"captcha_id": str(captcha_id)}, media_type="image/png")
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500)
@@ -53,30 +110,12 @@ async def logout(_: User = Depends(active_user)):
         raise HTTPException(status_code=500)
 
 
-@router.post("/register")
-async def register(data: UserCreate):
-    try:
-        user = await crud_read(User, attr1=User.username, attr2=data.username)
-
-        if user is not None:
-            user_id = await crud_create_user(data)
-            user_settings = UserSettingsCreate(user_id=user_id)
-            await crud_create_user_settings(user_settings)
-
-            return Response({"user_id": user_id}, status_code=201)
-        else:
-            return Response({"detail": "User exist"}, status_code=400)
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500)
-
-
 @router.post("/reset-password")
-async def reset_password(old_password: str, new_password: str, user: User = Depends(active_user)):
+async def reset_password(data: ResetPassword, user: User = Depends(active_user)):
     try:
-        if password_helper.verify_and_update(old_password, user.hashed_password)[0]:
+        if password_helper.verify_and_update(data.old_password, user.hashed_password)[0]:
             schema = UserUpdate()
-            schema.password = new_password
+            schema.password = data.new_password
 
             await crud_update_user(schema, user.id)
 
@@ -89,10 +128,10 @@ async def reset_password(old_password: str, new_password: str, user: User = Depe
 
 
 @router.post("/reset-email")
-async def reset_email(email: EmailStr, user: User = Depends(active_user)):
+async def reset_email(data: ResetEmail, user: User = Depends(active_user)):
     try:
         schema = UserUpdate()
-        schema.email = email
+        schema.email = data.email
         schema.is_verified = False
 
         await crud_update_user(schema, user.id)
@@ -112,7 +151,7 @@ Links expire within 24 hours.
 If you received this letter by mistake, please write to the administrator: admin@{DOMAIN}
         """
 
-        await sendmail(subject, body, email)
+        await sendmail(subject, body, data.email)
 
         return Response(status_code=204)
     except Exception as e:
@@ -134,21 +173,21 @@ async def verify(token: str):
         await crud_update_user(schema, int(user_id))
         await r.delete(token)
 
-        return Response(status_code=204)
+        return RedirectResponse('/')
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500)
 
 
 @router.post("/recovery")
-async def recovery(username: str, email: str):
+async def recovery(data: Recovery):
     try:
-        user = await crud_read(User, attr1=User.username, attr2=username)
+        user = await crud_read(User, attr1=User.username, attr2=data.username)
 
         if user is None:
             return Response(status_code=401)
 
-        if not user.is_verified or user.email != email:
+        if not user.is_verified or user.email != data.email:
             return Response(status_code=401)
 
         user_settings = await crud_read_user_settings(user.id)
@@ -170,7 +209,7 @@ Your new password is: {password}
 If you received this letter by mistake, please write to the administrator: admin@{DOMAIN}
         """
 
-        await sendmail(subject, body, email)
+        await sendmail(subject, body, data.email)
 
         return Response(status_code=204)
     except Exception as e:

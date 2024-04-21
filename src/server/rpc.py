@@ -28,7 +28,7 @@ async def rpc_get_av_specs(ip: str) -> dict:
         if res["status"] == "success":
             return res["specs"]
         else:
-            raise Exception(f"Can't recive available spces of server {ip}")
+            raise Exception(res["detail"])
 
 
 async def rpc_create_disk(ip: str, name: str, size: int):
@@ -36,7 +36,7 @@ async def rpc_create_disk(ip: str, name: str, size: int):
 
     if res is not None:
         if res["status"] == "error":
-            raise Exception(f"Can't create disk for VPS {name}")
+            raise Exception(res["detail"])
 
 
 async def rpc_delete_disk(ip: str, name: str):
@@ -44,4 +44,4 @@ async def rpc_delete_disk(ip: str, name: str):
 
     if res is not None:
         if res["status"] == "error":
-            raise Exception(f"Can't delete disk of VPS {name}")
+            raise Exception(res["detail"])

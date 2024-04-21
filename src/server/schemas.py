@@ -48,6 +48,10 @@ class ServerUpdate(BaseModel):
     user_id: int = None
 
 
+class VPSInstall(BaseModel):
+    os: str
+
+
 class Specs(BaseModel):
     cores: int = 1
     ram: int = 1024
@@ -56,11 +60,11 @@ class Specs(BaseModel):
     month: int = 1
 
 
-class IPv4(BaseModel):
-    ip: str
+class IPv4Addr(BaseModel):
+    ip: str = None
     available: bool
 
 
-class IPv6(BaseModel):
-    ip: str
+class IPv6Addr(BaseModel):
+    ip: str = None
     available: bool

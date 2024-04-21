@@ -7,8 +7,8 @@ from src.server.crud import (
     crud_update_server,
     crud_delete_server
 )
-from src.server.schemas import ServerCreate, ServerUpdate
-from src.server.vps import vps_action, vps_status
+from src.server.schemas import ServerCreate, ServerUpdate, VPSInstall
+from src.server.vps import vps_create, vps_action, vps_status
 from src.user.models import User
 from src.auth.utils import active_user, admin
 
@@ -80,6 +80,23 @@ async def delete_server(server_id: int, _: User = Depends(admin)):
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail=None)
+
+
+@router.post("/install/{server_id}")
+async def action(data: VPSInstall, server_id: int, user: User = Depends(active_user)):
+    server = await crud_read_server(server_id)
+
+    if server is None:
+        raise HTTPException(status_code=400)
+    elif not server.active:
+        raise HTTPException(status_code=400, detail=f"Server {server_id} is not active")
+    elif server.user_id != user.id or not user.is_superuser:
+        raise HTTPException(status_code=400)
+
+    res = await vps_create(server_id, data.os)
+
+    if not res:
+        raise HTTPException(status_code=422, detail="Invalid OS")
 
 
 @router.post("/action")

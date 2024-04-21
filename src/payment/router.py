@@ -11,7 +11,6 @@ from src.server.schemas import ServerCreate, Specs
 from src.server.crud import crud_create_server, crud_read_server
 from src.user.models import User
 from src.auth.utils import active_user
-from src.server.rpc import rpc_get_ipv4
 
 router = APIRouter(prefix="/api/payment", tags=["payments"])
 
@@ -51,7 +50,7 @@ async def buy(data: Specs, user: User = Depends(active_user)):
         disk_size=data.disk_size,
         traffic=1,
         location="Spain",
-        ipv4=data.ipv4 if await rpc_get_ipv4("127.0.0.1") else None,
+        ipv4=data.ipv4 if "127.0.0.1" else None,
         ipv6=None,
         start_at=datetime.utcnow(),
         end_at=datetime.now() + timedelta(days=30 * data.month),

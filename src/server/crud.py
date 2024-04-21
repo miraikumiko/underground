@@ -50,11 +50,11 @@ async def crud_read_server_ips() -> list[str]:
 
 async def crud_read_ipv4s(available: bool = None) -> list[IPv4Addr]:
     if available is None:
-        ipv4 = await crud_reads(IPv4)
+        ipv4s = await crud_reads(IPv4)
     else:
-        ipv4 = await crud_reads(IPv4, attr1=IPv4.available, attr2=available)
+        ipv4s = await crud_reads(IPv4, attr1=IPv4.available, attr2=available)
 
-    return ipv4
+    return ipv4s
 
 
 async def crud_update_ipv4(schema: IPv4Addr, ip: str) -> None:
@@ -63,11 +63,11 @@ async def crud_update_ipv4(schema: IPv4Addr, ip: str) -> None:
 
 async def crud_read_ipv6s(available: bool = None) -> list[IPv6Addr]:
     if available is None:
-        ipv6 = await crud_reads(IPv6)
+        ipv6s = await crud_reads(IPv6)
     else:
-        ipv6 = await crud_reads(IPv6, attr1=IPv6.available, attr2=available)
+        ipv6s = await crud_reads(IPv6, attr1=IPv6.available, attr2=available)
 
-    return ipv6
+    return ipv6s
 
 
 async def crud_update_ipv6(schema: IPv6Addr, ip: str) -> None:

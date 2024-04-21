@@ -1,7 +1,7 @@
 import logging
 from src.config import LOG_FILE
 
-logger = logging.getLogger('logger')
+logger = logging.getLogger("logger")
 logger.setLevel(logging.DEBUG)
 
 if LOG_FILE == '':

@@ -12,11 +12,11 @@ from src.config import (
 )
 
 
-async def monero_request(method: str, params: dict = None) -> dict:
+async def monero_request(method: str, params: dict = None) -> dict | None:
     if params is None:
         params = {}
 
-    response = requests.post(f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}/json_rpc",
+    res = requests.post(f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}/json_rpc",
         json={
             "jsonrpc": "2.0",
             "id": "0",
@@ -25,8 +25,9 @@ async def monero_request(method: str, params: dict = None) -> dict:
         }, headers={"Content-Type": "application/json"},
         auth=HTTPDigestAuth(MONERO_RPC_USER, MONERO_RPC_PASSWORD)
     )
-
-    return response.json()
+    
+    if res.status_code == 200:
+        return res.json()
 
 
 async def xmr_course() -> float:
@@ -34,12 +35,14 @@ async def xmr_course() -> float:
         usd = await r.get("xmr_course")
 
         if usd is None:
-            response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
-            usd = response.json()["monero"]["usd"]
+            res = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
 
-            await r.set("xmr_course", usd, ex=86400)
+            if res.status_code == 200:
+                usd = res.json()["monero"]["usd"]
 
-            return usd
+                await r.set("xmr_course", usd, ex=86400)
+
+                return usd
         else:
             return usd
     except Exception as e:

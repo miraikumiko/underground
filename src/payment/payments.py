@@ -7,19 +7,19 @@ from src.payment.utils import monero_request, usd_to_xmr
 
 
 async def payment_request(data: dict, amount: float) -> str:
-    response = await monero_request("make_integrated_address")
+    res = await monero_request("make_integrated_address")
 
-    address = response["result"]["integrated_address"]
-    payment_id = response["result"]["payment_id"]
+    address = res["result"]["integrated_address"]
+    payment_id = res["result"]["payment_id"]
 
     amount_xmr = await usd_to_xmr(amount)
 
-    response = await monero_request("make_uri", {
+    res = await monero_request("make_uri", {
         "address": address,
         "amount": amount_xmr
     })
 
-    payment_uri = response["result"]["uri"]
+    payment_uri = res["result"]["uri"]
 
     data["payment_id"] = payment_id
     data["amount"] = amount_xmr
@@ -33,10 +33,10 @@ async def payment_request(data: dict, amount: float) -> str:
 
 
 async def payment_checkout(txid: str) -> None:
-    response = await monero_request("get_transfer_by_txid", {"txid": txid})
+    res = await monero_request("get_transfer_by_txid", {"txid": txid})
 
-    payment_id = response["result"]["transfer"]["payment_id"]
-    amount = response["result"]["transfer"]["amount"]
+    payment_id = res["result"]["transfer"]["payment_id"]
+    amount = res["result"]["transfer"]["amount"]
 
     payment = await r.hgetall(f"payment:{payment_id}")
 

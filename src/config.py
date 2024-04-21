@@ -48,7 +48,6 @@ MONERO_RPC_USER = environ.get("MONERO_RPC_USER")
 MONERO_RPC_PASSWORD = environ.get("MONERO_RPC_PASSWORD")
 
 # Specs prices
-
 PRICE_CPU = environ.get("PRICE_CPU")
 PRICE_RAM = environ.get("PRICE_RAM")
 PRICE_DISK = environ.get("PRICE_DISK")
@@ -56,7 +55,6 @@ PRICE_IPV4 = environ.get("PRICE_IPV4")
 RECOVERY_XMR_COURSE = environ.get("RECOVERY_XMR_COURSE")
 
 # Type correction
-
 PORT = int(PORT)
 DB_PORT = int(DB_PORT)
 REDIS_PORT = int(REDIS_PORT)

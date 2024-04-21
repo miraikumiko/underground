@@ -15,7 +15,7 @@ from src.auth.utils import active_user, admin
 router = APIRouter(prefix="/api/server", tags=["servers"])
 
 
-@router.post("")
+@router.post("/create")
 async def create_server(data: ServerCreate, _: User = Depends(admin)):
     try:
         server_id = await crud_create_server(data)
@@ -93,10 +93,14 @@ async def action(data: VPSInstall, server_id: int, user: User = Depends(active_u
     elif server.user_id != user.id or not user.is_superuser:
         raise HTTPException(status_code=400)
 
-    res = await vps_create(server_id, data.os)
-
-    if not res:
-        raise HTTPException(status_code=422, detail="Invalid OS")
+    try:
+        await vps_create(server_id, data.os)
+    except ValueError as e:
+        logger.error(e)
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/action")

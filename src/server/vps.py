@@ -7,23 +7,30 @@ from src.server.crud import (
     crud_read_server_ips
 )
 from src.server.rpc import (
-    rpc_get_available_cores_number,
-    rpc_delete_vps
+    rpc_get_av_specs,
+    rpc_create_disk,
+    rpc_delete_disk
 )
 
 
-async def vps_create(server_id: int, os: str) -> str:
+async def vps_create(server_id: int, os: str):
     try:
         server_addresses = await crud_read_server_ips()
         server = await crud_read_server(server_id)
 
-        for server_address in server_addresses:
-            available_cores = await rpc_get_available_cores_number(server_address)
+        for server_addr in server_addresses:
+            specs = await rpc_get_av_specs(server_addr)
 
-            if available_cores <= server.cores:
+            if specs["cores"] <= server.cores:
                 raise Exception("Doesn't have available cores")
 
-            with libvirt.open(f"qemu+ssh://{server_address}/system") as conn:
+            if specs["ram"] <= server.ram:
+                raise Exception("Doesn't have available ram")
+
+            if specs["disk_size"] <= server.disk_size:
+                raise Exception("Doesn't have available disk size")
+
+            with libvirt.open(f"qemu+ssh://{server_addr}/system") as conn:
                 with open("src/server/xml/vps.xml", "r") as file:
                     template = Template(file.read())
                     xml = template.render(
@@ -34,9 +41,7 @@ async def vps_create(server_id: int, os: str) -> str:
 
                     conn.defineXML(xml)
 
-                    await rpc_create_disk(server_address, str(server_id), server.disk_size)
-
-                    return xml
+                    await rpc_create_disk(server_addr, str(server_id), server.disk_size)
     except Exception as e:
         logger.error(e)
         raise e
@@ -44,7 +49,7 @@ async def vps_create(server_id: int, os: str) -> str:
 
 async def vps_delete(server_id: int):
     try:
-        await rpc_delete_vps(server_id, "ip")
+        await rpc_delete_disk("", str(server_id))
     except Exception as e:
         logger.error(e)
         raise e

@@ -7,8 +7,15 @@ from src.config import PRICE_CPU, PRICE_RAM, PRICE_DISK, PRICE_IPV4
 from src.payment.schemas import Pay
 from src.payment.payments import payment_request
 from src.payment.utils import xmr_course
-from src.server.schemas import ServerCreate, Specs
-from src.server.crud import crud_create_server, crud_read_server
+from src.server.schemas import ServerCreate, Specs, IPv4Addr, IPv6Addr
+from src.server.crud import (
+    crud_create_server,
+    crud_read_server,
+    crud_read_ipv4s,
+    crud_update_ipv4,
+    crud_read_ipv6s,
+    crud_update_ipv6
+)
 from src.user.models import User
 from src.auth.utils import active_user
 
@@ -42,6 +49,20 @@ async def buy(data: Specs, user: User = Depends(active_user)):
     if data.month not in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
         raise HTTPException(status_code=400, detail="Invalid month count")
 
+    if data.ipv4:
+        ipv4s = await crud_read_ipv4s(True)
+
+        if not ipv4s:
+            raise HTTPException(
+                status_code=400,
+                detail="Haven't available IPv4 addresses"
+            )
+
+        ipv4 = ipv4s[0]
+        await crud_update_ipv4(IPv4Addr(available=False), ipv4)
+    else:
+        ipv4 = None
+
     # Make payment request and return it uri
     server_schema = ServerCreate(
         cores=data.cores,
@@ -50,7 +71,7 @@ async def buy(data: Specs, user: User = Depends(active_user)):
         disk_size=data.disk_size,
         traffic=1,
         location="Spain",
-        ipv4=data.ipv4 if "127.0.0.1" else None,
+        ipv4=ipv4,
         ipv6=None,
         start_at=datetime.utcnow(),
         end_at=datetime.now() + timedelta(days=30 * data.month),

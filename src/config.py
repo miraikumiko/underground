@@ -38,7 +38,8 @@ SMTP_SENDER = environ.get("SMTP_SENDER")
 
 # RPC
 RPC_SERVER_PORT = environ.get("RPC_SERVER_PORT")
-RPC_SERVER_KEY = environ.get("RPC_SERVER_KEY")
+RPC_SERVER_USERNAME = environ.get("RPC_SERVER_USERNAME")
+RPC_SERVER_PASSWORD = environ.get("RPC_SERVER_PASSWORD")
 
 # Monero
 MONERO_RPC_IP = environ.get("MONERO_RPC_IP")

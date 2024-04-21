@@ -1,35 +1,47 @@
 import requests
-from src.config import RPC_SERVER_PORT, RPC_SERVER_KEY
+from requests.auth import HTTPDigestAuth
+from src.config import RPC_SERVER_PORT, RPC_SERVER_USERNAME, RPC_SERVER_PASSWORD
 from src.server.models import IPv4, IPv6
 
 
-async def rpc_create_disk(ip: str, name: str, size: int) -> int:
-    response = requests.get(f"https://{ip}:{RPC_SERVER_PORT}", {
-        "key": RPC_SERVER_KEY,
-        "operation": "create_disk",
-        "params": {"name": name, "size": size}
-    }).json()
+async def rpc_request(ip: str, method: str, params: dict = None) -> dict:
+    if params is None:
+        params = {}
 
-    return 1 if response["status"] == "success" else 0
+    response = requests.post(f"http://{ip}:{RPC_SERVER_PORT}/json_rpc",
+        json={
+            "jsonrpc": "2.0",
+            "id": "0",
+            "method": method,
+            "params": params
+        }, headers={"Content-Type": "application/json"},
+        auth=HTTPDigestAuth(RPC_SERVER_USERNAME, RPC_SERVER_PASSWORD)
+    )
 
-
-async def rpc_delete_vps(server_id: int, ip: str) -> int:
-    response = requests.get(f"https://{ip}:{RPC_SERVER_PORT}", {
-        "key": RPC_SERVER_KEY,
-        "operation": "delete_vps",
-        "params": {"name": str(server_id)}
-    }).json()
-
-    return 1 if response["status"] == "success" else 0
+    return response.json()
 
 
-async def rpc_get_available_cores_number(ip: str) -> int:
-    response = requests.get(f"https://{ip}:{RPC_SERVER_PORT}", {
-        "key": RPC_SERVER_KEY,
-        "operation": "get_cores"
-    }).json()
+async def rpc_get_av_specs(ip: str) -> dict:
+    res = await rpc_request(ip, "get_av_specs")
 
-    if response is not None:
-        cores_count = response["cores_count"]
+    if res is not None:
+        if res["status"] == "success":
+            return res["specs"]
+        else:
+            raise Exception(f"Can't recive available spces of server {ip}")
 
-        return cores_count
+
+async def rpc_create_disk(ip: str, name: str, size: int):
+    res = await rpc_request(ip, "create_disk", {"name": name, "size": size})
+
+    if res is not None:
+        if res["status"] == "error":
+            raise Exception(f"Can't create disk for VPS {name}")
+
+
+async def rpc_delete_disk(ip: str, name: str):
+    res = await rpc_request(ip, "delete_disk", {"name": name, "size": size})
+
+    if res is not None:
+        if res["status"] == "error":
+            raise Exception(f"Can't delete disk of VPS {name}")

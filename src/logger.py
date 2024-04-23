@@ -4,7 +4,7 @@ from src.config import LOG_FILE
 logger = logging.getLogger("logger")
 logger.setLevel(logging.DEBUG)
 
-if LOG_FILE == '':
+if LOG_FILE is None or LOG_FILE == '':
     LOG_FILE = "logs.log"
 
 fh = logging.FileHandler(LOG_FILE)

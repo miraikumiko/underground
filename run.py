@@ -5,10 +5,7 @@ from src.arguments import args
 from src.logger import logger
 from src.config import HOST, PORT
 from src.user.schemas import UserCreate, UserSettingsCreate
-from src.user.crud import (
-    crud_create_user,
-    crud_create_user_settings
-)
+from src.user.crud import crud_create_user, crud_create_user_settings
 from src.payment.payments import payment_checkout
 from src.server.utils import servers_expired_check
 

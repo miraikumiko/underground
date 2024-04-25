@@ -1,16 +1,24 @@
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import Response, JSONResponse
-from datetime import datetime, timedelta
 from src.database import r
 from src.logger import logger
 from src.config import PRICE_CPU, PRICE_RAM, PRICE_DISK, PRICE_IPV4
 from src.payment.schemas import Pay
 from src.payment.payments import payment_request
 from src.payment.utils import xmr_course
-from src.server.schemas import ServerCreate, Specs, IPv4Addr, IPv6Addr
+from src.server.schemas import (
+    ServerCreate,
+    NodeUpdate,
+    Specs,
+    IPv4Addr,
+    IPv6Addr
+)
 from src.server.crud import (
     crud_create_server,
     crud_read_server,
+    crud_read_nodes,
+    crud_update_node,
     crud_read_ipv4s,
     crud_update_ipv4,
     crud_read_ipv6s,
@@ -35,6 +43,26 @@ async def buy(data: Specs, user: User = Depends(active_user)):
             "ttl": ttl,
             "detail": "You already have payment"
         }, status_code=203)
+
+    # Check user's payment limit
+    payments_count = await r.get(f"payments_count:{user.id}")
+
+    if payments_count is not None:
+        ttl = await r.ttl(f"payments_count:{user.id}")
+
+        if int(payments_count) < 3:
+            await r.set(
+                f"payments_count:{user.id}",
+                int(payments_count) + 1,
+                ex=ttl
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="You can make only 3 payment request per day"
+            )
+    else:
+        await r.set(f"payments_count:{user.id}", 1, ex=(86400))
 
     # Validate specs
     if data.cores not in (1, 2, 4, 8):
@@ -63,6 +91,13 @@ async def buy(data: Specs, user: User = Depends(active_user)):
     else:
         ipv4 = None
 
+    nodes = await crud_read_nodes(server.cores, server.ram, server.disk_size)
+
+    if not nodes:
+        raise Exception("Doesn't have available nodes")
+
+    node = nodes[0]
+
     # Make payment request and return it uri
     server_schema = ServerCreate(
         cores=data.cores,
@@ -76,10 +111,21 @@ async def buy(data: Specs, user: User = Depends(active_user)):
         start_at=datetime.utcnow(),
         end_at=datetime.now() + timedelta(days=30 * data.month),
         active=False,
-        user_id=user.id
+        user_id=user.id,
+        node_id=node.id
     )
 
+    node_schema = NodeUpdate(
+        cores_available=(node.cores_available - data.cores),
+        ram_available=(node.ram_available - data.ram),
+        disk_size_available=(node.disk_size_available - data.disk_size)
+    )
+
+    await crud_update_node(node_schema, node.id)
+
     server_id = await crud_create_server(server_schema)
+
+    await r.set(f"inactive_server:{server_id}", server_id, ex=900)
 
     payment_data = {
         "user_id": user.id,
@@ -113,6 +159,26 @@ async def pay(data: Pay, user: User = Depends(active_user)):
             "ttl": ttl,
             "detail": "You already have payment"
         }, status_code=203)
+
+    # Check user's payment limit
+    payments_count = await r.get(f"payments_count:{user.id}")
+
+    if payments_count is not None:
+        ttl = await r.ttl(f"payments_count:{user.id}")
+
+        if int(payments_count) < 3:
+            await r.set(
+                f"payments_count:{user.id}",
+                int(payments_count) + 1,
+                ex=ttl
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="You can make only 3 payment request per day"
+            )
+    else:
+        await r.set(f"payments_count:{user.id}", 1, ex=(86400))
 
     # Validate params
     if data.month < 1 or data.month > 12:

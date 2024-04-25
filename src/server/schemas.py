@@ -15,6 +15,7 @@ class ServerCreate(BaseModel):
     end_at: datetime = datetime.utcnow() + timedelta(days=30)
     active: bool = True
     user_id: int
+    node_id: int
 
 
 class ServerRead(BaseModel):
@@ -31,6 +32,7 @@ class ServerRead(BaseModel):
     end_at: datetime
     active: bool
     user_id: int
+    node_id: int
 
 
 class ServerUpdate(BaseModel):
@@ -46,6 +48,7 @@ class ServerUpdate(BaseModel):
     end_at: datetime = None
     active: bool = None
     user_id: int = None
+    node_id: int = None
 
 
 class NodeCreate(BaseModel):
@@ -86,6 +89,7 @@ class NodeUpdate(BaseModel):
 
 
 class VPSInstall(BaseModel):
+    server_id: int
     os: str
 
 

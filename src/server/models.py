@@ -19,7 +19,7 @@ class Server(Base):
     end_at = Column(TIMESTAMP, nullable=False)
     active = Column(Boolean, nullable=False, index=True, default=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    node_id = Column(Integer, ForeignKey("node.id"))
+    node_id = Column(Integer, ForeignKey("node.id"), nullable=False)
 
 
 class Node(Base):

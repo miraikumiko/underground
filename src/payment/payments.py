@@ -26,8 +26,8 @@ async def payment_request(data: dict, amount: float) -> str:
     data["payment_uri"] = payment_uri
 
     await r.hset(f"payment:{payment_id}", mapping=data)
-    await r.expire(f"payment:{payment_id}", 3600)
-    await r.set(f'payment_uri:{data["user_id"]}', payment_uri, 1800)
+    await r.expire(f"payment:{payment_id}", 900)
+    await r.set(f'payment_uri:{data["user_id"]}', payment_uri, ex=900)
 
     return payment_uri
 

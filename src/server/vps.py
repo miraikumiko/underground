@@ -3,19 +3,14 @@ from libvirt import libvirtError
 from mako.template import Template
 from src.logger import logger
 from src.server.schemas import ServerUpdate
-from src.server.crud import crud_read_server, crud_update_server, crud_read_nodes
+from src.server.crud import crud_read_server, crud_update_server, crud_read_node
 from src.server.rpc import rpc_create_disk, rpc_delete_disk
 
 
 async def vps_create(server_id: int, os: str):
     try:
         server = await crud_read_server(server_id)
-        nodes = await crud_read_nodes(server.cores, server.ram, server.disk_size)
-
-        if not nodes:
-            raise Exception("Doesn't have available nodes")
-
-        node = nodes[0]
+        node = await crud_read_node(server.node_id)
 
         with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
             with open("src/server/xml/vps.xml", "r") as file:
@@ -28,8 +23,7 @@ async def vps_create(server_id: int, os: str):
 
                 conn.defineXML(xml)
 
-                await rpc_create_disk(node.ip, str(server_id), server.disk_size)
-                await crud_update_server(ServerUpdate(node_id=node.id), server_id)
+        await rpc_create_disk(node.ip, str(server_id), server.disk_size)
     except Exception as e:
         logger.error(e)
         raise e

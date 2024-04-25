@@ -82,19 +82,19 @@ async def delete_server(server_id: int, _: User = Depends(admin)):
         raise HTTPException(status_code=500, detail=None)
 
 
-@router.post("/install/{server_id}")
-async def action(data: VPSInstall, server_id: int, user: User = Depends(active_user)):
-    server = await crud_read_server(server_id)
+@router.post("/install")
+async def action(data: VPSInstall, user: User = Depends(active_user)):
+    server = await crud_read_server(data.server_id)
 
     if server is None:
-        raise HTTPException(status_code=400)
-    elif not server.active:
-        raise HTTPException(status_code=400, detail=f"Server {server_id} is not active")
+        raise HTTPException(status_code=400, detail="Server doesn't exist")
     elif server.user_id != user.id or not user.is_superuser:
-        raise HTTPException(status_code=400)
+        raise HTTPException(status_code=401, detail="Permision denied")
+    elif not server.active:
+        raise HTTPException(status_code=400, detail="Server is not active")
 
     try:
-        await vps_create(server_id, data.os)
+        await vps_create(data.server_id, data.os)
     except ValueError as e:
         logger.error(e)
         raise HTTPException(status_code=422, detail=str(e))

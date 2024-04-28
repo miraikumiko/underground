@@ -7,23 +7,17 @@ from src.config import PRICE_CPU, PRICE_RAM, PRICE_DISK, PRICE_IPV4
 from src.payment.schemas import Pay
 from src.payment.payments import payment_request
 from src.payment.utils import xmr_course
-from src.server.schemas import (
-    ServerCreate,
-    NodeUpdate,
-    Specs,
-    IPv4Addr,
-    IPv6Addr
-)
+from src.server.schemas import ServerCreate, Specs, IPv4Addr, IPv6Addr
 from src.server.crud import (
     crud_create_server,
     crud_read_server,
-    crud_read_nodes,
-    crud_update_node,
     crud_read_ipv4s,
     crud_update_ipv4,
     crud_read_ipv6s,
     crud_update_ipv6
 )
+from src.node.crud import crud_read_nodes, crud_update_node
+from src.node.schemas import NodeUpdate
 from src.user.models import User
 from src.auth.utils import active_user
 
@@ -78,7 +72,7 @@ async def buy(data: Specs, user: User = Depends(active_user)):
         raise HTTPException(status_code=400, detail="Invalid month count")
 
     if data.ipv4:
-        ipv4s = await crud_read_ipv4s(True)
+        ipv4s = await crud_read_ipv4s(available=True)
 
         if not ipv4s:
             raise HTTPException(

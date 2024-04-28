@@ -1,5 +1,5 @@
 <domain type='kvm'>
-  <name>${server_id}</name>
+  <name>${name}</name>
   <memory unit='GiB'>${ram}</memory>
   <vcpu placement='static'>${cores}</vcpu>
   <os>
@@ -9,7 +9,7 @@
     <emulator>/usr/bin/qemu-system-x86_64</emulator>
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' discard='unmap'/>
-      <source file='/var/lib/libvirt/images/${server_id}.qcow2'/>
+      <source file='/var/lib/libvirt/images/${name}.qcow2'/>
       <target dev='sda' bus='sata'/>
       <boot order='2'/>
       <address type='drive' controller='0' bus='0' target='0' unit='0'/>

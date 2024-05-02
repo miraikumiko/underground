@@ -1,4 +1,4 @@
-import os
+import subprocess
 import libvirt
 from libvirt import libvirtError
 from mako.template import Template
@@ -8,80 +8,55 @@ from src.server.crud import crud_read_server, crud_update_server
 from src.node.crud import crud_read_node
 
 
-async def vps_create_disk(node_ip: str, name: str, disk_size: float):
-    try:
-        os.system(f"ssh root@{node_ip} 'qemu-img create /var/lib/libvirt/images/{name}.qcow2 -f qcow2 {disk_size}G'")
-    except Exception as e:
-        logger.error(e)
-        raise e
-
-
-async def vps_delete_disk(node_ip: str, name: str):
-    try:
-        os.system(f"ssh root@{node_ip} 'rm -f /var/lib/libvirt/images/{name}.qcow2'")
-    except Exception as e:
-        logger.error(e)
-        raise e
-
-
 async def vps_create(server_id: int, os: str):
-    try:
-        server = await crud_read_server(server_id)
-        node = await crud_read_node(server.node_id)
+    if os not in (
+        "debian", "ubuntu", "fedora",
+        "arch", "alpine", "gentoo",
+        "freebsd", "openbsd", "netbsd"
+    ):
+        raise Exception("Invalid OS")
 
-        with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-            with open("src/server/xml/vps.xml", "r") as file:
-                template = Template(file.read())
-                xml = template.render(
-                    name=server.id,
-                    cores=server.cores,
-                    ram=server.ram
-                )
+    server = await crud_read_server(server_id)
+    node = await crud_read_node(server.node_id)
 
-                conn.defineXML(xml)
-
-        await vps_create_disk(node.ip, str(server_id), server.disk_size)
-    except Exception as e:
-        logger.error(e)
-        raise e
+    subprocess.Popen(f"ssh root@{node.ip} 'virt-install --name {server.id} --vcpus {server.cores} --memory {server.ram} --disk /var/lib/libvirt/images/{server.id}.qcow2,size={server.disk_size} --cdrom /opt/iso/{os}.iso --os-variant unknown --graphics vnc,listen={node.ip},port={server.vnc_port}'", shell=True)
 
 
 async def vps_delete(node_ip: str, name: str):
-    try:
-        async with libvirt.open(f"qemu+ssh://{node_ip}/system") as conn:
-            vps = conn.lookupByName(name)
+    with libvirt.open(f"qemu+ssh://{node_ip}/system") as conn:
+        vps = conn.lookupByName(name)
 
+        try:
             vps.destroy()
-            vps.undefine()
+        except libvirtError:
+            pass
 
-        await vps_delete_disk(node_ip, name)
-    except Exception as e:
-        logger.error(e)
-        raise e
+        try:
+            vps.undefine()
+        except libvirtError:
+            pass
+
+    await vps_delete_disk(node_ip, name)
 
 
 async def vps_action(server_id: int, action: str) -> None:
-    try:
-        server = await crud_read_server(server_id)
-        node = await crud_read_node(server.node_id)
+    server = await crud_read_server(server_id)
+    node = await crud_read_node(server.node_id)
 
-        if server.active:
-            with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-                vps = conn.lookupByName(str(server_id))
+    if server.active:
+        with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
+            vps = conn.lookupByName(str(server_id))
 
-                if action == "on":
-                    vps.create()
-                elif action == "reboot":
-                    vps.reboot()
-                elif action == "off":
-                    vps.destroy()
-                elif action == "delete":
-                    await vps_delete(str(server_id))
-                else:
-                    raise Exception("Invalid action")
-    except Exception as e:
-        logger.error(e)
-        raise e
+            if action == "on":
+                vps.create()
+            elif action == "reboot":
+                vps.reboot()
+            elif action == "off":
+                vps.destroy()
+            elif action == "delete":
+                await vps_delete(node.ip, str(server_id))
+            else:
+                raise Exception("Invalid action")
 
 
 async def vps_status(server_id: int) -> str:
@@ -106,3 +81,17 @@ async def vps_status(server_id: int) -> str:
         except Exception as e:
             logger.error(e)
             return "unknown"
+
+
+async def vps_create_disk(node_ip: str, name: str, disk_size: int, os: str):
+    try:
+        subprocess.run(f"ssh root@{node_ip} 'qemu-img create /var/lib/libvirt/images/{name}.qcow2 -f qcow2 {disk_size}G'")
+    except FileExistsError:
+        pass
+
+
+async def vps_delete_disk(node_ip: str, name: str):
+    try:
+        subprocess.run(f"ssh root@{node_ip} 'rm -f /var/lib/libvirt/images/{name}.qcow2'")
+    except FileNotFoundError:
+        pass

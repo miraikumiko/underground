@@ -10,6 +10,7 @@ from src.payment.utils import xmr_course
 from src.server.schemas import ServerCreate, Specs, IPv4Addr, IPv6Addr
 from src.server.crud import (
     crud_create_server,
+    crud_read_servers,
     crud_read_server,
     crud_read_ipv4s,
     crud_update_ipv4,
@@ -92,14 +93,27 @@ async def buy(data: Specs, user: User = Depends(active_user)):
 
     node = nodes[0]
 
+    # Reservation port for VNC
+    servers = await crud_read_servers()
+    used_ports = []
+    vnc_port = 5900
+
+    if servers:
+        for server in servers:
+            if server.node_id == node.id:
+                used_ports.append(server.vnc_port)
+
+        while vnc_port in used_ports:
+            vnc_port += 1
+
     # Make payment request and return it uri
     server_schema = ServerCreate(
         cores=data.cores,
         ram=data.ram,
         disk_type="ssd",
         disk_size=data.disk_size,
-        traffic=1,
-        location="Spain",
+        traffic=5,
+        vnc_port=vnc_port,
         ipv4=ipv4,
         ipv6=None,
         start_at=datetime.utcnow(),

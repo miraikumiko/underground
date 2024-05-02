@@ -8,6 +8,7 @@ class ServerCreate(BaseModel):
     disk_type: str
     disk_size: int
     traffic: int
+    vnc_port: int
     ipv4: str | None
     ipv6: str | None
     start_at: datetime = datetime.utcnow()
@@ -24,6 +25,7 @@ class ServerRead(BaseModel):
     disk_type: str
     disk_size: int
     traffic: int
+    vnc_port: int
     ipv4: str
     ipv6: str
     start_at: datetime
@@ -39,6 +41,7 @@ class ServerUpdate(BaseModel):
     disk_type: str = None
     disk_size: int = None
     traffic: int = None
+    vnc_port: int
     ipv4: str = None
     ipv6: str = None
     start_at: datetime = None
@@ -51,6 +54,11 @@ class ServerUpdate(BaseModel):
 class VPSInstall(BaseModel):
     server_id: int
     os: str
+
+
+class VPSAction(BaseModel):
+    server_id: int
+    cmd: str
 
 
 class Specs(BaseModel):

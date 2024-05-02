@@ -14,6 +14,7 @@ class Server(Base):
     ipv4 = Column(String, unique=True, index=True)
     ipv6 = Column(String, unique=True, index=True)
     traffic = Column(Integer, nullable=False)
+    vnc_port = Column(Integer, nullable=False, unique=True, index=True)
     start_at = Column(TIMESTAMP, nullable=False, default=datetime.now)
     end_at = Column(TIMESTAMP, nullable=False)
     active = Column(Boolean, nullable=False, index=True, default=True)

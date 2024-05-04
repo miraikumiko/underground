@@ -13,7 +13,7 @@ async def active_user(request: Request):
 
     if user_id is not None:
         user = await crud_read_user(int(user_id))
-        
+
         if user is not None:
             if user.is_active:
                 return user

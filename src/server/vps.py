@@ -3,12 +3,13 @@ import libvirt
 from libvirt import libvirtError
 from mako.template import Template
 from src.logger import logger
+from src.server.models import Server
 from src.server.schemas import ServerUpdate
 from src.server.crud import crud_read_server, crud_update_server
 from src.node.crud import crud_read_node
 
 
-async def vps_create(server_id: int, os: str):
+async def vps_install(server: Server, os: str):
     if os not in (
         "debian", "ubuntu", "fedora",
         "arch", "alpine", "gentoo",
@@ -16,8 +17,19 @@ async def vps_create(server_id: int, os: str):
     ):
         raise Exception("Invalid OS")
 
-    server = await crud_read_server(server_id)
     node = await crud_read_node(server.node_id)
+
+    with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
+        try:
+            vps = conn.lookupByName(str(server.id))
+            state, _ = vps.state()
+
+            if state == libvirt.VIR_DOMAIN_RUNNING:
+                vps.destroy()
+
+            vps.undefine()
+        except libvirtError:
+            pass
 
     subprocess.Popen(f"ssh root@{node.ip} 'virt-install --name {server.id} --vcpus {server.cores} --memory {server.ram} --disk /var/lib/libvirt/images/{server.id}.qcow2,size={server.disk_size} --cdrom /opt/iso/{os}.iso --os-variant unknown --graphics vnc,listen={node.ip},port={server.vnc_port}'", shell=True)
 

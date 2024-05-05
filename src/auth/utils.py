@@ -4,66 +4,48 @@ from src.user.crud import crud_read_user
 
 
 async def active_user(request: Request):
-    if "auth" in request.cookies:
-        token = request.cookies["auth"]
-    else:
+    has_cookie = "auth" in request.cookies
+    auth_token = request.cookies["auth"] if has_cookie else None
+
+    if not has_cookie or auth_token is None:
         raise HTTPException(status_code=401)
 
-    user_id = await r.get(f"auth:{token}")
+    user_id = await r.get(f"auth:{auth_token}")
+    user = await crud_read_user(int(user_id))
 
-    if user_id is not None:
-        user = await crud_read_user(int(user_id))
-
-        if user is not None:
-            if user.is_active:
-                return user
-            else:
-                raise HTTPException(status_code=401)
-        else:
-            raise HTTPException(status_code=401)
+    if user is not None and user.is_active:
+        return user
     else:
         raise HTTPException(status_code=401)
 
 
 async def verified_user(request: Request):
-    if "auth" in request.cookies:
-        token = request.cookies["auth"]
-    else:
+    has_cookie = "auth" in request.cookies
+    auth_token = request.cookies["auth"] if has_cookie else None
+
+    if not has_cookie or auth_token is None:
         raise HTTPException(status_code=401)
 
-    user_id = await r.get(f"auth:{token}")
+    user_id = await r.get(f"auth:{auth_token}")
+    user = await crud_read_user(int(user_id))
 
-    if user_id is not None:
-        user = await crud_read_user(int(user_id))
-
-        if user is not None:
-            if user.is_active and user.is_verified:
-                return user
-            else:
-                raise HTTPException(status_code=401)
-        else:
-            raise HTTPException(status_code=401)
+    if user is not None or user.is_active and user.is_verified:
+        return user
     else:
         raise HTTPException(status_code=401)
 
 
 async def admin(request: Request):
-    if "auth" in request.cookies:
-        token = request.cookies["auth"]
-    else:
+    has_cookie = "auth" in request.cookies
+    auth_token = request.cookies["auth"] if has_cookie else None
+
+    if not has_cookie or auth_token is None:
         raise HTTPException(status_code=401)
 
-    user_id = await r.get(f"auth:{token}")
+    user_id = await r.get(f"auth:{auth_token}")
+    user = await crud_read_user(int(user_id))
 
-    if user_id is not None:
-        user = await crud_read_user(int(user_id))
-
-        if user is not None:
-            if user.is_active and user.is_superuser and user.is_verified:
-                return user
-            else:
-                raise HTTPException(status_code=401)
-        else:
-            raise HTTPException(status_code=401)
+    if user is not None or user.is_active and user.is_verified and user.is_superuser:
+        return user
     else:
         raise HTTPException(status_code=401)

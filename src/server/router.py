@@ -133,13 +133,13 @@ async def action(data: VPSAction, user: User = Depends(active_user)):
 @router.websocket("/status/{server_id}")
 async def status(server_id: int, ws: WebSocket):
     # Check cookie
-    auth_cookie = "auth" not in ws.cookies
-    auth_id = ws.cookies["auth"] if auth_cookie else None
-    user_id = await r.get(f"auth:{auth_id}")
+    has_cookie = "auth" in ws.cookies
+    auth_token = ws.cookies["auth"] if has_cookie else None
 
-    if auth_cookie or user_id is None:
+    if not has_cookie or auth_token is None:
         raise HTTPException(status_code=401)
 
+    user_id = await r.get(f"auth:{auth_token}")
     user = await crud_read_user(int(user_id))
 
     if user is None or not user.is_active:
@@ -170,13 +170,13 @@ async def status(server_id: int, ws: WebSocket):
 @router.websocket("/vnc/{server_id}")
 async def vnc(server_id: int, ws: WebSocket):
     # Check cookie
-    auth_cookie = "auth" not in ws.cookies
-    auth_id = ws.cookies["auth"] if auth_cookie else None
-    user_id = await r.get(f"auth:{auth_id}")
+    has_cookie = "auth" in ws.cookies
+    auth_token = ws.cookies["auth"] if has_cookie else None
 
-    if auth_cookie or user_id is None:
+    if not has_cookie or auth_token is None:
         raise HTTPException(status_code=401)
 
+    user_id = await r.get(f"auth:{auth_token}")
     user = await crud_read_user(int(user_id))
 
     if user is None or not user.is_active:

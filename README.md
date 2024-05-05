@@ -8,6 +8,8 @@ Privacy hosting
 * pip
 * redis
 * nginx
+* ssh
+* cronie
 * openrc/systemd
 * Docker (Optional)
 
@@ -35,6 +37,10 @@ pip install -r requirements/base.txt
 Or you can build Docker image:
 
 `docker buildx build -t underground.pm-be .`
+
+### Cronie
+
+`*/15 * * * * /var/www/underground.pm-be/venv/bin/python /var/www/underground.pm-be/run.py -X`
 
 ### OpenRC
 

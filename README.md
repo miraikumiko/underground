@@ -40,7 +40,7 @@ Or you can build Docker image:
 
 ### Cronie
 
-`*/15 * * * * /var/www/underground.pm-be/venv/bin/python /var/www/underground.pm-be/run.py -X`
+`*/15 * * * * /var/www/underground.pm-be/venv/bin/python /var/www/underground.pm-be/run.py -X &> /dev/null`
 
 ### OpenRC
 

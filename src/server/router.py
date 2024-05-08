@@ -1,7 +1,7 @@
 import socket
 import asyncio
-from fastapi import APIRouter, WebSocket, Depends, HTTPException
 from websockets.exceptions import ConnectionClosedOK
+from fastapi import APIRouter, WebSocket, Depends, HTTPException
 from src.database import r
 from src.logger import logger
 from src.server.schemas import ServerCreate, ServerUpdate, VPSInstall, VPSAction

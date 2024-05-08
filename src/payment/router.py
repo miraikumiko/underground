@@ -231,9 +231,26 @@ async def close(user: User = Depends(active_user)):
 @router.get("/prices")
 async def checkout():
     return {
-        "cpu": PRICE_CPU,
-        "ram": PRICE_RAM,
-        "disk": PRICE_DISK,
+        "cpu": {
+            1: PRICE_CPU,
+            2: 2 * PRICE_CPU * 2,
+            4: 4 * PRICE_CPU * 3,
+            8: 8 * PRICE_CPU * 4
+        },
+        "ram": {
+            1024: PRICE_RAM,
+            2048: 2 * PRICE_RAM * 2,
+            4096: 4 * PRICE_RAM * 3,
+            8192: 8 * PRICE_RAM * 4
+        },
+        "disk": {
+            32: PRICE_DISK,
+            64: PRICE_DISK,
+            128: PRICE_DISK,
+            256: PRICE_DISK,
+            512: PRICE_DISK,
+            1024: PRICE_DISK
+        },
         "ipv4": PRICE_IPV4,
         "xmr": await xmr_course()
     }

@@ -11,6 +11,10 @@ async def active_user(request: Request):
         raise HTTPException(status_code=401)
 
     user_id = await r.get(f"auth:{auth_token}")
+
+    if user_id is None:
+        raise HTTPException(status_code=401)
+
     user = await crud_read_user(int(user_id))
 
     if user is not None and user.is_active:
@@ -27,6 +31,10 @@ async def verified_user(request: Request):
         raise HTTPException(status_code=401)
 
     user_id = await r.get(f"auth:{auth_token}")
+
+    if user_id is None:
+        raise HTTPException(status_code=401)
+
     user = await crud_read_user(int(user_id))
 
     if user is not None or user.is_active and user.is_verified:
@@ -43,6 +51,10 @@ async def admin(request: Request):
         raise HTTPException(status_code=401)
 
     user_id = await r.get(f"auth:{auth_token}")
+
+    if user_id is None:
+        raise HTTPException(status_code=401)
+
     user = await crud_read_user(int(user_id))
 
     if user is not None or user.is_active and user.is_verified and user.is_superuser:

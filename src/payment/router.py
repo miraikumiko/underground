@@ -245,11 +245,11 @@ async def checkout():
         },
         "disk": {
             32: PRICE_DISK,
-            64: PRICE_DISK,
-            128: PRICE_DISK,
-            256: PRICE_DISK,
-            512: PRICE_DISK,
-            1024: PRICE_DISK
+            64: PRICE_DISK * 2,
+            128: PRICE_DISK * 4,
+            256: PRICE_DISK * 8,
+            512: PRICE_DISK * 16,
+            1024: PRICE_DISK * 32
         },
         "ipv4": PRICE_IPV4,
         "xmr": await xmr_course()

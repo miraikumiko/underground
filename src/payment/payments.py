@@ -3,6 +3,7 @@ from src.database import r
 from src.logger import logger
 from src.server.schemas import ServerUpdate
 from src.server.crud import crud_read_server, crud_update_server
+from src.server.vps import vps_action, vps_upgrade
 from src.payment.utils import monero_request, usd_to_xmr
 
 
@@ -40,16 +41,33 @@ async def payment_checkout(txid: str) -> None:
 
     payment = await r.hgetall(f"payment:{payment_id}")
 
-    if payment is not None:
+    if not payment:
         if payment["amount"] == amount:
-            server = await crud_read_server(payment["server_id"])
-            server_schema = ServerUpdate(
-                end_at=server.end_at + timedelta(days=30 * payment["month"]),
-                active=True
-            )
+            if payment["type"] in ("buy", "pay"):
+                server = await crud_read_server(payment["server_id"])
+                server_schema = ServerUpdate(
+                    end_at=(server.end_at + timedelta(days=(30 * payment["month"]))),
+                    active=True
+                )
 
-            await crud_update_server(server_schema, server.id)
-            await r.delete(f"payment:{payment_id}")
-            await r.delete(f'payment_uri:{data["user_id"]}')
+                await crud_update_server(server_schema, server.id)
+                await r.delete(f"payment:{payment_id}")
+                await r.delete(f'payment_uri:{data["user_id"]}')
 
-            logger.info(f'Server has been bought/payed by user with id {payment["user_id"]}')
+                if payment["type"] == "buy":
+                    logger.info(f'Server {payment["server_id"]} has been bought by user {payment["user_id"]}')
+                else:
+                    logger.info(f'Server {payment["server_id"]} has been payed by user {payment["user_id"]}')
+            elif payment["type"] == "upgrade":
+                server = await crud_read_server(payment["server_id"])
+                server_schema = ServerUpdate(
+                    end_at=(datetime.now() + timedelta(days=(30 * payment["month"])))
+                )
+
+                await crud_update_server(server_schema, server.id)
+                await vps_upgrade(server.id, *payment["data"].split(','))
+
+                await r.delete(f"payment:{payment_id}")
+                await r.delete(f'payment_uri:{data["user_id"]}')
+
+                logger.info(f'Server {payment["server_id"]} has been upgraded by user {payment["user_id"]}')

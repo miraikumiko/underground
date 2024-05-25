@@ -61,14 +61,6 @@ class VPSAction(BaseModel):
     cmd: str
 
 
-class Specs(BaseModel):
-    cores: int = 1
-    ram: int = 1024
-    disk_size: int = 32
-    ipv4: bool = True
-    month: int = 1
-
-
 class IPv4Addr(BaseModel):
     ip: str = None
     available: bool

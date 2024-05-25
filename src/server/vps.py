@@ -107,3 +107,23 @@ async def vps_delete_disk(node_ip: str, name: str):
         subprocess.run(f"ssh root@{node_ip} 'rm -f /var/lib/libvirt/images/{name}.qcow2'")
     except FileNotFoundError:
         pass
+
+
+async def vps_upgrade(server_id: int, cores: int, ram: int, disk: int) -> None:
+    server = await crud_read_server(server_id)
+    node = await crud_read_node(server.node_id)
+
+    if server.active:
+        with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
+            vps = conn.lookupByName(str(server_id))
+
+            vps.destroy()
+
+            if cores > server.cores:
+                vps.setVcpu(cores)
+
+            if ram > server.ram:
+                vps.setMemory(ram)
+
+            if disk > server.disk_size:
+                subprocess.run(f"ssh root@{node_ip} 'qemu-img resize /var/lib/libvirt/images/{server_id}.qcow2 {disk}M'")

@@ -1,13 +1,17 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import Response, JSONResponse
+from fastapi.responses import Response
 from src.database import r
 from src.logger import logger
-from src.config import PRICE_CPU, PRICE_RAM, PRICE_DISK, PRICE_IPV4
-from src.payment.schemas import Pay
+from src.payment.schemas import Buy, Pay, Upgrade
 from src.payment.payments import payment_request
-from src.payment.utils import xmr_course
-from src.server.schemas import ServerCreate, Specs, IPv4Addr, IPv6Addr
+from src.payment.utils import (
+    get_prices,
+    check_active_payment,
+    check_payment_limit,
+    make_payment_request
+)
+from src.server.schemas import ServerCreate, IPv4Addr, IPv6Addr
 from src.server.crud import (
     crud_create_server,
     crud_read_servers,
@@ -17,7 +21,7 @@ from src.server.crud import (
     crud_read_ipv6s,
     crud_update_ipv6
 )
-from src.node.crud import crud_read_nodes, crud_update_node
+from src.node.crud import crud_read_nodes, crud_read_node, crud_update_node
 from src.node.schemas import NodeUpdate
 from src.user.models import User
 from src.auth.utils import active_user
@@ -26,65 +30,33 @@ router = APIRouter(prefix="/api/payment", tags=["payments"])
 
 
 @router.post("/buy")
-async def buy(data: Specs, user: User = Depends(active_user)):
-    # Check user's active payments
-    payment_uri = await r.get(f"payment_uri:{user.id}")
-
-    if payment_uri is not None:
-        ttl = await r.ttl(f"payment_uri:{user.id}")
-
-        return JSONResponse({
-            "payment_uri": payment_uri,
-            "ttl": ttl,
-            "detail": "You already have payment"
-        }, status_code=203)
+async def buy(data: Buy, user: User = Depends(active_user)):
+    # Check if user have active payment
+    await check_active_payment(user.id)
 
     # Check user's payment limit
-    payments_count = await r.get(f"payments_count:{user.id}")
-
-    if payments_count is not None:
-        ttl = await r.ttl(f"payments_count:{user.id}")
-
-        if int(payments_count) < 3:
-            await r.set(
-                f"payments_count:{user.id}",
-                int(payments_count) + 1,
-                ex=ttl
-            )
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="You can make only 3 payment request per day"
-            )
-    else:
-        await r.set(f"payments_count:{user.id}", 1, ex=(86400))
+    await check_payment_limit(user.id)
 
     # Validate specs
     if data.cores not in (1, 2, 4, 8):
         raise HTTPException(status_code=400, detail="Invalid cores count")
-
-    if data.ram not in (1024, 2048, 4096, 8192):
+    elif data.ram not in (1024, 2048, 4096, 8192):
         raise HTTPException(status_code=400, detail="Invalid ram count")
-
-    if data.disk_size not in (32, 64, 128, 256, 512, 1024):
+    elif data.disk_size not in (32, 64, 128, 256, 512, 1024):
         raise HTTPException(status_code=400, detail="Invalid disk size")
-
-    if data.month not in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
+    elif data.month not in (1, 2, 3, 4, 5, 6, 7, 8, 9):
         raise HTTPException(status_code=400, detail="Invalid month count")
 
-    if data.ipv4:
-        ipv4s = await crud_read_ipv4s(available=True)
+    ipv4s = await crud_read_ipv4s(available=True)
 
-        if not ipv4s:
-            raise HTTPException(
-                status_code=400,
-                detail="Haven't available IPv4 addresses"
-            )
+    if not ipv4s:
+        raise HTTPException(
+            status_code=400,
+            detail="Haven't available IPv4 addresses"
+        )
 
-        ipv4 = ipv4s[0]
-        await crud_update_ipv4(IPv4Addr(available=False), ipv4)
-    else:
-        ipv4 = None
+    ipv4 = ipv4s[0]
+    await crud_update_ipv4(IPv4Addr(available=False), ipv4)
 
     nodes = await crud_read_nodes(server.cores, server.ram, server.disk_size)
 
@@ -106,7 +78,6 @@ async def buy(data: Specs, user: User = Depends(active_user)):
         while vnc_port in used_ports:
             vnc_port += 1
 
-    # Make payment request and return it uri
     server_schema = ServerCreate(
         cores=data.cores,
         ram=data.ram,
@@ -123,6 +94,7 @@ async def buy(data: Specs, user: User = Depends(active_user)):
         node_id=node.id
     )
 
+    # Update node available specs
     node_schema = NodeUpdate(
         cores_available=(node.cores_available - data.cores),
         ram_available=(node.ram_available - data.ram),
@@ -131,90 +103,112 @@ async def buy(data: Specs, user: User = Depends(active_user)):
 
     await crud_update_node(node_schema, node.id)
 
+    # Make payment request and return it uri
     server_id = await crud_create_server(server_schema)
 
     await r.set(f"inactive_server:{server_id}", server_id, ex=900)
 
-    payment_data = {
-        "user_id": user.id,
-        "server_id": server_id,
-        "month": data.month
-    }
-
-    amount = (
-        (1 / data.cores * PRICE_CPU) +
-        (1024 / data.ram * PRICE_RAM) +
-        (32 / data.disk_size * PRICE_DISK) +
-        (data.ipv4 if PRICE_IPV4 else 0)
-    ) * data.month
-
-    payment_uri = await payment_request(payment_data, float(amount))
-    ttl = await r.ttl(f"payment_uri:{user.id}")
-
-    return {"payment_uri": payment_uri, "ttl": ttl}
+    return await make_payment_request(
+        user.id,
+        server_id,
+        data.cores,
+        data.ram,
+        data.disk_size,
+        data.month
+    )
 
 
 @router.post("/pay")
 async def pay(data: Pay, user: User = Depends(active_user)):
-    # Check user's active payments
-    payment_uri = await r.get(f"payment_uri:{user.id}")
-
-    if payment_uri is not None:
-        ttl = await r.ttl(f"payment_uri:{user.id}")
-
-        return JSONResponse({
-            "payment_uri": payment_uri,
-            "ttl": ttl,
-            "detail": "You already have payment"
-        }, status_code=203)
+    # Check if user have active payment
+    await check_active_payment(user.id)
 
     # Check user's payment limit
-    payments_count = await r.get(f"payments_count:{user.id}")
-
-    if payments_count is not None:
-        ttl = await r.ttl(f"payments_count:{user.id}")
-
-        if int(payments_count) < 3:
-            await r.set(
-                f"payments_count:{user.id}",
-                int(payments_count) + 1,
-                ex=ttl
-            )
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="You can make only 3 payment request per day"
-            )
-    else:
-        await r.set(f"payments_count:{user.id}", 1, ex=(86400))
+    await check_payment_limit(user.id)
 
     # Validate params
-    if data.month < 1 or data.month > 12:
+    if data.month not in range(1, 10):
         raise HTTPException(status_code=400, detail="Invalid month count")
 
-    # Make payment request and return it uri
     server = await crud_read_server(data.server_id)
 
     if server is None:
-        raise HTTPException(status_code=400)
+        raise HTTPException(status_code=400, detail="Server doesn't exist")
 
-    payment_data = {
-        "user_id": user.id,
-        "server_id": data.server_id,
-        "month": data.month
-    }
+    if ((server.end_at - datetime.now()).days / 30) + data.month > 8:
+        raise HTTPException(status_code=400, detail="You can't pay for more than 9 months")
 
-    amount = (
-        (1 / server.cores * PRICE_CPU) +
-        (1024 / server.ram * PRICE_RAM) +
-        (32 / server.disk_size * PRICE_DISK) +
-        (server.ipv4 is not None if PRICE_IPV4 else 0)
-    ) * data.month
+    # Make payment request and return it uri
+    return await make_payment_request(
+        user.id,
+        data.server_id,
+        server.cores,
+        server.ram,
+        server.disk_size,
+        data.month
+    )
 
-    payment_uri = await payment_request(payment_data, float(amount))
-    ttl = await r.ttl(f"payment_uri:{user.id}")
 
-    return {"payment_uri": payment_uri, "ttl": ttl}
+@router.post("/upgrade")
+async def upgrade(data: Upgrade, user: User = Depends(active_user)):
+    # Check if user have active payment
+    await check_active_payment(user.id)
+
+    # Check user's payment limit
+    await check_payment_limit(user.id)
+
+    # Validate specs
+    server = await crud_read_server(data.server_id)
+
+    if server is None:
+        raise HTTPException(status_code=400, detail="Server doesn't exist")
+
+    prices = await get_prices()
+
+    if data.cores not in prices["cpu"].keys() or data.cores < server.cores:
+        raise HTTPException(status_code=400, detail="Invalid cores count")
+    elif data.ram not in prices["ram"].keys() or data.ram < server.ram:
+        raise HTTPException(status_code=400, detail="Invalid ram count")
+    elif data.disk_size not in prices["disk"].keys() or data.disk_size < server.disk_size:
+        raise HTTPException(status_code=400, detail="Invalid disk size")
+    elif data.month not in range(1, 10):
+        raise HTTPException(status_code=400, detail="Invalid month count")
+
+    # Check node specs availability
+    node = await crud_read_node(server.node_id)
+
+    if data.cores > node.cores_available:
+        raise HTTPException(
+            status_code=503, detail="This node haven't available cores"
+        )
+    elif data.ram > node.ram_available:
+        raise HTTPException(
+            status_code=503, detail="This node haven't available ram"
+        )
+    elif data.disk > node.disk_size_available:
+        raise HTTPException(
+            status_code=503, detail="This node haven't available disk space"
+        )
+
+    # Update node available specs
+    node_schema = NodeUpdate(
+        cores_available=(node.cores_available - data.cores),
+        ram_available=(node.ram_available - data.ram),
+        disk_size_available=(node.disk_size_available - data.disk_size)
+    )
+
+    await crud_update_node(node_schema, node.id)
+
+    # Make payment request and return it uri
+    return await make_payment_request(
+        "upgrade",
+        user.id,
+        data.server_id,
+        data.cores,
+        data.ram,
+        data.disk_size,
+        data=f"{server.cores},{server.ram},{server.disk_size}"
+    )
 
 
 @router.post("/close")
@@ -229,28 +223,5 @@ async def close(user: User = Depends(active_user)):
 
 
 @router.get("/prices")
-async def checkout():
-    return {
-        "cpu": {
-            1: PRICE_CPU,
-            2: 2 * PRICE_CPU * 2,
-            4: 4 * PRICE_CPU * 3,
-            8: 8 * PRICE_CPU * 4
-        },
-        "ram": {
-            1024: PRICE_RAM,
-            2048: 2 * PRICE_RAM * 2,
-            4096: 4 * PRICE_RAM * 3,
-            8192: 8 * PRICE_RAM * 4
-        },
-        "disk": {
-            32: PRICE_DISK,
-            64: PRICE_DISK * 2,
-            128: PRICE_DISK * 4,
-            256: PRICE_DISK * 8,
-            512: PRICE_DISK * 16,
-            1024: PRICE_DISK * 32
-        },
-        "ipv4": PRICE_IPV4,
-        "xmr": await xmr_course()
-    }
+async def prices():
+    return await get_prices()

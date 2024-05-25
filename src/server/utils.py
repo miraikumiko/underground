@@ -13,7 +13,7 @@ async def servers_expired_check():
     servers = await crud_read_servers()
 
     for server in servers:
-        if server.end_at + timedelta(days=7) <= datetime.now():
+        if server.end_at + timedelta(days=3) <= datetime.now():
             user = await crud_read_user(server.user_id)
             subject = "[Notification] Your VPS has been expired and deleted"
             body = "Your VPS has been expired and deleted."

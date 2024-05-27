@@ -2,15 +2,15 @@ import requests
 from requests.auth import HTTPDigestAuth
 from datetime import datetime
 from decimal import Decimal
+from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from src.database import r
-from src.server.crud import crud_read_server
 from src.logger import logger
 from src.config import (
     MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD,
-    RECOVERY_XMR_COURSE,
-    PRICE_CPU, PRICE_RAM, PRICE_DISK, PRICE_IPV4
+    PRICE_CPU, PRICE_RAM, PRICE_DISK, PRICE_IPV4, RECOVERY_XMR_COURSE
 )
+from src.server.crud import crud_read_server
 
 
 async def monero_request(method: str, params: dict = None) -> dict | None:
@@ -123,53 +123,3 @@ async def check_payment_limit(user_id: int) -> None:
             )
     else:
         await r.set(f"payments_count:{user_id}", 1, ex=86400)
-
-
-async def make_payment_request(
-    ptype: str,
-    user_id: int,
-    server_id: int,
-    cores: int,
-    ram: int,
-    disk: int,
-    month: int = None,
-    data: str = None
-) -> dict:
-    payment_data = {
-        "type": ptype,
-        "user_id": user_id,
-        "server_id": server_id,
-        "month": month,
-        "data": data
-    }
-
-    if ptype == "upgrade":
-        server = await crud_read_server(server_id)
-
-        payed_month = (server.end_at - datetime.now()) // 30
-
-        amount = ((
-            (cores * prices["cpu"][cores]) +
-            (ram * prices["ram"][ram]) +
-            (disk * prices["disk"][disk]) +
-            (prices["ipv4"])
-        ) - (
-            (server.cores * prices["cpu"][cores]) +
-            (server.ram * prices["ram"][ram]) +
-            (server.disk * prices["disk"][disk]) +
-            (prices["ipv4"])
-        )) * payed_month
-
-        payment_data["month"] = payed_month
-    else:
-        amount = (
-            (cores * prices["cpu"][cores]) +
-            (ram * prices["ram"][ram]) +
-            (disk * prices["disk"][disk]) +
-            (prices["ipv4"])
-        ) * month
-
-    payment_uri = await payment_request(payment_data, float(amount))
-    ttl = await r.ttl(f"payment_uri:{user_id}")
-
-    return {"payment_uri": payment_uri, "ttl": ttl}

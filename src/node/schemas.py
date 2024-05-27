@@ -27,12 +27,6 @@ class NodeRead(BaseModel):
 
 
 class NodeUpdate(BaseModel):
-    ip: str = None
-    cores: int = None
     cores_available: int = None
-    ram: int = None
     ram_available: int = None
-    disk_type: str = None
-    disk_size: int = None
     disk_size_available: int = None
-    location: str = None

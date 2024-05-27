@@ -4,8 +4,8 @@ from src.server.schemas import (
     ServerCreate,
     ServerRead,
     ServerUpdate,
-    IPv4Addr,
-    IPv6Addr
+    IPRead,
+    IPUpdate
 )
 
 
@@ -42,7 +42,7 @@ async def crud_delete_servers(user_id: int) -> None:
     await crud_delete(Server, attr1=Server.user_id, attr2=user_id)
 
 
-async def crud_read_ipv4s(available: bool = None) -> list[IPv4Addr]:
+async def crud_read_ipv4s(available: bool = None) -> list[IPRead]:
     if available is None:
         ipv4s = await crud_reads(IPv4)
     else:
@@ -51,11 +51,11 @@ async def crud_read_ipv4s(available: bool = None) -> list[IPv4Addr]:
     return ipv4s
 
 
-async def crud_update_ipv4(schema: IPv4Addr, ip: str) -> None:
+async def crud_update_ipv4(schema: IPUpdate, ip: str) -> None:
     await crud_update(IPv4, schema, attr1=IPv4.ip, attr2=ip)
 
 
-async def crud_read_ipv6s(available: bool = None) -> list[IPv6Addr]:
+async def crud_read_ipv6s(available: bool = None) -> list[IPRead]:
     if available is None:
         ipv6s = await crud_reads(IPv6)
     else:
@@ -64,5 +64,5 @@ async def crud_read_ipv6s(available: bool = None) -> list[IPv6Addr]:
     return ipv6s
 
 
-async def crud_update_ipv6(schema: IPv6Addr, ip: str) -> None:
+async def crud_update_ipv6(schema: IPUpdate, ip: str) -> None:
     await crud_update(IPv6, schema, attr1=IPv6.ip, attr2=ip)

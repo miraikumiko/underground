@@ -25,12 +25,18 @@ from src.auth.schemas import (
 from src.auth.utils import active_user
 from src.auth.password import password_helper
 from src.user.models import User
-from src.user.schemas import UserCreate, UserUpdate, UserSettingsCreate
+from src.user.schemas import (
+    UserCreate,
+    UserUpdate,
+    UserSettingsCreate,
+    UserSettingsUpdate
+)
 from src.user.crud import (
     crud_create_user,
     crud_update_user,
     crud_create_user_settings,
-    crud_read_user_settings
+    crud_read_user_settings,
+    crud_update_user_settings
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -167,10 +173,15 @@ async def verify(token: str):
         if user_id is None:
             raise HTTPException(status_code=400)
 
-        schema = UserUpdate()
-        schema.is_verified = True
+        UserSchema = UserUpdate()
+        UserSchema.is_verified = True
 
-        await crud_update_user(schema, int(user_id))
+        SettingsSchema = UserSettingsUpdate()
+        SettingsSchema.notifications = True
+        SettingsSchema.reset_password = True
+
+        await crud_update_user(UserSchema, int(user_id))
+        await crud_update_user_settings(SettingsSchema, int(user_id))
         await r.delete(token)
 
         return RedirectResponse('/')

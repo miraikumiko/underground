@@ -61,11 +61,16 @@ class VPSAction(BaseModel):
     cmd: str
 
 
-class IPv4Addr(BaseModel):
-    ip: str = None
+class IPCreate(BaseModel):
+    ip: str
+    available: bool = False
+
+
+class IPRead(BaseModel):
+    id: int
+    ip: str
     available: bool
 
 
-class IPv6Addr(BaseModel):
-    ip: str = None
+class IPUpdate(BaseModel):
     available: bool

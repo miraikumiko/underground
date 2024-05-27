@@ -5,13 +5,8 @@ from src.database import r
 from src.logger import logger
 from src.payment.schemas import Buy, Pay, Upgrade
 from src.payment.payments import payment_request
-from src.payment.utils import (
-    get_prices,
-    check_active_payment,
-    check_payment_limit,
-    make_payment_request
-)
-from src.server.schemas import ServerCreate, IPv4Addr, IPv6Addr
+from src.payment.utils import get_prices, check_active_payment, check_payment_limit
+from src.server.schemas import ServerCreate, IPUpdate
 from src.server.crud import (
     crud_create_server,
     crud_read_servers,
@@ -56,9 +51,8 @@ async def buy(data: Buy, user: User = Depends(active_user)):
         )
 
     ipv4 = ipv4s[0]
-    await crud_update_ipv4(IPv4Addr(available=False), ipv4)
 
-    nodes = await crud_read_nodes(server.cores, server.ram, server.disk_size)
+    nodes = await crud_read_nodes(data.cores, data.ram, data.disk_size)
 
     if not nodes:
         raise Exception("Doesn't have available nodes")
@@ -85,7 +79,7 @@ async def buy(data: Buy, user: User = Depends(active_user)):
         disk_size=data.disk_size,
         traffic=5,
         vnc_port=vnc_port,
-        ipv4=ipv4,
+        ipv4=ipv4.ip,
         ipv6=None,
         start_at=datetime.utcnow(),
         end_at=datetime.now() + timedelta(days=30 * data.month),
@@ -94,21 +88,24 @@ async def buy(data: Buy, user: User = Depends(active_user)):
         node_id=node.id
     )
 
-    # Update node available specs
+    # Update availability of node and IPs
     node_schema = NodeUpdate(
         cores_available=(node.cores_available - data.cores),
         ram_available=(node.ram_available - data.ram),
         disk_size_available=(node.disk_size_available - data.disk_size)
     )
+    ipv4_schema = IPUpdate(available=False)
 
     await crud_update_node(node_schema, node.id)
+    await crud_update_ipv4(ipv4_schema, ipv4.ip)
 
     # Make payment request and return it uri
     server_id = await crud_create_server(server_schema)
 
     await r.set(f"inactive_server:{server_id}", server_id, ex=900)
 
-    return await make_payment_request(
+    return await payment_request(
+        "buy",
         user.id,
         server_id,
         data.cores,
@@ -139,7 +136,8 @@ async def pay(data: Pay, user: User = Depends(active_user)):
         raise HTTPException(status_code=400, detail="You can't pay for more than 9 months")
 
     # Make payment request and return it uri
-    return await make_payment_request(
+    return await payment_request(
+        "pay",
         user.id,
         data.server_id,
         server.cores,
@@ -200,7 +198,7 @@ async def upgrade(data: Upgrade, user: User = Depends(active_user)):
     await crud_update_node(node_schema, node.id)
 
     # Make payment request and return it uri
-    return await make_payment_request(
+    return await payment_request(
         "upgrade",
         user.id,
         data.server_id,

@@ -5,7 +5,6 @@ class Buy(BaseModel):
     cores: int
     ram: int
     disk_size: int
-    ipv4: bool
     month: int
 
 

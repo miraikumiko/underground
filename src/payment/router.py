@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from src.database import r
 from src.logger import logger
 from src.payment.schemas import Buy, Pay, Upgrade
@@ -8,16 +8,11 @@ from src.payment.payments import payment_request
 from src.payment.utils import get_prices, check_active_payment, check_payment_limit
 from src.server.schemas import ServerCreate, IPUpdate
 from src.server.crud import (
-    crud_create_server,
-    crud_read_servers,
-    crud_read_server,
-    crud_read_ipv4s,
-    crud_update_ipv4,
-    crud_read_ipv6s,
-    crud_update_ipv6
+    crud_create_server, crud_read_servers, crud_read_server,
+    crud_read_ipv4s, crud_update_ipv4, crud_read_ipv6s, crud_update_ipv6
 )
-from src.node.crud import crud_read_nodes, crud_read_node, crud_update_node
 from src.node.schemas import NodeUpdate
+from src.node.crud import crud_read_nodes, crud_read_node, crud_update_node
 from src.user.models import User
 from src.auth.utils import active_user
 
@@ -27,7 +22,10 @@ router = APIRouter(prefix="/api/payment", tags=["payments"])
 @router.post("/buy")
 async def buy(data: Buy, user: User = Depends(active_user)):
     # Check if user have active payment
-    await check_active_payment(user.id)
+    res = await check_active_payment(user.id)
+
+    if res is not None:
+        return res
 
     # Check user's payment limit
     await check_payment_limit(user.id)
@@ -87,8 +85,6 @@ async def buy(data: Buy, user: User = Depends(active_user)):
         user_id=user.id,
         node_id=node.id
     )
-
-    # Update availability of node and IPs
     node_schema = NodeUpdate(
         cores_available=(node.cores_available - data.cores),
         ram_available=(node.ram_available - data.ram),
@@ -98,10 +94,9 @@ async def buy(data: Buy, user: User = Depends(active_user)):
 
     await crud_update_node(node_schema, node.id)
     await crud_update_ipv4(ipv4_schema, ipv4.ip)
-
-    # Make payment request and return it uri
     server_id = await crud_create_server(server_schema)
 
+    # Make payment request and return it uri
     await r.set(f"inactive_server:{server_id}", server_id, ex=900)
 
     return await payment_request(
@@ -118,7 +113,10 @@ async def buy(data: Buy, user: User = Depends(active_user)):
 @router.post("/pay")
 async def pay(data: Pay, user: User = Depends(active_user)):
     # Check if user have active payment
-    await check_active_payment(user.id)
+    res = await check_active_payment(user.id)
+
+    if res is not None:
+        return res
 
     # Check user's payment limit
     await check_payment_limit(user.id)
@@ -133,7 +131,10 @@ async def pay(data: Pay, user: User = Depends(active_user)):
         raise HTTPException(status_code=400, detail="Server doesn't exist")
 
     if ((server.end_at - datetime.now()).days / 30) + data.month > 8:
-        raise HTTPException(status_code=400, detail="You can't pay for more than 9 months")
+        raise HTTPException(
+            status_code=400,
+            detail="You can't pay for more than 9 months"
+        )
 
     # Make payment request and return it uri
     return await payment_request(
@@ -150,7 +151,10 @@ async def pay(data: Pay, user: User = Depends(active_user)):
 @router.post("/upgrade")
 async def upgrade(data: Upgrade, user: User = Depends(active_user)):
     # Check if user have active payment
-    await check_active_payment(user.id)
+    res = await check_active_payment(user.id)
+
+    if res is not None:
+        return res
 
     # Check user's payment limit
     await check_payment_limit(user.id)
@@ -215,9 +219,9 @@ async def close(user: User = Depends(active_user)):
 
     if payment_uri is not None:
         await r.delete(f"payment_uri:{user.id}")
-        return Response(status_code=204)
+        return JSONResponse({"detail": "Payment has been closed"}, status_code=204)
     else:
-        return "You haven't active payments"
+        raise HTTPException(status_code=400, detail="You haven't active payments")
 
 
 @router.get("/prices")

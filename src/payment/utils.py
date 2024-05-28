@@ -54,9 +54,9 @@ async def xmr_course() -> float:
 
 async def usd_to_xmr(usd: float) -> int:
     course = await xmr_course()
-    xmr = str(round(Decimal(usd) / Decimal(course), 12))
+    xmr = str(round(Decimal(usd) / Decimal(course), 12)).replace('.', '')
 
-    while xmr[0:1] == '0' or xmr[0:1] == '.':
+    while xmr[0:1] == '0':
         xmr = xmr[1:]
 
     return int(xmr)

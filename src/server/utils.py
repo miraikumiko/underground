@@ -19,20 +19,25 @@ async def servers_expired_check():
     for server in servers:
         if server.end_at + timedelta(days=3) <= datetime.now():
             user = await crud_read_user(server.user_id)
-            subject = "[Notification] Your VPS has been expired and deleted"
-            body = "Your VPS has been expired and deleted."
 
-            await sendmail(subject, body, user.email)
+            if user.email is not None:
+                subject = "[Notification] Your VPS has been expired and deleted"
+                body = "Your VPS has been expired and deleted."
+
+                await sendmail(subject, body, user.email)
+
             await crud_delete_server(server.id)
             await vps_delete(server.id)
 
             logger.info(f"Active server with id {server.id} has been expired and deleted")
         elif server.end_at <= datetime.now():
             user = await crud_read_user(server.user_id)
-            subject = "[Notification] VPS has been expired"
-            body = "Your VPS has been expired. Please, pay the billing, if you want to continue using it."
 
-            await sendmail(subject, body, user.email)
+            if user.email is not None:
+                subject = "[Notification] VPS has been expired"
+                body = "Your VPS has been expired. Please, pay the billing, if you want to continue using it."
+
+                await sendmail(subject, body, user.email)
 
             logger.info(f"Active server with id {server.id} has been expired")
 
@@ -65,3 +70,5 @@ async def servers_expired_check():
                 await crud_update_node(node_schema, server.node_id)
                 await crud_update_ipv4(ipv4_schema, server.ipv4)
                 await crud_delete_server(server.id)
+
+                logger.info(f"Inactive server with id {server.id} has been deleted")

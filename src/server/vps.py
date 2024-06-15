@@ -59,19 +59,16 @@ async def vps_action(server_id: int, action: str) -> None:
         with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
             vps = conn.lookupByName(str(server_id))
 
-            try:
-                if action == "on":
-                    vps.create()
-                elif action == "reboot":
-                    vps.reboot()
-                elif action == "off":
-                    vps.destroy()
-                elif action == "delete":
-                    await vps_delete(node.ip, str(server_id))
-                else:
-                    raise Exception("Invalid action")
-            except libvirtError:
-                pass
+            if action == "on":
+                vps.create()
+            elif action == "reboot":
+                vps.reboot()
+            elif action == "off":
+                vps.destroy()
+            elif action == "delete":
+                await vps_delete(node.ip, str(server_id))
+            else:
+                raise Exception("Invalid action")
 
 
 async def vps_status(server_id: int) -> str:

@@ -17,7 +17,6 @@ PORT = environ.get("PORT")
 LOG_FILE = environ.get("LOG_FILE")
 
 # Database
-DB_TYPE = environ.get("DB_TYPE")
 DB_HOST = environ.get("DB_HOST")
 DB_PORT = environ.get("DB_PORT")
 DB_DATABASE = environ.get("DB_DATABASE")
@@ -27,7 +26,6 @@ DB_PASSWORD = environ.get("DB_PASSWORD")
 # Redis
 REDIS_HOST = environ.get("REDIS_HOST")
 REDIS_PORT = environ.get("REDIS_PORT")
-REDIS_PASSWORD = environ.get("REDIS_PASSWORD")
 
 # SMTP
 SMTP_HOST = environ.get("SMTP_HOST")

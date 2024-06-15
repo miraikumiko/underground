@@ -27,7 +27,7 @@ async def servers_expired_check():
                 await sendmail(subject, body, user.email)
 
             await crud_delete_server(server.id)
-            await vps_delete(str(server.id))
+            await vps_delete(server.id)
 
             logger.info(f"Active server with id {server.id} has been expired and deleted")
         elif server.end_at <= datetime.now():

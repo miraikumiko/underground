@@ -1,13 +1,19 @@
-from conftest import client
+import pytest
+from src.database import r
 
 
-async def test_register():
-    response = client.post("http://test/api/auth/register", json={
-        "email": "test@example.com",
-        "password": "string",
-        "is_active": True,
-        "is_superuser": False,
-        "is_verified": False
+@pytest.mark.asyncio
+async def test_register(client):
+    captcha_id = 0
+    captcha_text = "test"
+
+    await r.set(f"captcha:{captcha_id}", captcha_text, ex=60)
+
+    response = await client.post("/auth/register", json={
+        "username": "test",
+        "password": "test",
+        "captcha_id": captcha_id,
+        "captcha_text": captcha_text
     })
 
     assert response.status_code == 201

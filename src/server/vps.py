@@ -1,8 +1,8 @@
 import subprocess
 import libvirt
 from libvirt import libvirtError
-from mako.template import Template
 from src.logger import logger
+from src.config import PRODUCTS
 from src.server.models import Server
 from src.server.schemas import ServerUpdate
 from src.server.crud import crud_read_server, crud_update_server
@@ -10,11 +10,7 @@ from src.node.crud import crud_read_node
 
 
 async def vps_install(server: Server, os: str):
-    if os not in (
-        "debian", "ubuntu", "fedora",
-        "arch", "alpine", "gentoo",
-        "freebsd", "openbsd", "netbsd"
-    ):
+    if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd", "netbsd"):
         raise Exception("Invalid OS")
 
     node = await crud_read_node(server.node_id)
@@ -31,19 +27,14 @@ async def vps_install(server: Server, os: str):
         except libvirtError:
             pass
 
-    subprocess.Popen(f"ssh root@{node.ip} 'virt-install --name {server.id} --vcpus {server.cores} --memory {server.ram} --disk /var/lib/libvirt/images/{server.id}.qcow2,size={server.disk_size} --cdrom /opt/iso/{os}.iso --os-variant unknown --graphics vnc,listen={node.ip},port={server.vnc_port}'", shell=True)
+    subprocess.Popen(f"ssh root@{node.ip} 'virt-install --name {server.id} --vcpus {server.cores} --memory {server.ram * 1000} --disk /var/lib/libvirt/images/{server.id}.qcow2,size={server.disk_size} --cdrom /opt/iso/{os}.iso --os-variant unknown --graphics vnc,listen={node.ip},port={server.vnc_port}'", shell=True)
 
 
 async def vps_delete(node_ip: str, name: str):
     with libvirt.open(f"qemu+ssh://{node_ip}/system") as conn:
-        vps = conn.lookupByName(name)
-
         try:
+            vps = conn.lookupByName(name)
             vps.destroy()
-        except libvirtError:
-            pass
-
-        try:
             vps.undefine()
         except libvirtError:
             pass
@@ -55,7 +46,7 @@ async def vps_action(server_id: int, action: str) -> None:
     server = await crud_read_server(server_id)
     node = await crud_read_node(server.node_id)
 
-    if server.active:
+    if server.is_active:
         with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
             vps = conn.lookupByName(str(server_id))
 
@@ -109,21 +100,21 @@ async def vps_delete_disk(node_ip: str, name: str):
         pass
 
 
-async def vps_upgrade(server_id: int, cores: int, ram: int, disk: int) -> None:
+async def vps_upgrade(server_id: int, vps_id: int) -> None:
     server = await crud_read_server(server_id)
     node = await crud_read_node(server.node_id)
 
-    if server.active:
+    if server.is_active:
         with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
             vps = conn.lookupByName(str(server_id))
 
             vps.destroy()
 
-            if cores > server.cores:
+            if PRODUCTS["vps"][vps_id]["cores"] > server.cores:
                 vps.setVcpu(cores)
 
-            if ram > server.ram:
+            if PRODUCTS["vps"][vps_id]["ram"] > server.ram:
                 vps.setMemory(ram)
 
-            if disk > server.disk_size:
-                subprocess.run(f"ssh root@{node_ip} 'qemu-img resize /var/lib/libvirt/images/{server_id}.qcow2 {disk}M'")
+            if PRODUCTS["vps"][vps_id]["disk_size"] > server.disk_size:
+                subprocess.run(f"ssh root@{node.ip} 'qemu-img resize /var/lib/libvirt/images/{server_id}.qcow2 {PRODUCTS['vps'][str(vps_id)]['disk_size']}G'")

@@ -1,89 +1,41 @@
 from datetime import datetime, timedelta
 from src.database import r
 from src.logger import logger
+from src.config import PRODUCTS
 from src.server.schemas import ServerUpdate
 from src.server.crud import crud_read_server, crud_update_server
 from src.server.vps import vps_action, vps_upgrade
-from src.payment.utils import monero_request, usd_to_xmr, get_prices
+from src.payment.utils import monero_request, usd_to_xmr
 
 
-async def payment_request(
-    ptype: str,
-    user_id: int,
-    server_id: int,
-    cores: int,
-    ram: int,
-    disk: int,
-    month: int = None,
-    data: str = None
-) -> dict:
-    payment_data = {
-        "type": ptype,
-        "user_id": user_id,
-        "server_id": server_id,
-        "month": month
-    }
-
-    if data is not None: payment_data["data"] = data
-
-    prices = await get_prices()
-
-    if ptype == "upgrade":
-        server = await crud_read_server(server_id)
-
-        payed_month = (server.end_at - datetime.now()) // 30
-
-        amount = ((
-            (cores * prices["cpu"][cores]) +
-            (ram * prices["ram"][ram]) +
-            (disk * prices["disk"][disk]) +
-            (prices["ipv4"])
-        ) - (
-            (server.cores * prices["cpu"][cores]) +
-            (server.ram * prices["ram"][ram]) +
-            (server.disk * prices["disk"][disk]) +
-            (prices["ipv4"])
-        )) * payed_month
-
-        payment_data["month"] = payed_month
-    else:
-        amount = (
-            (cores * prices["cpu"][cores]) +
-            (ram * prices["ram"][ram]) +
-            (disk * prices["disk"][disk]) +
-            (prices["ipv4"])
-        ) * month
-
+async def payment_request(type: str, server_id: int, vps_id: int = None) -> dict:
     res = await monero_request("make_integrated_address")
-
     address = res["result"]["integrated_address"]
     payment_id = res["result"]["payment_id"]
 
-    amount_xmr = await usd_to_xmr(float(amount))
+    server = await crud_read_server(server_id)
 
-    res = await monero_request("make_uri", {
-        "address": address,
-        "amount": amount_xmr
-    })
+    if type == "upgrade":
+        amount = await usd_to_xmr(PRODUCTS["vps"][str(vps_id)]["price"])
+    else:
+        amount = await usd_to_xmr(PRODUCTS["vps"][str(server.vps_id)]["price"])
 
+    res = await monero_request("make_uri", {"address": address, "amount": amount})
     payment_uri = res["result"]["uri"]
 
-    payment_data["payment_id"] = payment_id
-    payment_data["amount"] = amount_xmr
-    payment_data["payment_uri"] = payment_uri
+    payment_data = {"type": type, "payment_id": payment_id, "amount": amount}
+    if server_id is not None: payment_data["server_id"] = server_id
+    if vps_id is not None: payment_data["vps_id"] = vps_id
 
     await r.hset(f"payment:{payment_id}", mapping=payment_data)
     await r.expire(f"payment:{payment_id}", 900)
-    await r.set(f'payment_uri:{payment_data["user_id"]}', payment_uri, ex=900)
+    await r.set(f"payment_uri:{server.user_id}", payment_uri, ex=900)
 
-    ttl = await r.ttl(f"payment_uri:{user_id}")
-
-    return {"payment_uri": payment_uri, "ttl": ttl}
+    return {"payment_uri": payment_uri, "ttl": 900}
 
 
 async def payment_checkout(txid: str) -> None:
     res = await monero_request("get_transfer_by_txid", {"txid": txid})
-
     payment_id = res["result"]["transfer"]["payment_id"]
     amount = res["result"]["transfer"]["amount"]
 
@@ -91,31 +43,21 @@ async def payment_checkout(txid: str) -> None:
 
     if not payment:
         if payment["amount"] == amount:
-            if payment["type"] in ("buy", "pay"):
-                server = await crud_read_server(payment["server_id"])
+            server = await crud_read_server(payment["server_id"])
+
+            if payment["type"] == "buy":
+                server_schema = ServerUpdate(active=True)
+                await crud_update_server(server_schema, payment["server_id"])
+            elif payment["type"] == "pay":
                 server_schema = ServerUpdate(
-                    end_at=(server.end_at + timedelta(days=(30 * payment["month"]))),
+                    end_at=(server.end_at - server.start_at + timedelta(days=31)),
                     active=True
                 )
-
-                await crud_update_server(server_schema, server.id)
-                await r.delete(f"payment:{payment_id}")
-                await r.delete(f'payment_uri:{payment["user_id"]}')
-
-                if payment["type"] == "buy":
-                    logger.info(f'Server {payment["server_id"]} has been bought by user {payment["user_id"]}')
-                else:
-                    logger.info(f'Server {payment["server_id"]} has been payed by user {payment["user_id"]}')
+                await crud_update_server(server_schema, payment["server_id"])
             elif payment["type"] == "upgrade":
-                server = await crud_read_server(payment["server_id"])
-                server_schema = ServerUpdate(
-                    end_at=(datetime.now() + timedelta(days=(30 * payment["month"])))
-                )
+                await vps_upgrade(payment["server_id"], payment["vps_id"])
 
-                await crud_update_server(server_schema, server.id)
-                await vps_upgrade(server.id, payment["data"].split(','))
+            await r.delete(f"payment:{payment_id}")
+            await r.delete(f'payment_uri:{server.user_id}')
 
-                await r.delete(f"payment:{payment_id}")
-                await r.delete(f'payment_uri:{payment["user_id"]}')
-
-                logger.info(f'Server {payment["server_id"]} has been upgraded by user {payment["user_id"]}')
+            logger.info(f'Checkout {payment_id} {payment["server_id"]}')

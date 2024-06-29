@@ -1,14 +1,16 @@
-import requests
-from requests.auth import HTTPDigestAuth
 from datetime import datetime
 from decimal import Decimal
+from io import BytesIO
+import requests
+from requests.auth import HTTPDigestAuth
+from qrcode import QRCode
+from qrcode.constants import ERROR_CORRECT_L
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from src.database import r
 from src.logger import logger
 from src.config import (
-    MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD,
-    PRICE_CPU, PRICE_RAM, PRICE_DISK, PRICE_IPV4, RECOVERY_XMR_COURSE
+    MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD, MONERO_RECOVERY_COURSE
 )
 from src.server.crud import crud_read_server
 
@@ -17,16 +19,13 @@ async def monero_request(method: str, params: dict = None) -> dict | None:
     if params is None:
         params = {}
 
-    res = requests.post(f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}/json_rpc",
-        json={
-            "jsonrpc": "2.0",
-            "id": "0",
-            "method": method,
-            "params": params
-        }, headers={"Content-Type": "application/json"},
+    res = requests.post(
+        f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}/json_rpc",
+        json={"jsonrpc": "2.0", "id": "0", "method": method, "params": params},
+        headers={"Content-Type": "application/json"},
         auth=HTTPDigestAuth(MONERO_RPC_USER, MONERO_RPC_PASSWORD)
     )
-    
+
     if res.status_code == 200:
         return res.json()
 
@@ -41,15 +40,13 @@ async def xmr_course() -> float:
             if res.status_code == 200:
                 usd = res.json()["monero"]["usd"]
 
-                await r.set("xmr_course", usd, ex=86400)
+                await r.set("xmr_course", usd, ex=28800)
 
-                return usd
-        else:
-            return usd
+        return usd
     except Exception as e:
         logger.error(e)
-        await r.set("xmr_course", RECOVERY_XMR_COURSE, ex=86400)
-        return RECOVERY_XMR_COURSE
+        await r.set("xmr_course", MONERO_RECOVERY_COURSE, ex=28800)
+        return MONERO_RECOVERY_COURSE
 
 
 async def usd_to_xmr(usd: float) -> int:
@@ -60,35 +57,6 @@ async def usd_to_xmr(usd: float) -> int:
         xmr = xmr[1:]
 
     return int(xmr)
-
-
-async def get_prices():
-    prices = {
-        "cpu": {
-            1: PRICE_CPU,
-            2: 2 * PRICE_CPU * 2,
-            4: 4 * PRICE_CPU * 3,
-            8: 8 * PRICE_CPU * 4
-        },
-        "ram": {
-            1024: PRICE_RAM,
-            2048: 2 * PRICE_RAM * 2,
-            4096: 4 * PRICE_RAM * 3,
-            8192: 8 * PRICE_RAM * 4
-        },
-        "disk": {
-            32: PRICE_DISK,
-            64: PRICE_DISK * 2,
-            128: PRICE_DISK * 4,
-            256: PRICE_DISK * 8,
-            512: PRICE_DISK * 16,
-            1024: PRICE_DISK * 32
-        },
-        "ipv4": PRICE_IPV4,
-        "xmr": await xmr_course()
-    }
-
-    return prices
 
 
 async def check_active_payment(user_id: int) -> JSONResponse:
@@ -123,3 +91,15 @@ async def check_payment_limit(user_id: int) -> None:
             )
     else:
         await r.set(f"payments_count:{user_id}", 1, ex=86400)
+
+
+async def draw_qrcode(text: str):
+    qr = QRCode(version=1, error_correction=ERROR_CORRECT_L, box_size=10, border=4)
+    qr.add_data(text)
+    qr.make()
+    img = qr.make_image()
+    img_bytes = BytesIO()
+    img.save(img_bytes, format="PNG")
+    img_bytes.seek(0)
+
+    return img_bytes

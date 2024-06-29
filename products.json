@@ -1,0 +1,56 @@
+{
+    "vps": {
+        "0": {
+            "cores": 1,
+            "cores_desc": "2.80GHz",
+            "ram": 1,
+            "ram_desc": "DDR3 ECC",
+            "disk_type": "hdd",
+            "disk_size": 50,
+            "disk_desc": "HDD",
+            "ipv4": true,
+            "ipv6": false,
+            "traffic": 0,
+            "price": 5
+        },
+        "1": {
+            "cores": 1,
+            "cores_desc": "2.80GHz",
+            "ram": 2,
+            "ram_desc": "DDR3 ECC",
+            "disk_type": "hdd",
+            "disk_size": 100,
+            "disk_desc": "HDD",
+            "ipv4": true,
+            "ipv6": false,
+            "traffic": 0,
+            "price": 10
+        },
+        "2": {
+            "cores": 2,
+            "cores_desc": "2.80GHz",
+            "ram": 4,
+            "ram_desc": "DDR3 ECC",
+            "disk_type": "hdd",
+            "disk_size": 200,
+            "disk_desc": "HDD",
+            "ipv4": true,
+            "ipv6": false,
+            "traffic": 0,
+            "price": 20
+        },
+        "3": {
+            "cores": 4,
+            "cores_desc": "2.80GHz",
+            "ram": 8,
+            "ram_desc": "DDR3 ECC",
+            "disk_type": "hdd",
+            "disk_size": 400,
+            "disk_desc": "HDD",
+            "ipv4": true,
+            "ipv6": false,
+            "traffic": 0,
+            "price": 40
+        }
+    }
+}

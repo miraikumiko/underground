@@ -16,31 +16,9 @@ from src.server.vps import vps_install, vps_action, vps_status
 from src.node.crud import crud_read_node
 from src.user.models import User
 from src.user.crud import crud_read_user
-from src.auth.utils import active_user, admin
+from src.auth.utils import active_user
 
 router = APIRouter(prefix="/api/server", tags=["servers"])
-
-
-@router.post("/create")
-async def create_server(data: ServerCreate, _: User = Depends(admin)):
-    try:
-        server_id = await crud_create_server(data)
-
-        return {"id": server_id}
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail=None)
-
-
-@router.get("/all")
-async def read_servers(_: User = Depends(admin)):
-    try:
-        servers = await crud_read_servers()
-
-        return servers
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail=None)
 
 
 @router.get("/me")
@@ -54,40 +32,6 @@ async def read_my_servers(user: User = Depends(active_user)):
         raise HTTPException(status_code=500, detail=None)
 
 
-@router.get("/{server_id}")
-async def read_server(server_id: int, _: User = Depends(admin)):
-    try:
-        server = await crud_read_server(server_id)
-
-        if server is None:
-            raise ValueError(f"Server with id {server_id} doesn't exist")
-
-        return server
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail=None)
-
-
-@router.patch("/{server_id}")
-async def update_server(server_id: int, data: ServerUpdate, _: User = Depends(admin)):
-    try:
-        await crud_update_server(data, server_id)
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail=None)
-
-
-@router.delete("/{server_id}")
-async def delete_server(server_id: int, _: User = Depends(admin)):
-    try:
-        await crud_delete_server(server_id)
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail=None)
-
-
 @router.post("/install")
 async def install(data: VPSInstall, user: User = Depends(active_user)):
     server = await crud_read_server(data.server_id)
@@ -96,7 +40,7 @@ async def install(data: VPSInstall, user: User = Depends(active_user)):
         raise HTTPException(status_code=400, detail="Server doesn't exist")
     elif server.user_id != user.id or not user.is_superuser:
         raise HTTPException(status_code=401, detail="Permision denied")
-    elif not server.active:
+    elif not server.is_active:
         raise HTTPException(status_code=400, detail="Server is not active")
 
     try:
@@ -116,7 +60,7 @@ async def action(data: VPSAction, user: User = Depends(active_user)):
 
         if server is None:
             raise HTTPException(status_code=400)
-        elif not server.active:
+        elif not server.is_active:
             raise HTTPException(status_code=400, detail=f"Server {data.server_id} is not active")
         elif server.user_id != user.id or not user.is_superuser:
             raise HTTPException(status_code=400)
@@ -148,7 +92,7 @@ async def status(server_id: int, ws: WebSocket):
     # Status logic
     server = await crud_read_server(server_id)
 
-    if server is None or not server.active:
+    if server is None or not server.is_active:
         raise HTTPException(status_code=400)
     elif server.user_id != user.id or not user.is_superuser:
         raise HTTPException(status_code=401, detail="Permision denied")
@@ -159,7 +103,7 @@ async def status(server_id: int, ws: WebSocket):
         try:
             stat = await vps_status(server_id)
             await ws.send_text(stat)
-            await asyncio.sleep(10)
+            await asyncio.sleep(5)
         except ConnectionClosedOK:
             break
         except Exception as e:
@@ -185,7 +129,7 @@ async def vnc(server_id: int, ws: WebSocket):
     # VNC logic
     server = await crud_read_server(server_id)
 
-    if server is None or not server.active:
+    if server is None or not server.is_active:
         raise HTTPException(status_code=400, detail="Server doesn't exist")
     elif server.user_id != user.id or not user.is_superuser:
         raise HTTPException(status_code=401, detail="Permision denied")

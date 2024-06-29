@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class Login(BaseModel):
@@ -16,15 +16,6 @@ class Register(BaseModel):
 class ResetPassword(BaseModel):
     old_password: str
     new_password: str
-
-
-class ResetEmail(BaseModel):
-    email: EmailStr
-
-
-class Recovery(BaseModel):
-    username: str
-    email: str
 
 
 class Captcha(BaseModel):

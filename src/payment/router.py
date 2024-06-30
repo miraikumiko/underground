@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/payment", tags=["payments"])
 
 
 @router.post("/buy")
-async def checkout(data: Buy, user: User = Depends(active_user)):
+async def buy(data: Buy, user: User = Depends(active_user)):
     # Check if user have active payment
     res = await check_active_payment(user.id)
 
@@ -30,10 +30,10 @@ async def checkout(data: Buy, user: User = Depends(active_user)):
     # Check user's payment limit
     await check_payment_limit(user.id)
 
+    # Check availability of resources
     if not [vps_id for vps_id in PRODUCTS["vps"] if int(vps_id) == data.vps_id]:
         raise HTTPException(status_code=400, detail="This product doesn't exist")
 
-    # Check availability of resources
     if PRODUCTS["vps"][str(data.vps_id)]["ipv4"]:
         subnet = ipaddress.IPv4Network(SUBNET_IPV4)
 
@@ -105,7 +105,7 @@ async def checkout(data: Buy, user: User = Depends(active_user)):
 
 
 @router.post("/pay")
-async def checkout(data: Pay, user: User = Depends(active_user)):
+async def pay(data: Pay, user: User = Depends(active_user)):
     # Check if user have active payment
     res = await check_active_payment(user.id)
 
@@ -124,6 +124,24 @@ async def checkout(data: Pay, user: User = Depends(active_user)):
 
     # Make payment request and return it uri
     return await payment_request("pay", data.server_id)
+
+
+@router.post("/upgrade")
+async def upgrade(data: Upgrade, user: User = Depends(active_user)):
+    # Check if user have active payment
+    res = await check_active_payment(user.id)
+
+    if res is not None: return res
+
+    # Check user's payment limit
+    await check_payment_limit(user.id)
+
+    # Check availability of resources
+    if not [vps_id for vps_id in PRODUCTS["vps"] if int(vps_id) == data.vps_id]:
+        raise HTTPException(status_code=400, detail="This product doesn't exist")
+
+    # Make payment request and return it uri
+    return await payment_request("upgrade", data.server_id, data.vps_id)
 
 
 @router.post("/close")

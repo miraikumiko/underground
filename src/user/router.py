@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from src.logger import logger
 from src.user.models import User
@@ -12,23 +12,13 @@ router = APIRouter(prefix="/api/user", tags=["users"])
 
 @router.get("/me")
 async def read_me(user: User = Depends(active_user)):
-    try:
-        del user.password
-        return user
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500)
+    del user.password
+    return user
 
 
 @router.patch("/me")
 async def update_me(data: UserUpdate, user: User = Depends(active_user)):
-    try:
-        await crud_update_user(data, user.id)
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500)
+    await crud_update_user(data, user.id)
 
 
 @router.delete("/me")

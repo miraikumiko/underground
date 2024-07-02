@@ -25,3 +25,23 @@ async def active_user(request: Request):
         return user
     else:
         raise HTTPException(status_code=401)
+
+
+async def auth_check(request: Request):
+    has_cookie = "auth" in request.cookies
+    auth_token = request.cookies["auth"] if has_cookie else None
+
+    if not has_cookie or auth_token is None:
+        return None
+
+    user_id = await r.get(f"auth:{auth_token}")
+
+    if user_id is None:
+        return None
+
+    user = await crud_read_user(int(user_id))
+
+    if user is not None and user.is_active:
+        return user
+    else:
+        return None

@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
@@ -101,5 +102,6 @@ async def draw_qrcode(text: str):
     img_bytes = BytesIO()
     img.save(img_bytes, format="PNG")
     img_bytes.seek(0)
+    qrcode = base64.b64encode(img_bytes.getvalue()).decode("utf-8")
 
-    return img_bytes
+    return qrcode

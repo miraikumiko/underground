@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header>
+    <div id="status">
+      <div id="personal">
+        {% if user is none %}
+          <a class="btn0" href="/login">login</a>
+          <a class="btn0" href="/register">register</a>
+        {% else %}
+          <div class="dropdown">
+            <button class="btn0">{{ user.username }}</button>
+            <div class="dropdown-content">
+              <a class="btn0" href="/reset-password">Change password</a>
+              <a class="btn0" href="/delete-account">Delete account</a>
+              <form method="post" action="/logout">
+                <button class="btn0" type="submit">Logout</button>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+      <div id="other">
+        <p id="course">1 XMR = ${{ course }}</p>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div id="servers">
+      <div id="vps-container">
+        {% for i in products %}
+          <div class="vps">
+            <span>vCPU: {{ products[i]["cores"] }} [{{ products[i]["cores_desc"] }}]</span>
+            <span>RAM: {{ products[i]["ram"] }}GB [{{ products[i]["ram_desc"] }}]</span>
+            <span>Disk: {{ products[i]["disk_size"] }}GB [{{ products[i]["disk_desc"] }}]</span>
+            <span>IPv4: {% if products[i]["ipv4"] %} Yes {% else %} No {% endif %}</span>
+            <span>IPv6: {% if products[i]["ipv6"] %} Yes {% else %} No {% endif %}</span>
+            <div class="bottom">
+              <span>Total: $<span class="price">{{ products[i]["price"] }}</span>/mo</span>
+              <a class="btn1" href="/checkout/{{ i }}">Checkout</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </main>
+  <footer>
+    <h2>About</h2>
+    <p>It's private hosting for cryptocurrency <b class="glow">XMR</b>, that doesn't spy its users.</p>
+    <p>Also available on <a href="http://underupptqt5efxaxutkfgjikkwu2lsoosyyooxs45tqkeg7dfdytwqd.onion" style="color: #c145ff">.onion</a> and <a href="http://undergroundpm.i2p" style="color: #c145ff">.i2p</a>, all <a href="https://git.underground.pm">sources</a> is open and available under <b class="glow">GPLv3</b> licence.</p>
+    <p>If law in the server's location is violated, account will be deleted.</p>
+    <p>We publish news at <a href="https://mastodon.social/@undergroundpm" style="color: #8c8dff">Mastodon</a>, if you need a help you can write <a href="mailto:underground@underground.pm">admin</a>.</p>
+  </footer>
+{% endblock %}

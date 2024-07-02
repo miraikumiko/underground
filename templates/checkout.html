@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <form class="form0">
+    <h1>15:00</h1>
+    <img src="data:image/png;base64,{{ qrcode }}" alt="qrcode">
+    <input name="uri" value="{{ uri }}" disabled>
+    <a class="btn1">End payment request</a>
+  </form>
+  <script>
+    setInterval(() => {
+      let ttl = {{ ttl }};
+      let minutes = Math.floor(ttl / 60);
+      let seconds = ttl % 60;
+
+      while (minutes >= 0 && seconds >= 0) {
+        if (minutes < 10) minutes = `0${minutes}`;
+        if (seconds < 10) seconds = `0${seconds}`;
+        document.querySelector("h1").innerText = `${minutes}:${seconds}`;
+        ttl--;
+      }
+    }, 1000);
+  </script>
+{% endblock %}

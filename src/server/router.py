@@ -53,7 +53,7 @@ async def install(server_id: int, os: str = Form(...), user: User = Depends(acti
         })
 
 
-@router.get("/action/{server_id}")
+@router.post("/action/{server_id}")
 async def action(server_id: int, user: User = Depends(active_user)):
     # Check auth
     if user is None:

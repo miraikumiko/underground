@@ -58,17 +58,40 @@ async def register(request: Request):
 
 
 @router.get("/reset-password")
-async def change_password(request: Request, _: User = Depends(active_user)):
+async def change_password(request: Request, user: User = Depends(active_user)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
     return templates.TemplateResponse("change-password.html", {"request": request})
 
 
 @router.get("/delete-account")
-async def delete_account(request: Request, _: User = Depends(active_user)):
+async def delete_account(request: Request, user: User = Depends(active_user)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
+
     return templates.TemplateResponse("delete-account.html", {"request": request})
 
 
 @router.post("/logout")
-async def logout(_: User = Depends(active_user)):
+async def logout(user: User = Depends(active_user)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
+
     return RedirectResponse('/', status_code=301, headers={
         "Content-Type": "application/x-www-form-urlencoded",
         "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax; Secure'
@@ -77,6 +100,14 @@ async def logout(_: User = Depends(active_user)):
 
 @router.get("/dashboard")
 async def dashboard(request: Request, user: User = Depends(active_user)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
+
     course = await xmr_course()
     servers = await crud_read_servers(user.id)
     servers = [server for server in servers if server.is_active]
@@ -264,6 +295,14 @@ async def pay(server_id: int, request: Request, user: User = Depends(active_user
 
 @router.get("/upgrademenu/{server_id}")
 async def upgrade(server_id: int, request: Request, user: User = Depends(active_user)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
+
     server = await crud_read_server(server_id)
     products = {key: value for key, value in PRODUCTS["vps"].items() if int(key) > server.vps_id}
 
@@ -276,6 +315,13 @@ async def upgrade(server_id: int, request: Request, user: User = Depends(active_
 
 @router.get("/install/{server_id}")
 async def install(server_id: int, request: Request, user: User = Depends(active_user)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
     return templates.TemplateResponse("install.html", {
       "request": request,
       "server_id": server_id
@@ -284,6 +330,13 @@ async def install(server_id: int, request: Request, user: User = Depends(active_
 
 @router.get("/vnc/{server_id}")
 async def vnc(server_id: int, request: Request, user: User = Depends(active_user)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
     return templates.TemplateResponse("vnc.html", {
         "request": request,
         "server_id": server_id

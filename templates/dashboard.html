@@ -39,11 +39,15 @@
             <td>{% if server.ipv4 %} {{ server.ipv4 }} {% else %} - {% endif %}</td>
             <td id="status-{{ server.id }}"></td>
             <td>{{ server.end_at|to_days }}</td>
-            <td><a href="/api/server/action/{{ server.id }}">power</a></td>
-            <td><a href="/install/{{ server.id }}">install</a></td>
-            <td><a href="/vnc/{{ server.id }}">vnc</a></td>
-            <td><a href="/pay/{{ server.id }}">pay</a></td>
-            <td><a href="/upgrademenu/{{ server.id }}">upgrade</a></td>
+            <td>
+              <form method="post" action="/api/server/action/{{ server.id }}">
+                <button class="btn0" style="display: contents" type="submit">power</button>
+              </form>
+            </td>
+            <td><a class="btn0" style="display: contents" href="/install/{{ server.id }}">install</a></td>
+            <td><a class="btn0" style="display: contents" href="/vnc/{{ server.id }}">vnc</a></td>
+            <td><a class="btn0" style="display: contents" href="/pay/{{ server.id }}">pay</a></td>
+            <td><a class="btn0" style="display: contents" href="/upgrademenu/{{ server.id }}">upgrade</a></td>
           </tr>
           <script>
             const socket{{ server.id }} = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/server/status/{{ server.id }}`);

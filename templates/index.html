@@ -18,6 +18,7 @@
               </form>
             </div>
           </div>
+          <a class="btn0" href="/dashboard">dashboard</a>
         {% endif %}
       </div>
       <div id="other">
@@ -37,7 +38,7 @@
             <span>IPv6: {% if products[i]["ipv6"] %} Yes {% else %} No {% endif %}</span>
             <div class="bottom">
               <span>Total: $<span class="price">{{ products[i]["price"] }}</span>/mo</span>
-              <a class="btn1" href="/checkout/{{ i }}">Checkout</a>
+              <a class="btn1" href="/buy/{{ i }}">Checkout</a>
             </div>
           </div>
         {% endfor %}
@@ -46,7 +47,7 @@
   </main>
   <footer>
     <h2>About</h2>
-    <p>It's private hosting for cryptocurrency <b class="glow">XMR</b>, that doesn't spy its users.</p>
+    <p>It's private KVM hosting for cryptocurrency <b class="glow">XMR</b>, that doesn't spy its users.</p>
     <p>Also available on <a href="http://underupptqt5efxaxutkfgjikkwu2lsoosyyooxs45tqkeg7dfdytwqd.onion" style="color: #c145ff">.onion</a> and <a href="http://undergroundpm.i2p" style="color: #c145ff">.i2p</a>, all <a href="https://git.underground.pm">sources</a> is open and available under <b class="glow">GPLv3</b> licence.</p>
     <p>If law in the server's location is violated, account will be deleted.</p>
     <p>We publish news at <a href="https://mastodon.social/@undergroundpm" style="color: #8c8dff">Mastodon</a>, if you need a help you can write <a href="mailto:underground@underground.pm">admin</a>.</p>

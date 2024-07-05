@@ -1,10 +1,10 @@
 import socket
 import asyncio
-from websockets.exceptions import ConnectionClosedOK
-from fastapi import APIRouter, WebSocket, Depends, HTTPException
+from fastapi import APIRouter, WebSocket, Form, Depends
+from fastapi.responses import RedirectResponse
 from src.database import r
 from src.logger import logger
-from src.server.schemas import ServerCreate, ServerUpdate, VPSInstall, VPSAction
+from src.server.schemas import ServerCreate, ServerUpdate
 from src.server.crud import (
     crud_create_server,
     crud_read_servers,
@@ -13,90 +13,94 @@ from src.server.crud import (
     crud_delete_server
 )
 from src.server.vps import vps_install, vps_action, vps_status
+from src.server.utils import read_from_vnc, read_from_websocket
 from src.node.crud import crud_read_node
 from src.user.models import User
 from src.user.crud import crud_read_user
-from src.auth.utils import active_user
+from src.auth.utils import active_user, active_user_ws
 
 router = APIRouter(prefix="/api/server", tags=["servers"])
 
 
-@router.get("/me")
-async def read_my_servers(user: User = Depends(active_user)):
+@router.post("/install/{server_id}")
+async def install(server_id: int, os: str = Form(...), user: User = Depends(active_user)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
+
+    # Check server
+    server = await crud_read_server(server_id)
+
+    if server is None or not server.is_active or server.user_id != user.id:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Forbidden",
+            "msg2": "Invalid server"
+        })
+
+    # Action logic
     try:
-        servers = await crud_read_servers(user.id)
-
-        return servers
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail=None)
-
-
-@router.post("/install")
-async def install(data: VPSInstall, user: User = Depends(active_user)):
-    server = await crud_read_server(data.server_id)
-
-    if server is None:
-        raise HTTPException(status_code=400, detail="Server doesn't exist")
-    elif server.user_id != user.id or not user.is_superuser:
-        raise HTTPException(status_code=401, detail="Permision denied")
-    elif not server.is_active:
-        raise HTTPException(status_code=400, detail="Server is not active")
-
-    try:
-        await vps_install(server, data.os)
+        await vps_install(server, os)
+        return RedirectResponse("/dashboard", status_code=301)
     except ValueError as e:
-        logger.error(e)
-        raise HTTPException(status_code=422, detail=str(e))
-    except Exception as e:
-        logger.error(e)
-        raise HTTPException(status_code=500, detail=str(e))
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unprocessable Content",
+            "msg2": str(e)
+        })
 
 
-@router.post("/action")
-async def action(data: VPSAction, user: User = Depends(active_user)):
-    try:
-        server = await crud_read_server(data.server_id)
+@router.get("/action/{server_id}")
+async def action(server_id: int, user: User = Depends(active_user)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
 
-        if server is None:
-            raise HTTPException(status_code=400)
-        elif not server.is_active:
-            raise HTTPException(status_code=400, detail=f"Server {data.server_id} is not active")
-        elif server.user_id != user.id or not user.is_superuser:
-            raise HTTPException(status_code=400)
+    # Check server
+    server = await crud_read_server(server_id)
 
-        if data.cmd in ("on", "reboot", "off", "delete"):
-            await vps_action(data.server_id, data.cmd)
-        else:
-            raise ValueError("Invalid server action")
-    except ValueError as e:
-        logger.error(e)
-        raise HTTPException(status_code=422, detail=str(e))
+    if server is None or not server.is_active or server.user_id != user.id:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Forbidden",
+            "msg2": "Invalid server"
+        })
+
+    # Action logic
+    await vps_action(server_id)
+
+    return RedirectResponse("/dashboard", status_code=301)
 
 
 @router.websocket("/status/{server_id}")
-async def status(server_id: int, ws: WebSocket):
-    # Check cookie
-    has_cookie = "auth" in ws.cookies
-    auth_token = ws.cookies["auth"] if has_cookie else None
+async def status(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
 
-    if not has_cookie or auth_token is None:
-        raise HTTPException(status_code=401)
-
-    user_id = await r.get(f"auth:{auth_token}")
-    user = await crud_read_user(int(user_id))
-
-    if user is None or not user.is_active:
-        raise HTTPException(status_code=401)
-
-    # Status logic
+    # Check server
     server = await crud_read_server(server_id)
 
-    if server is None or not server.is_active:
-        raise HTTPException(status_code=400)
-    elif server.user_id != user.id or not user.is_superuser:
-        raise HTTPException(status_code=401, detail="Permision denied")
+    if server is None or not server.is_active or server.user_id != user.id:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Forbidden",
+            "msg2": "Invalid server"
+        })
 
+    # Status logic
     await ws.accept()
 
     while True:
@@ -104,36 +108,31 @@ async def status(server_id: int, ws: WebSocket):
             stat = await vps_status(server_id)
             await ws.send_text(stat)
             await asyncio.sleep(5)
-        except ConnectionClosedOK:
-            break
-        except Exception as e:
-            logger.error(e)
+        except Exception:
             break
 
 
 @router.websocket("/vnc/{server_id}")
-async def vnc(server_id: int, ws: WebSocket):
-    # Check cookie
-    has_cookie = "auth" in ws.cookies
-    auth_token = ws.cookies["auth"] if has_cookie else None
+async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
+    # Check auth
+    if user is None:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Unauthorized",
+            "msg2": "Please login"
+        })
 
-    if not has_cookie or auth_token is None:
-        raise HTTPException(status_code=401)
-
-    user_id = await r.get(f"auth:{auth_token}")
-    user = await crud_read_user(int(user_id))
-
-    if user is None or not user.is_active:
-        raise HTTPException(status_code=401)
-
-    # VNC logic
+    # Check server
     server = await crud_read_server(server_id)
 
-    if server is None or not server.is_active:
-        raise HTTPException(status_code=400, detail="Server doesn't exist")
-    elif server.user_id != user.id or not user.is_superuser:
-        raise HTTPException(status_code=401, detail="Permision denied")
+    if server is None or not server.is_active or server.user_id != user.id:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Forbidden",
+            "msg2": "Invalid server"
+        })
 
+    # VNC logic
     await ws.accept()
 
     node = await crud_read_node(server.node_id)
@@ -142,32 +141,5 @@ async def vnc(server_id: int, ws: WebSocket):
         reader, writer = await asyncio.open_connection(node.ip, server.vnc_port)
     except ConnectionRefusedError:
         return await ws.close(1013, "VNC Server isn't running now")
-
-
-    async def read_from_vnc():
-        while True:
-            try:
-                data = await reader.read(32768)
-                if not data:
-                    break
-                await ws.send_bytes(data)
-            except ConnectionClosedOK:
-                break
-            except Exception as e:
-                logger.error(e)
-                break
-
-
-    async def read_from_websocket():
-        while True:
-            try:
-                data = await ws.receive()
-                writer.write(data["bytes"])
-                await writer.drain()
-            except ConnectionClosedOK:
-                break
-            except Exception as e:
-                logger.error(e)
-                break
 
     await asyncio.gather(read_from_vnc(), read_from_websocket())

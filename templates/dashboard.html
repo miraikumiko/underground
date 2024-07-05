@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header>
+    <div id="status">
+      <div id="personal">
+        {% if user is none %}
+          <a class="btn0" href="/login">login</a>
+          <a class="btn0" href="/register">register</a>
+        {% else %}
+          <div class="dropdown">
+            <button class="btn0">{{ user.username }}</button>
+            <div class="dropdown-content">
+              <a class="btn0" href="/reset-password">Change password</a>
+              <a class="btn0" href="/delete-account">Delete account</a>
+              <form method="post" action="/logout">
+                <button class="btn0" type="submit">Logout</button>
+              </form>
+            </div>
+          </div>
+          <a class="btn0" href="/">store</a>
+        {% endif %}
+      </div>
+      <div id="other">
+        <p id="course">1 XMR = ${{ course }}</p>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div id="servers">
+      <table>
+        <tr>
+          <th>IPv4</th>
+          <th>Status</th>
+          <th>Days</th>
+        </tr>
+        {% for server in servers %}
+          <tr>
+            <td>{% if server.ipv4 %} {{ server.ipv4 }} {% else %} - {% endif %}</td>
+            <td id="status-{{ server.id }}"></td>
+            <td>{{ server.end_at|to_days }}</td>
+            <td><a href="/api/server/action/{{ server.id }}">power</a></td>
+            <td><a href="/install/{{ server.id }}">install</a></td>
+            <td><a href="/vnc/{{ server.id }}">vnc</a></td>
+            <td><a href="/pay/{{ server.id }}">pay</a></td>
+            <td><a href="/upgrademenu/{{ server.id }}">upgrade</a></td>
+          </tr>
+          <script>
+            const socket{{ server.id }} = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}/api/server/status/{{ server.id }}`);
+            socket{{ server.id }}.onmessage = async (event) => { document.getElementById("status-{{ server.id }}").innerText = event.data; };
+            socket{{ server.id }}.onerror = (error) => { document.getElementById("status-{{ server.id }}").innerText = "unknown" };
+          </script>
+        {% endfor %}
+        </table>
+      </div>
+    </div>
+  </main>
+{% endblock %}

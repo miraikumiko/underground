@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="center">
+    <h1>{{ msg1 }}</h1>
+    <p>{{ msg2 }}</p>
+  </div>
+  <style>
+    body {
+        color: white;
+        background-color: black;
+        background-image: url('/static/img/eye.gif');
+        text-align: center;
+    }
+    h1 {
+      font-family: Bagel Fat One, Courier New;
+    }
+    p { font-family: 'Courier New', monospace; }
+    .center {
+        position: fixed;
+        bottom: 15%;
+        top: 50%;
+        right: 20%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+  </style>
+{% endblock %}

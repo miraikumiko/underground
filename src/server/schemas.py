@@ -37,23 +37,3 @@ class ServerUpdate(BaseModel):
     user_id: int = None
     vps_id: int
     node_id: int = None
-
-
-class VPSInstall(BaseModel):
-    server_id: int
-    os: str
-
-
-class VPSAction(BaseModel):
-    server_id: int
-    cmd: str
-
-
-class IPRead(BaseModel):
-    id: int
-    ip: str
-    available: bool
-
-
-class IPUpdate(BaseModel):
-    available: bool

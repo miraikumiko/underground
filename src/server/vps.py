@@ -10,10 +10,14 @@ from src.node.crud import crud_read_node
 
 
 async def vps_install(server: Server, os: str):
-    if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd", "netbsd"):
-        raise Exception("Invalid OS")
+    if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd"):
+        raise ValueError("Invalid OS")
 
     node = await crud_read_node(server.node_id)
+
+    cores = PRODUCTS["vps"][str(server.vps_id)]["cores"]
+    ram = PRODUCTS["vps"][str(server.vps_id)]["ram"]
+    disk_size = PRODUCTS["vps"][str(server.vps_id)]["disk_size"]
 
     with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
         try:
@@ -27,7 +31,7 @@ async def vps_install(server: Server, os: str):
         except libvirtError:
             pass
 
-    subprocess.Popen(f"ssh root@{node.ip} 'virt-install --name {server.id} --vcpus {server.cores} --memory {server.ram * 1000} --disk /var/lib/libvirt/images/{server.id}.qcow2,size={server.disk_size} --cdrom /opt/iso/{os}.iso --os-variant unknown --graphics vnc,listen={node.ip},port={server.vnc_port}'", shell=True)
+    subprocess.Popen(f"ssh root@{node.ip} 'virt-install --name {server.id} --vcpus {cores} --memory {ram * 1000} --disk /var/lib/libvirt/images/{server.id}.qcow2,size={disk_size} --cdrom /opt/iso/{os}.iso --os-variant unknown --graphics vnc,listen={node.ip},port={server.vnc_port}'", shell=True)
 
 
 async def vps_delete(node_ip: str, name: str):
@@ -42,24 +46,22 @@ async def vps_delete(node_ip: str, name: str):
     await vps_delete_disk(node_ip, name)
 
 
-async def vps_action(server_id: int, action: str) -> None:
+async def vps_action(server_id: int) -> None:
     server = await crud_read_server(server_id)
     node = await crud_read_node(server.node_id)
 
     if server.is_active:
         with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-            vps = conn.lookupByName(str(server_id))
+            try:
+                vps = conn.lookupByName(str(server_id))
+                state, _ = vps.state()
 
-            if action == "on":
-                vps.create()
-            elif action == "reboot":
-                vps.reboot()
-            elif action == "off":
-                vps.destroy()
-            elif action == "delete":
-                await vps_delete(node.ip, str(server_id))
-            else:
-                raise Exception("Invalid action")
+                if state == libvirt.VIR_DOMAIN_SHUTOFF:
+                    vps.create()
+                else:
+                    vps.destroy()
+            except:
+              pass
 
 
 async def vps_status(server_id: int) -> str:

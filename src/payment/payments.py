@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from fastapi.exceptions import HTTPException
 from src.database import r
 from src.logger import logger
 from src.config import PRODUCTS
@@ -15,8 +14,6 @@ async def payment_request(type: str, server_id: int, vps_id: int = None) -> dict
     payment_id = res["result"]["payment_id"]
 
     server = await crud_read_server(server_id)
-
-    if server is None: raise HTTPException(status_code=400, detail="Invalid server")
 
     if type == "upgrade":
         amount = await usd_to_xmr(PRODUCTS["vps"][str(vps_id)]["price"])

@@ -6,14 +6,15 @@ import requests
 from requests.auth import HTTPDigestAuth
 from qrcode import QRCode
 from qrcode.constants import ERROR_CORRECT_L
-from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from src.database import r
 from src.logger import logger
 from src.config import (
-    MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD, MONERO_RECOVERY_COURSE
+    MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD,
+    MONERO_RECOVERY_COURSE
 )
 from src.server.crud import crud_read_server
+from src.display.utils import templates
 
 
 async def monero_request(method: str, params: dict = None) -> dict | None:
@@ -54,23 +55,24 @@ async def usd_to_xmr(usd: float) -> int:
     course = await xmr_course()
     xmr = str(round(Decimal(usd) / Decimal(course), 12)).replace('.', '')
 
-    while xmr[0:1] == '0':
-        xmr = xmr[1:]
+    while xmr[0:1] == '0': xmr = xmr[1:]
 
     return int(xmr)
 
 
-async def check_active_payment(user_id: int) -> JSONResponse:
+async def check_active_payment(user_id: int) -> None:
     payment_uri = await r.get(f"payment_uri:{user_id}")
 
     if payment_uri is not None:
         ttl = await r.ttl(f"payment_uri:{user_id}")
+        qrcode = await draw_qrcode(payment_uri)
 
-        return JSONResponse({
-            "payment_uri": payment_uri,
-            "ttl": ttl,
-            "detail": "You already have payment"
-        }, status_code=203)
+        return templates.TemplateResponse("checkout.html", {
+            "request": request,
+            "qrcode": qrcode,
+            "uri": payment_uri,
+            "ttl": ttl
+        })
 
 
 async def check_payment_limit(user_id: int) -> None:
@@ -86,10 +88,11 @@ async def check_payment_limit(user_id: int) -> None:
                 ex=ttl
             )
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="You can make only 3 payment request per day"
-            )
+            return templates.TemplateResponse("error.html", {
+                "request": request,
+                "msg1": "Bad Request",
+                "msg2": "You can make only 3 payment request per day"
+            })
     else:
         await r.set(f"payments_count:{user_id}", 1, ex=86400)
 

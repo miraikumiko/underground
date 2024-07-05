@@ -284,4 +284,7 @@ async def install(server_id: int, request: Request, user: User = Depends(active_
 
 @router.get("/vnc/{server_id}")
 async def vnc(server_id: int, request: Request, user: User = Depends(active_user)):
-    return templates.TemplateResponse("vnc.html", {"request": request})
+    return templates.TemplateResponse("vnc.html", {
+        "request": request,
+        "server_id": server_id
+    })

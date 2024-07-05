@@ -46,7 +46,7 @@
             <td><a href="/upgrademenu/{{ server.id }}">upgrade</a></td>
           </tr>
           <script>
-            const socket{{ server.id }} = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.hostname}/api/server/status/{{ server.id }}`);
+            const socket{{ server.id }} = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/server/status/{{ server.id }}`);
             socket{{ server.id }}.onmessage = async (event) => { document.getElementById("status-{{ server.id }}").innerText = event.data; };
             socket{{ server.id }}.onerror = (error) => { document.getElementById("status-{{ server.id }}").innerText = "unknown" };
           </script>

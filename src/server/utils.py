@@ -9,26 +9,6 @@ from src.node.crud import crud_read_node, crud_update_node
 from src.user.crud import crud_read_user
 
 
-async def read_from_vnc():
-    while True:
-        try:
-            data = await reader.read(32768)
-            if not data: break
-            await ws.send_bytes(data)
-        except Exception:
-            break
-
-
-async def read_from_websocket():
-    while True:
-        try:
-            data = await ws.receive()
-            writer.write(data["bytes"])
-            await writer.drain()
-        except Exception:
-            break
-
-
 async def servers_expired_check():
     servers = await crud_read_servers()
 

@@ -13,7 +13,6 @@ from src.server.crud import (
     crud_delete_server
 )
 from src.server.vps import vps_install, vps_action, vps_status
-from src.server.utils import read_from_vnc, read_from_websocket
 from src.node.crud import crud_read_node
 from src.user.models import User
 from src.user.crud import crud_read_user
@@ -141,5 +140,26 @@ async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws
         reader, writer = await asyncio.open_connection(node.ip, server.vnc_port)
     except ConnectionRefusedError:
         return await ws.close(1013, "VNC Server isn't running now")
+
+
+    async def read_from_vnc():
+        while True:
+            try:
+                data = await reader.read(32768)
+                if not data: break
+                await ws.send_bytes(data)
+            except Exception:
+                break
+
+
+    async def read_from_websocket():
+        while True:
+            try:
+                data = await ws.receive()
+                writer.write(data["bytes"])
+                await writer.drain()
+            except Exception:
+                break
+
 
     await asyncio.gather(read_from_vnc(), read_from_websocket())

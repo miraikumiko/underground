@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div id="vnc-status">Loading</div>
+  <div id="screen"></div>
+  <script type="module">
+    import RFB from '/static/noVNC/core/rfb.js';
+
+    const screen = document.querySelector("#screen");
+    const url = `${window.location.protocol === "http:" ? "ws" : "wss"}://${window.location.host}/api/server/vnc/{{ server_id }}`;
+    let rfb;
+    let desktopName;
+
+    function status(text) {
+      document.querySelector("#vnc-status").textContent = text;
+    }
+
+    function connectedToServer(e) {
+      status(`Connected to ${desktopName}`);
+    }
+
+    function disconnectedFromServer(e) {
+      if (e.detail.clean) {
+        status("Disconnected");
+      } else {
+        status("Something went wrong, connection is closed");
+      }
+      screen.innerHTML = null;
+    }
+
+    function updateDesktopName(e) {
+      desktopName = e.detail.name;
+    }
+
+    function sendCtrlAltDel() {
+      rfb.sendCtrlAltDel();
+      return false;
+    }
+
+    function readQueryVariable(name, defaultValue) {
+      const re = new RegExp(`.*[?&]${name}=([^&#]*)`);
+      const match = document.location.href.match(re);
+    
+      if (match) return decodeURIComponent(match[1]);
+    
+      return defaultValue;
+    }
+
+    status("Connecting");
+
+    rfb = new RFB(screen, url);
+    rfb.addEventListener("connect",  connectedToServer);
+    rfb.addEventListener("disconnect", disconnectedFromServer);
+    rfb.addEventListener("desktopname", updateDesktopName);
+    rfb.viewOnly = readQueryVariable("view_only", false);
+    rfb.scaleViewport = readQueryVariable("scale", false);
+    rfb.focus();
+  </script>
+{% endblock %}

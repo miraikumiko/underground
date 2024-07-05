@@ -1,0 +1,19 @@
+[Unit]
+Description=underground.pm BE
+Wants=network-online.target
+Wants=libvirtd.service
+Wants=redis.service
+Wants=monerod.service
+After=network-online.target
+After=libvirtd.service
+After=redis.service
+After=monerod.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/underground.pm
+ExecStart=/var/www/underground.pm/venv/bin/python /var/www/underground.pm/run.py
+
+[Install]
+WantedBy=multi-user.target

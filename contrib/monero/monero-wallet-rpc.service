@@ -6,7 +6,7 @@ After=network-online.target
 [Service]
 Type=simple
 User=root
-ExecStart=/var/www/underground.pm-be/contrib/monero/run.sh
+ExecStart=/var/www/underground.pm/contrib/monero/run.sh
 
 [Install]
 WantedBy=multi-user.target

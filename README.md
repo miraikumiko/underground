@@ -10,12 +10,13 @@ Privacy hosting
 * nginx
 * ssh
 * cronie
+* libvirt
+* monero
 * openrc/systemd
-* Docker (Optional)
 
 ## Installing
 
-Clone repository into `/var/www/underground.pm-be`
+Clone repository into `/var/www/underground.pm`
 
 ## Setup
 
@@ -31,30 +32,26 @@ And install requirements:
 python -m venv venv
 . venv/bin/activate
 pip install -U pip
-pip install -r requirements/base.txt
+pip install -r requirements.txt
 ```
-
-Or you can build Docker image:
-
-`docker buildx build -t underground.pm-be .`
 
 ### Cronie
 
-`*/15 * * * * /var/www/underground.pm-be/venv/bin/python /var/www/underground.pm-be/run.py -X &> /dev/null`
+`*/15 * * * * /var/www/underground.pm/venv/bin/python /var/www/underground.pm/run.py`
 
 ### OpenRC
 
-`cp contrib/openrc/underground.pm-be /etc/init.d/underground.pm-be`
+`cp contrib/openrc/underground.pm /etc/init.d/underground.pm`
 
 ### Systemd
 
-`cp contrib/systemd/underground.pm-be.service /etc/systemd/system/underground.pm-be.service`
+`cp contrib/systemd/underground.pm.service /etc/systemd/system/underground.pm.service`
 
 ### Nginx
 
 ```
-cp contrib/nginx/sites-available/underground.pm-be.conf /etc/nginx/sites-available/underground.pm-be.conf
-ln -s /etc/nginx/sites-available/underground.pm-be.conf /etc/nginx/sites-enabled/underground.pm-be.conf
+cp contrib/nginx/sites-available/underground.pm.conf /etc/nginx/sites-available/underground.pm.conf
+ln -s /etc/nginx/sites-available/underground.pm.conf /etc/nginx/sites-enabled/underground.pm.conf
 ```
 
 ## Start
@@ -62,25 +59,17 @@ ln -s /etc/nginx/sites-available/underground.pm-be.conf /etc/nginx/sites-enabled
 ### OpenRC
 
 ```
-rc-update add postgresql default
+rc-update add libvirtd default
 rc-update add redis default
-rc-update add underground.pm-be default
+rc-update add underground.pm default
 rc-update add nginx default
 
-rc-service postgresql start
+rc-service libvirtd start
 rc-service redis start
-rc-service underground.pm-be start
+rc-service underground.pm start
 rc-service nginx start
 ```
 
 ### Systemd
 
-`systemctl enable --now postgresql redis underground.pm-be nginx`
-
-## Testing
-
-Install dependencies:
-`pip install -r requirements/dev.txt`
-
-And run tests:
-`pytest`
+`systemctl enable --now libvirtd redis underground.pm nginx`

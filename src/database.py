@@ -1,9 +1,9 @@
 from redis.asyncio import from_url
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from src.logger import logger
-from src.config import DB_PATH, REDIS_HOST, REDIS_PORT
+from src.config import DB_PATH, REDIS_HOST, REDIS_PORT, BASE_PATH
 
-DATABASE_URL = f"sqlite+aiosqlite:///{DB_PATH}"
+DATABASE_URL = f"sqlite+aiosqlite:///{BASE_PATH}/{DB_PATH}"
 REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}"
 
 engine = create_async_engine(DATABASE_URL)

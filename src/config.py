@@ -33,9 +33,9 @@ REDIS_PORT = int(REDIS_PORT)
 MONERO_RPC_PORT = int(MONERO_RPC_PORT)
 MONERO_RECOVERY_COURSE = float(MONERO_RECOVERY_COURSE)
 
-# Read products
-with open("products.json", 'r') as file:
-    PRODUCTS = json.load(file)
-
 # Base path of project
 BASE_PATH = path.dirname(path.dirname(path.realpath(__file__)))
+
+# Read products
+with open(f"{BASE_PATH}/products.json", 'r') as file:
+    PRODUCTS = json.load(file)

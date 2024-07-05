@@ -1,5 +1,5 @@
 import json
-from os import environ
+from os import environ, path
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -36,3 +36,6 @@ MONERO_RECOVERY_COURSE = float(MONERO_RECOVERY_COURSE)
 # Read products
 with open("products.json", 'r') as file:
     PRODUCTS = json.load(file)
+
+# Base path of project
+BASE_PATH = path.dirname(path.dirname(path.realpath(__file__)))

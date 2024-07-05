@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from src.config import BASE_PATH
 from src.auth.router import router as auth_router
 from src.payment.router import router as payment_router
 from src.server.router import router as server_router
@@ -16,7 +17,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=f"{BASE_PATH}/static"), name="static")
 app.include_router(auth_router)
 app.include_router(payment_router)
 app.include_router(server_router)

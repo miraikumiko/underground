@@ -34,10 +34,10 @@
           <th>Status</th>
           <th>Days</th>
         </tr>
-        {% for server in servers %}
+        {% for server, status in servers_and_statuses %}
           <tr>
             <td>{% if server.ipv4 %} {{ server.ipv4 }} {% else %} - {% endif %}</td>
-            <td id="status-{{ server.id }}"></td>
+            <td id="status-{{ server.id }}">{{ status }}</td>
             <td>{{ server.end_at|to_days }}</td>
             <td>
               <form method="post" action="/api/server/action/{{ server.id }}">

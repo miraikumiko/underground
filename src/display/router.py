@@ -111,12 +111,14 @@ async def dashboard(request: Request, user: User = Depends(active_user)):
     course = await xmr_course()
     servers = await crud_read_servers(user.id)
     servers = [server for server in servers if server.is_active]
+    statuses = [await vps_status(server.id) for server in servers]
+    servers_and_statuses = zip(servers, statuses)
 
     return templates.TemplateResponse("dashboard.html", {
-      "request": request,
-      "user": user,
-      "course": course,
-      "servers": servers
+        "request": request,
+        "user": user,
+        "course": course,
+        "servers_and_statuses": servers_and_statuses
     })
 
 

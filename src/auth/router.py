@@ -42,6 +42,13 @@ async def register_form(
     username: str = Form(...), password: str = Form(...),
     captcha_id: str = Form(...), captcha_text: str = Form(...)
 ):
+    if not REGISTRATION:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Bad Request",
+            "msg2": "Registration is disabled"
+        })
+
     captcha = await r.get(f"captcha:{captcha_id}")
     await r.delete(f"captcha:{captcha_id}")
 

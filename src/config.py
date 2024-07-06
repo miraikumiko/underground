@@ -8,6 +8,7 @@ load_dotenv()
 HOST = environ.get("HOST")
 PORT = environ.get("PORT")
 LOG_FILE = environ.get("LOG_FILE")
+REGISTRATION = environ.get("REGISTRATION")
 
 # Database
 DB_PATH = environ.get("DB_PATH")
@@ -29,6 +30,7 @@ SUBNET_IPV6 = environ.get("SUBNET_IPV6")
 
 # Type correction
 PORT = int(PORT)
+REGISTRATION = bool(REGISTRATION)
 REDIS_PORT = int(REDIS_PORT)
 MONERO_RPC_PORT = int(MONERO_RPC_PORT)
 MONERO_RECOVERY_COURSE = float(MONERO_RECOVERY_COURSE)

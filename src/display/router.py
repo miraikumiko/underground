@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse
 from captcha.image import ImageCaptcha
 from src.database import r
 from src.crud import crud_read
-from src.config import SUBNET_IPV4, SUBNET_IPV6, PRODUCTS
+from src.config import REGISTRATION, SUBNET_IPV4, SUBNET_IPV6, PRODUCTS
 from src.user.models import User
 from src.auth.utils import active_user
 from src.server.models import Server
@@ -43,6 +43,13 @@ async def login(request: Request):
 
 @router.get("/register")
 async def register(request: Request):
+    if not REGISTRATION:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Bad Request",
+            "msg2": "Registration is disabled"
+        })
+
     chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     text = ''.join(choice(chars) for _ in range(randint(5, 7)))
     captcha_id = randint(10000000, 99999999)

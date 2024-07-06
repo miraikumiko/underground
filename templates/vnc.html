@@ -2,11 +2,11 @@
 
 {% block content %}
   <div id="vnc-status">Loading</div>
-  <div id="screen"></div>
+  <div id="vnc-screen"></div>
   <script type="module">
     import RFB from '/static/noVNC/core/rfb.js';
 
-    const screen = document.querySelector("#screen");
+    const screen = document.querySelector("#vnc-screen");
     const url = `${window.location.protocol === "http:" ? "ws" : "wss"}://${window.location.host}/api/server/vnc/{{ server_id }}`;
     let rfb;
     let desktopName;
@@ -54,6 +54,7 @@
     rfb.addEventListener("desktopname", updateDesktopName);
     rfb.viewOnly = readQueryVariable("view_only", false);
     rfb.scaleViewport = readQueryVariable("scale", false);
+    rfb.background = (0, 0, 0);
     rfb.focus();
   </script>
 {% endblock %}

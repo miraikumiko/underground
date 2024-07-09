@@ -1,3 +1,3 @@
 #!/bin/sh
 
-monero-wallet-rpc --wallet-file "/var/lib/wallets/underground.pm" --password "password" --rpc-bind-port "20000" --daemon-address "127.0.0.1:18081" --trusted-daemon --rpc-login "underground:underground" --log-file "/dev/null" --tx-notify "/var/www/underground.pm/contrib/monero/tx %s"
+monero-wallet-rpc --wallet-file "$MONERO_WALLET_PATH" --password "$MONERO_WALLET_PASSWORD" --daemon-address "$MONERO_DAEMON_ADDRESS" --trusted-daemon --rpc-bind-port "$MONERO_RPC_PORT" --rpc-login "$MONERO_RPC_LOGIN" --log-file "$MONERO_RPC_LOG_PATH" --tx-notify "$MONERO_TX_PATH %s"

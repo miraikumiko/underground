@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
 
-description="underground.pm BE"
+description="underground.pm"
 
 name=$RC_SVCNAME
 
@@ -9,7 +9,6 @@ pidfile="/run/$name.pid"
 
 depend() {
 	need net
-	need postgresql
 	need redis
 }
 

@@ -1,6 +1,6 @@
 from uuid import uuid4
 from random import choice, randint
-from fastapi import APIRouter, Form, Depends
+from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import Response, JSONResponse, RedirectResponse, StreamingResponse
 from captcha.image import ImageCaptcha
 from src.database import r
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/login")
-async def login_form(username: str = Form(...), password: str = Form(...)):
+async def login_form(request: Request, username: str = Form(...), password: str = Form(...)):
     user = await crud_read(User, attr1=User.username, attr2=username)
 
     if user is not None and password_helper.verify_and_update(password, user.password)[0]:
@@ -39,6 +39,7 @@ async def login_form(username: str = Form(...), password: str = Form(...)):
 
 @router.post("/register")
 async def register_form(
+    request: Request,
     username: str = Form(...), password: str = Form(...),
     captcha_id: str = Form(...), captcha_text: str = Form(...)
 ):
@@ -120,6 +121,7 @@ async def logout(_: User = Depends(active_user)):
 
 @router.post("/reset-password")
 async def reset_password_form(
+    request: Request, 
     old_password: str = Form(...), new_password: str = Form(...),
     user: User = Depends(active_user)
 ):
@@ -140,7 +142,7 @@ async def reset_password_form(
 
 
 @router.post("/delete-account")
-async def delete_me_form(password: str = Form(...), user: User = Depends(active_user)):
+async def delete_me_form(request: Request, password: str = Form(...), user: User = Depends(active_user)):
     if password_helper.verify_and_update(password, user.password)[0]:
         await crud_delete_servers(user.id)
         await crud_delete_user(user.id)

@@ -4,7 +4,7 @@ description="Monero Wallet RPC"
 command="/var/www/underground.pm/contrib/monero/run.sh"
 
 depend() {
-    need network
+    need net
 }
 
 start() {

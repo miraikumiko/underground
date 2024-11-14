@@ -1,31 +1,33 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from src.database import r
 from src.logger import logger
 from src.config import PRODUCTS
 from src.server.schemas import ServerUpdate
 from src.server.crud import crud_read_server, crud_update_server
-from src.server.vps import vps_action, vps_upgrade
+from src.server.vps import vps_upgrade
 from src.payment.utils import monero_request, usd_to_xmr
 
 
-async def payment_request(type: str, server_id: int, vps_id: int = None) -> dict:
+async def payment_request(ptype: str, server_id: int, vps_id: int = None) -> dict:
     res = await monero_request("make_integrated_address")
     address = res["result"]["integrated_address"]
     payment_id = res["result"]["payment_id"]
 
     server = await crud_read_server(server_id)
 
-    if type == "upgrade":
+    if ptype == "upgrade":
         amount = await usd_to_xmr(PRODUCTS["vps"][str(vps_id)]["price"])
     else:
         amount = await usd_to_xmr(PRODUCTS["vps"][str(server.vps_id)]["price"])
 
     res = await monero_request("make_uri", {"address": address, "amount": amount})
     payment_uri = res["result"]["uri"]
+    payment_data = {"type": ptype, "payment_id": payment_id, "amount": amount}
 
-    payment_data = {"type": type, "payment_id": payment_id, "amount": amount}
-    if server_id is not None: payment_data["server_id"] = server_id
-    if vps_id is not None: payment_data["vps_id"] = vps_id
+    if server_id is not None:
+        payment_data["server_id"] = server_id
+    if vps_id is not None:
+        payment_data["vps_id"] = vps_id
 
     await r.hset(f"payment:{payment_id}", mapping=payment_data)
     await r.expire(f"payment:{payment_id}", 900)

@@ -1,19 +1,12 @@
-import ipaddress
-from datetime import datetime, timedelta
-from fastapi import APIRouter, Request, Form, Depends
-from fastapi.responses import Response, RedirectResponse, JSONResponse, StreamingResponse
+from fastapi import APIRouter, Request, Depends
+from fastapi.responses import RedirectResponse, StreamingResponse
 from src.database import r
-from src.crud import crud_read
-from src.logger import logger
-from src.config import SUBNET_IPV4, SUBNET_IPV6, PRODUCTS
-from src.payment.schemas import Buy, Pay, Upgrade, QRCode
+from src.config import PRODUCTS
+from src.payment.schemas import QRCode
 from src.payment.payments import payment_request
 from src.payment.utils import check_active_payment, check_payment_limit, draw_qrcode, xmr_course
-from src.server.models import Server
-from src.server.schemas import ServerCreate
-from src.server.crud import crud_create_server, crud_read_servers, crud_read_server
-from src.node.schemas import NodeUpdate
-from src.node.crud import crud_read_nodes, crud_read_node, crud_update_node
+from src.server.crud import crud_read_server
+from src.node.crud import crud_read_nodes
 from src.user.models import User
 from src.auth.utils import active_user
 from src.display.utils import templates
@@ -45,10 +38,25 @@ async def upgrade(
         })
 
     # Check if user have active payment
-    await check_active_payment(user.id)
+    cap = await check_active_payment(user.id)
+
+    if cap is not None:
+        return templates.TemplateResponse("checkout.html", {
+            "request": request,
+            "qrcode": cap["qrcode"],
+            "uri": cap["payment_uri"],
+            "ttl": cap["ttl"]
+        })
 
     # Check user's payment limit
-    await check_payment_limit(user.id)
+    cpl = await check_payment_limit(user.id)
+
+    if cpl:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Bad Request",
+            "msg2": "You can make only 3 payment requests per day"
+        })
 
     # Validate product id
     if not [vps_id for vps_id in PRODUCTS["vps"] if int(vps_id) == product_id]:
@@ -74,18 +82,18 @@ async def upgrade(
 
     # Make payment request and return it uri
     payment_data = await payment_request("upgrade", server_id, product_id)
-    qrcode = await draw_qrcode(payment_data["payment_uri"])
+    qrc = await draw_qrcode(payment_data["payment_uri"])
 
     return templates.TemplateResponse("checkout.html", {
         "request": request,
-        "qrcode": qrcode,
+        "qrcode": qrc,
         "uri": payment_data["payment_uri"],
         "ttl": payment_data["ttl"]
     })
 
 
 @router.post("/close")
-async def close(user: User = Depends(active_user)):
+async def close(request: Request, user: User = Depends(active_user)):
     payment_uri = await r.get(f"payment_uri:{user.id}")
 
     if payment_uri is not None:
@@ -101,10 +109,10 @@ async def close(user: User = Depends(active_user)):
 
 
 @router.post("/qrcode")
-async def qrcode(data: QRCode, user: User = Depends(active_user)):
-    qrcode = await draw_qrcode(data.uri)
+async def qrcode(data: QRCode, _: User = Depends(active_user)):
+    qrc = await draw_qrcode(data.uri)
 
-    return StreamingResponse(qrcode, media_type="image/png")
+    return StreamingResponse(qrc, media_type="image/png")
 
 
 @router.get("/products")

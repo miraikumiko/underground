@@ -1,22 +1,19 @@
 import base64
 import ipaddress
-from uuid import uuid4
 from random import choice, randint
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 from captcha.image import ImageCaptcha
 from src.database import r
-from src.crud import crud_read
-from src.config import REGISTRATION, SUBNET_IPV4, SUBNET_IPV6, PRODUCTS
+from src.config import REGISTRATION, SUBNET_IPV4, PRODUCTS
 from src.user.models import User
 from src.auth.utils import active_user
-from src.server.models import Server
 from src.server.schemas import ServerCreate
 from src.server.crud import crud_create_server, crud_read_servers, crud_read_server
 from src.server.vps import vps_status
 from src.node.schemas import NodeUpdate
-from src.node.crud import crud_read_nodes, crud_read_node, crud_update_node
+from src.node.crud import crud_read_nodes, crud_update_node
 from src.payment.payments import payment_request
 from src.payment.utils import check_active_payment, check_payment_limit, draw_qrcode, xmr_course
 from src.display.utils import templates
@@ -90,7 +87,7 @@ async def delete_account(request: Request, user: User = Depends(active_user)):
 
 
 @router.post("/logout")
-async def logout(user: User = Depends(active_user)):
+async def logout(request: Request, user: User = Depends(active_user)):
     # Check auth
     if user is None:
         return templates.TemplateResponse("error.html", {
@@ -140,10 +137,25 @@ async def buy(product_id: int, request: Request, user: User = Depends(active_use
         })
 
     # Check if user have active payment
-    await check_active_payment(user.id)
+    cap = await check_active_payment(user.id)
+
+    if cap is not None:
+        return templates.TemplateResponse("checkout.html", {
+            "request": request,
+            "qrcode": cap["qrcode"],
+            "uri": cap["payment_uri"],
+            "ttl": cap["ttl"]
+        })
 
     # Check user's payment limit
-    await check_payment_limit(user.id)
+    cpl = await check_payment_limit(user.id)
+
+    if cpl:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Bad Request",
+            "msg2": "You can make only 3 payment requests per day"
+        })
 
     # Validate product id
     if not [vps_id for vps_id in PRODUCTS["vps"] if int(vps_id) == product_id]:
@@ -217,14 +229,15 @@ async def buy(product_id: int, request: Request, user: User = Depends(active_use
 
     if servers:
         up = [server.vnc_port for server in servers if server.node_id == node.id]
-        while vnc_port in up: vnc_port += 1
+        while vnc_port in up:
+            vnc_port += 1
 
     # Registration of new server
     server_schema = ServerCreate(
         vnc_port=vnc_port,
         ipv4=str(ipv4),
         ipv6=str(ipv6),
-        start_at=datetime.utcnow(),
+        start_at=datetime.now(UTC),
         end_at=datetime.now() + timedelta(days=31),
         is_active=False,
         vps_id=product_id,
@@ -275,10 +288,25 @@ async def pay(server_id: int, request: Request, user: User = Depends(active_user
         })
  
     # Check if user have active payment
-    await check_active_payment(user.id)
+    cap = await check_active_payment(user.id)
+
+    if cap is not None:
+        return templates.TemplateResponse("checkout.html", {
+            "request": request,
+            "qrcode": cap["qrcode"],
+            "uri": cap["payment_uri"],
+            "ttl": cap["ttl"]
+        })
 
     # Check user's payment limit
-    await check_payment_limit(user.id)
+    cpl = await check_payment_limit(user.id)
+
+    if cpl:
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "msg1": "Bad Request",
+            "msg2": "You can make only 3 payment requests per day"
+        })
 
     # Check expiring date
     server = await crud_read_server(server_id)

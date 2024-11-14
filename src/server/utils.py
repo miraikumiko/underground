@@ -2,11 +2,10 @@ from datetime import datetime, timedelta
 from src.database import r
 from src.config import PRODUCTS
 from src.logger import logger
-from src.server.crud import crud_read_servers, crud_update_server, crud_delete_server
-from src.server.vps import vps_delete, vps_action
+from src.server.crud import crud_read_servers, crud_delete_server
+from src.server.vps import vps_delete
 from src.node.schemas import NodeUpdate
 from src.node.crud import crud_read_node, crud_update_node
-from src.user.crud import crud_read_user
 
 
 async def servers_expired_check():
@@ -14,15 +13,13 @@ async def servers_expired_check():
 
     for server in servers:
         if server.end_at + timedelta(days=3) <= datetime.now():
-            user = await crud_read_user(server.user_id)
+            node = await crud_read_node(server.node_id)
 
             await crud_delete_server(server.id)
-            await vps_delete(server.id)
+            await vps_delete(node.ip, str(server.id))
 
             logger.info(f"Server {server.id} has been expired and deleted")
         elif server.end_at <= datetime.now():
-            user = await crud_read_user(server.user_id)
-
             logger.info(f"Server {server.id} has been expired")
 
         if not server.is_active:
@@ -35,9 +32,12 @@ async def servers_expired_check():
                 ram = node.ram_available + PRODUCTS["vps"][str(server.vps_id)]["ram"]
                 disk_size = node.disk_size_available + PRODUCTS["vps"][str(server.vps_id)]["disk_size"]
 
-                if cores > node.cores: cores = node.cores
-                if ram > node.ram: ram = node.ram
-                if disk_size > node.disk_size: disk_size = node.disk_size
+                if cores > node.cores:
+                    cores = node.cores
+                if ram > node.ram:
+                    ram = node.ram
+                if disk_size > node.disk_size:
+                    disk_size = node.disk_size
 
                 node_schema = NodeUpdate(
                     cores_available=cores,

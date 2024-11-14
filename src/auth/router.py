@@ -1,12 +1,9 @@
 from uuid import uuid4
-from random import choice, randint
 from fastapi import APIRouter, Request, Form, Depends
-from fastapi.responses import Response, JSONResponse, RedirectResponse, StreamingResponse
-from captcha.image import ImageCaptcha
+from fastapi.responses import Response, RedirectResponse
+from src.config import REGISTRATION
 from src.database import r
 from src.crud import crud_read
-from src.logger import logger
-from src.auth.schemas import Login, Register, Captcha, ResetPassword
 from src.auth.utils import password_helper, active_user
 from src.user.models import User
 from src.user.schemas import UserCreate, UserUpdate
@@ -121,7 +118,6 @@ async def logout(_: User = Depends(active_user)):
 
 @router.post("/reset-password")
 async def reset_password_form(
-    request: Request, 
     old_password: str = Form(...), new_password: str = Form(...),
     user: User = Depends(active_user)
 ):

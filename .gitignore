@@ -4,3 +4,4 @@ venv
 *.log
 *.socket
 /.env
+/.idea

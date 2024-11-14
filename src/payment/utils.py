@@ -1,20 +1,16 @@
 import base64
-from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
 import requests
 from requests.auth import HTTPDigestAuth
 from qrcode import QRCode
 from qrcode.constants import ERROR_CORRECT_L
-from fastapi.responses import JSONResponse
 from src.database import r
 from src.logger import logger
 from src.config import (
     MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD,
     MONERO_RECOVERY_COURSE
 )
-from src.server.crud import crud_read_server
-from src.display.utils import templates
 
 
 async def monero_request(method: str, params: dict = None) -> dict | None:
@@ -55,27 +51,23 @@ async def usd_to_xmr(usd: float) -> int:
     course = await xmr_course()
     xmr = str(round(Decimal(usd) / Decimal(course), 12)).replace('.', '')
 
-    while xmr[0:1] == '0': xmr = xmr[1:]
+    while xmr[0:1] == '0':
+        xmr = xmr[1:]
 
     return int(xmr)
 
 
-async def check_active_payment(user_id: int) -> None:
+async def check_active_payment(user_id: int) -> dict | None:
     payment_uri = await r.get(f"payment_uri:{user_id}")
 
     if payment_uri is not None:
         ttl = await r.ttl(f"payment_uri:{user_id}")
         qrcode = await draw_qrcode(payment_uri)
 
-        return templates.TemplateResponse("checkout.html", {
-            "request": request,
-            "qrcode": qrcode,
-            "uri": payment_uri,
-            "ttl": ttl
-        })
+        return {"qrcode": qrcode, "uri": payment_uri, "ttl": ttl}
 
 
-async def check_payment_limit(user_id: int) -> None:
+async def check_payment_limit(user_id: int) -> bool | None:
     payments_count = await r.get(f"payments_count:{user_id}")
 
     if payments_count is not None:
@@ -88,11 +80,7 @@ async def check_payment_limit(user_id: int) -> None:
                 ex=ttl
             )
         else:
-            return templates.TemplateResponse("error.html", {
-                "request": request,
-                "msg1": "Bad Request",
-                "msg2": "You can make only 3 payment request per day"
-            })
+            return True
     else:
         await r.set(f"payments_count:{user_id}", 1, ex=86400)
 

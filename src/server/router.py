@@ -1,28 +1,18 @@
-import socket
 import asyncio
-from fastapi import APIRouter, WebSocket, Form, Depends
+from fastapi import APIRouter, Request, WebSocket, Form, Depends
 from fastapi.responses import RedirectResponse
-from src.database import r
-from src.logger import logger
-from src.server.schemas import ServerCreate, ServerUpdate
-from src.server.crud import (
-    crud_create_server,
-    crud_read_servers,
-    crud_read_server,
-    crud_update_server,
-    crud_delete_server
-)
+from src.server.crud import crud_read_server
 from src.server.vps import vps_install, vps_action, vps_status
 from src.node.crud import crud_read_node
 from src.user.models import User
-from src.user.crud import crud_read_user
 from src.auth.utils import active_user, active_user_ws
+from src.display.utils import templates
 
 router = APIRouter(prefix="/api/server", tags=["servers"])
 
 
 @router.post("/install/{server_id}")
-async def install(server_id: int, os: str = Form(...), user: User = Depends(active_user)):
+async def install(request: Request, server_id: int, os: str = Form(...), user: User = Depends(active_user)):
     # Check auth
     if user is None:
         return templates.TemplateResponse("error.html", {
@@ -54,7 +44,7 @@ async def install(server_id: int, os: str = Form(...), user: User = Depends(acti
 
 
 @router.post("/action/{server_id}")
-async def action(server_id: int, user: User = Depends(active_user)):
+async def action(request: Request, server_id: int, user: User = Depends(active_user)):
     # Check auth
     if user is None:
         return templates.TemplateResponse("error.html", {
@@ -80,7 +70,7 @@ async def action(server_id: int, user: User = Depends(active_user)):
 
 
 @router.websocket("/status/{server_id}")
-async def status(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
+async def status(request: Request, server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
     # Check auth
     if user is None:
         return templates.TemplateResponse("error.html", {
@@ -112,7 +102,7 @@ async def status(server_id: int, ws: WebSocket, user: User = Depends(active_user
 
 
 @router.websocket("/vnc/{server_id}")
-async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
+async def vnc(request: Request, server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
     # Check auth
     if user is None:
         return templates.TemplateResponse("error.html", {
@@ -141,16 +131,15 @@ async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws
     except ConnectionRefusedError:
         return await ws.close(1013, "VNC Server isn't running now")
 
-
     async def read_from_vnc():
         while True:
             try:
                 data = await reader.read(32768)
-                if not data: break
+                if not data:
+                    break
                 await ws.send_bytes(data)
             except Exception:
                 break
-
 
     async def read_from_websocket():
         while True:
@@ -160,6 +149,5 @@ async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws
                 await writer.drain()
             except Exception:
                 break
-
 
     await asyncio.gather(read_from_vnc(), read_from_websocket())

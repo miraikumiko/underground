@@ -3,13 +3,12 @@ import libvirt
 from libvirt import libvirtError
 from src.logger import logger
 from src.config import PRODUCTS
-from src.server.models import Server
-from src.server.schemas import ServerUpdate
-from src.server.crud import crud_read_server, crud_update_server
+from src.server.schemas import ServerRead
+from src.server.crud import crud_read_server
 from src.node.crud import crud_read_node
 
 
-async def vps_install(server: Server, os: str):
+async def vps_install(server: ServerRead, os: str):
     if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd"):
         raise ValueError("Invalid OS")
 
@@ -60,8 +59,8 @@ async def vps_action(server_id: int) -> None:
                     vps.create()
                 else:
                     vps.destroy()
-            except:
-              pass
+            except Exception:
+                pass
 
 
 async def vps_status(server_id: int) -> str:
@@ -88,7 +87,7 @@ async def vps_status(server_id: int) -> str:
             return "unknown"
 
 
-async def vps_create_disk(node_ip: str, name: str, disk_size: int, os: str):
+async def vps_create_disk(node_ip: str, name: str, disk_size: int):
     try:
         subprocess.run(f"ssh root@{node_ip} 'qemu-img create /var/lib/libvirt/images/{name}.qcow2 -f qcow2 {disk_size}G'")
     except FileExistsError:
@@ -112,10 +111,13 @@ async def vps_upgrade(server_id: int, vps_id: int) -> None:
 
             vps.destroy()
 
-            if PRODUCTS["vps"][vps_id]["cores"] > server.cores:
+            cores = PRODUCTS["vps"][vps_id]["cores"]
+            ram = PRODUCTS["vps"][vps_id]["ram"]
+
+            if cores > server.cores:
                 vps.setVcpu(cores)
 
-            if PRODUCTS["vps"][vps_id]["ram"] > server.ram:
+            if ram > server.ram:
                 vps.setMemory(ram)
 
             if PRODUCTS["vps"][vps_id]["disk_size"] > server.disk_size:

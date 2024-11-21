@@ -34,3 +34,5 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
 
     if detail[0] == 'd':
         return await t_error(request, exc.status_code, detail[1])
+    else:
+        return await t_error(request, exc.status_code, exc.detail)

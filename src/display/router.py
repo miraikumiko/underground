@@ -88,6 +88,17 @@ async def promo(request: Request, _: User = Depends(active_user)):
     return templates.TemplateResponse("promo.html", {"request": request})
 
 
+@router.get("/blog")
+async def blog(request: Request, user: User = Depends(active_user_opt)):
+    course = await xmr_course()
+
+    return templates.TemplateResponse("blog.html", {
+        "request": request,
+        "user": user,
+        "course": course
+    })
+
+
 @router.get("/buy/{product_id}")
 async def buy(product_id: int, request: Request, user: User = Depends(active_user)):
     # Check if user have active payment

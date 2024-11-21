@@ -2,8 +2,8 @@
 
 {% block content %}
   <div class="center">
-    <h1>{{ msg1 }}</h1>
-    <p>{{ msg2 }}</p>
+    <h1>{{ status_code }}</h1>
+    <p>{{ detail }}</p>
   </div>
   <style>
     body {
@@ -14,8 +14,12 @@
     }
     h1 {
       font-family: Bagel Fat One, Courier New;
+      font-size: 50px;
     }
-    p { font-family: 'Courier New', monospace; }
+    p {
+      font-family: 'Courier New', monospace;
+      font-size: 20px;
+    }
     .center {
         position: fixed;
         bottom: 15%;

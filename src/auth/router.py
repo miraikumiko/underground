@@ -8,7 +8,7 @@ from src.auth.utils import password_helper, active_user
 from src.user.models import User
 from src.user.schemas import UserCreate, UserUpdate
 from src.user.crud import crud_create_user, crud_update_user, crud_delete_user
-from src.server.crud import crud_delete_servers
+from src.server.crud import crud_read_servers, crud_delete_servers
 from src.display.utils import templates
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -22,7 +22,11 @@ async def login_form(request: Request, username: str = Form(...), password: str 
         token = uuid4()
         await r.set(f"auth:{token}", user.id, ex=86400)
 
-        return RedirectResponse('/', status_code=301, headers={
+        servers = await crud_read_servers(user.id)
+        servers = [server for server in servers if server.is_active]
+        url = '/' if not servers else "/dashboard"
+
+        return RedirectResponse(url, status_code=301, headers={
             "Content-Type": "application/x-www-form-urlencoded",
             "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Secure; Max-Age=86400"
         })
@@ -110,7 +114,7 @@ async def register_form(
 
 @router.post("/logout")
 async def logout(_: User = Depends(active_user)):
-    return Response(status_code=204, headers={
+    return RedirectResponse('/', status_code=301, headers={
         "Content-Type": "application/x-www-form-urlencoded",
         "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax; Secure'
     })

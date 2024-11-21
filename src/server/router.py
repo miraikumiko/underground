@@ -13,14 +13,6 @@ router = APIRouter(prefix="/api/server", tags=["servers"])
 
 @router.post("/install/{server_id}")
 async def install(request: Request, server_id: int, os: str = Form(...), user: User = Depends(active_user)):
-    # Check auth
-    if user is None:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Unauthorized",
-            "msg2": "Please login"
-        })
-
     # Check server
     server = await crud_read_server(server_id)
 
@@ -45,14 +37,6 @@ async def install(request: Request, server_id: int, os: str = Form(...), user: U
 
 @router.post("/action/{server_id}")
 async def action(request: Request, server_id: int, user: User = Depends(active_user)):
-    # Check auth
-    if user is None:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Unauthorized",
-            "msg2": "Please login"
-        })
-
     # Check server
     server = await crud_read_server(server_id)
 
@@ -70,24 +54,12 @@ async def action(request: Request, server_id: int, user: User = Depends(active_u
 
 
 @router.websocket("/status/{server_id}")
-async def status(request: Request, server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
-    # Check auth
-    if user is None:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Unauthorized",
-            "msg2": "Please login"
-        })
-
+async def status(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
     # Check server
     server = await crud_read_server(server_id)
 
     if server is None or not server.is_active or server.user_id != user.id:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Forbidden",
-            "msg2": "Invalid server"
-        })
+        return None
 
     # Status logic
     await ws.accept()
@@ -102,24 +74,12 @@ async def status(request: Request, server_id: int, ws: WebSocket, user: User = D
 
 
 @router.websocket("/vnc/{server_id}")
-async def vnc(request: Request, server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
-    # Check auth
-    if user is None:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Unauthorized",
-            "msg2": "Please login"
-        })
-
+async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
     # Check server
     server = await crud_read_server(server_id)
 
     if server is None or not server.is_active or server.user_id != user.id:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Forbidden",
-            "msg2": "Invalid server"
-        })
+        return None
 
     # VNC logic
     await ws.accept()

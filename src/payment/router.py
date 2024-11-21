@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse, StreamingResponse
 from src.database import r
 from src.config import PRODUCTS
-from src.payment.schemas import QRCode
+from src.payment.schemas import PromoUpdate, QRCode
+from src.payment.crud import crud_read_promo, crud_update_promo
 from src.payment.payments import payment_request
 from src.payment.utils import check_active_payment, check_payment_limit, draw_qrcode, xmr_course
 from src.server.crud import crud_read_server
+from src.server.utils import request_vps
 from src.node.crud import crud_read_nodes
 from src.user.models import User
 from src.auth.utils import active_user
-from src.display.utils import templates
+from src.display.utils import templates, t_error
 
 router = APIRouter(prefix="/api/payment", tags=["payments"])
 
@@ -19,23 +21,11 @@ async def upgrade(
     server_id: int, product_id: int,
     request: Request, user: User = Depends(active_user)
 ):
-    # Check auth
-    if user is None:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Unauthorized",
-            "msg2": "Please login"
-        })
-
     # Check server
     server = await crud_read_server(server_id)
 
     if server is None or server.user_id != user.id or server.vps_id >= product_id:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "Invalid server"
-        })
+        return await t_error(request, 400, "Invalid server")
 
     # Check if user have active payment
     cap = await check_active_payment(user.id)
@@ -52,19 +42,11 @@ async def upgrade(
     cpl = await check_payment_limit(user.id)
 
     if cpl:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "You can make only 3 payment requests per day"
-        })
+        return await t_error(request, 400, "You can make only 3 payment requests per day")
 
     # Validate product id
     if not [vps_id for vps_id in PRODUCTS["vps"] if int(vps_id) == product_id]:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "This product doesn't exist"
-        })
+        return await t_error(request, 400, "This product doesn't exist")
 
     # Check availability of resources
     cores = PRODUCTS["vps"][str(product_id)]["cores"]
@@ -74,11 +56,7 @@ async def upgrade(
     nodes = await crud_read_nodes(cores, ram, disk_size)
 
     if not nodes:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Service Unavailable",
-            "msg2": "We haven't available resources"
-        })
+        return await t_error(request, 503, "We haven't available resources")
 
     # Make payment request and return it uri
     payment_data = await payment_request("upgrade", server_id, product_id)
@@ -101,11 +79,21 @@ async def close(request: Request, user: User = Depends(active_user)):
 
         return RedirectResponse('/', status_code=301)
 
-    return templates.TemplateResponse("error.html", {
-        "request": request,
-        "msg1": "Bad Request",
-        "msg2": "You haven't active payments"
-    })
+    return await t_error(request, 400, "You haven't active payments")
+
+
+@router.post("/promo")
+async def promo(code: str = Form(...), user: User = Depends(active_user)):
+    promo_code = await crud_read_promo(code)
+
+    if promo_code is not None:
+        await request_vps(promo_code.vps_id, user, True)
+
+        # Mark promo code as used
+        promo_schema = PromoUpdate(used=True)
+        await crud_update_promo(promo_schema, promo_code.id)
+
+        return RedirectResponse("/dashboard", status_code=301)
 
 
 @router.post("/qrcode")

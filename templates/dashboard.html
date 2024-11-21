@@ -19,6 +19,7 @@
             </div>
           </div>
           <a class="btn0" href="/">store</a>
+          <a class="btn0" href="/promo">promo</a>
         {% endif %}
       </div>
       <div id="other">
@@ -55,8 +56,7 @@
             socket{{ server.id }}.onerror = (error) => { document.getElementById("status-{{ server.id }}").innerText = "unknown" };
           </script>
         {% endfor %}
-        </table>
-      </div>
+      </table>
     </div>
   </main>
 {% endblock %}

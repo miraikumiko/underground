@@ -18,7 +18,9 @@
               </form>
             </div>
           </div>
-          <a class="btn0" href="/dashboard">dashboard</a>
+          {% if servers %}
+            <a class="btn0" href="/dashboard">dashboard</a>
+          {% endif %}
           <a class="btn0" href="/promo">promo</a>
         {% endif %}
         <a class="btn0" href="/blog">blog</a>
@@ -49,8 +51,8 @@
   </main>
   <footer>
     <h2>About</h2>
-    <p>It's private KVM hosting for cryptocurrency <b class="glow">XMR</b>, that doesn't spy its users.</p>
-    <p>Also available on <a href="http://snqcxtphmbl7ydxju7h2knnj4agz45x2sm4ospw47tqragodoy2xxlyd.onion" style="color: #c145ff">.onion</a> and <a href="http://undergroundpm.i2p" style="color: #c145ff">.i2p</a>, all <a href="https://git.underground.pm/underground.pm">sources</a> is open and available under <b class="glow">GPLv3</b> licence.</p>
-    <p>We publish news at <a href="https://mastodon.social/@undergroundpm" style="color: #8c8dff">Mastodon</a>, if you need a help you can write <a href="mailto:underground@underground.pm">admin</a>.</p>
+    <p>Welcome to anonymous KVM hosting for cryptocurrency <b class="glow">XMR</b>, that doesn't spy its users!</p>
+    <p>Also available on <a href="http://underupptqt5efxaxutkfgjikkwu2lsoosyyooxs45tqkeg7dfdytwqd.onion" style="color: #c145ff">.onion</a> and <a href="http://undergroundpm.i2p" style="color: #c145ff">.i2p</a>, all <a href="https://git.underground.pm/underground.pm">sources</a> is open and available under <b class="glow">GPLv3</b> licence.</p>
+    <p>We publish news at <a href="https://mastodon.social/@undergroundpm" style="color: #8c8dff">Mastodon</a>. If you need help you can write <a href="mailto:underground@underground.pm">admin</a>.</p>
   </footer>
 {% endblock %}

@@ -2,6 +2,7 @@ import base64
 from random import choice, randint
 from datetime import timedelta
 from fastapi import APIRouter, Request, Depends
+from fastapi.responses import RedirectResponse
 from captcha.image import ImageCaptcha
 from src.database import r
 from src.config import REGISTRATION, PRODUCTS
@@ -21,9 +22,16 @@ router = APIRouter()
 async def index(request: Request, user: User = Depends(active_user_opt)):
     course = await xmr_course()
 
+    if user is not None:
+        servers = await crud_read_servers(user.id)
+        servers = [server for server in servers if server.is_active]
+    else:
+        servers = None
+
     return templates.TemplateResponse("index.html", {
         "request": request,
         "user": user,
+        "server": servers,
         "course": course,
         "products": PRODUCTS["vps"]
     })
@@ -72,6 +80,10 @@ async def dashboard(request: Request, user: User = Depends(active_user)):
     course = await xmr_course()
     servers = await crud_read_servers(user.id)
     servers = [server for server in servers if server.is_active]
+
+    if not servers:
+        return RedirectResponse('/', status_code=301)
+
     statuses = [await vps_status(server.id) for server in servers]
     servers_and_statuses = zip(servers, statuses)
 

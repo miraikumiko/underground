@@ -9,7 +9,7 @@ from src.user.models import User
 from src.user.schemas import UserCreate, UserUpdate
 from src.user.crud import crud_create_user, crud_update_user, crud_delete_user
 from src.server.crud import crud_read_servers, crud_delete_servers
-from src.display.utils import templates
+from src.display.utils import t_error
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -31,11 +31,7 @@ async def login_form(request: Request, username: str = Form(...), password: str 
             "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Secure; Max-Age=86400"
         })
     else:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Unauthorized",
-            "msg2": "Invalid login or password"
-        })
+        return await t_error(request, 401, "Invalid login or password")
 
 
 @router.post("/register")
@@ -45,56 +41,30 @@ async def register_form(
     captcha_id: str = Form(...), captcha_text: str = Form(...)
 ):
     if not REGISTRATION:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "Registration is disabled"
-        })
+        return await t_error(request, 400, "Registration is disabled")
 
     captcha = await r.get(f"captcha:{captcha_id}")
     await r.delete(f"captcha:{captcha_id}")
 
     if captcha is None:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "Captcha was expired"
-        })
+        return await t_error(request, 400, "Captcha was expired")
 
     if captcha != captcha_text:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "Captcha didn't match"
-        })
+        return await t_error(request, 400, "Captcha didn't match")
 
     if len(username) not in range(21):
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "Username must be up to 20 characters"
-        })
+        return await t_error(request, 400, "Username must be up to 20 characters")
 
     if not username.isalnum():
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "Username must be contain only letters and numbers"
-        })
+        return await t_error(request, 400, "Username must be contain only letters and numbers")
 
     if len(password) not in range(51):
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "Password must be up to 50 characters"
-        })
+        return await t_error(request, 400, "Password must be up to 50 characters")
 
     user = await crud_read(User, attr1=User.username, attr2=username)
 
     if user is None:
-        user = UserCreate(
-            username=username, password=password_helper.hash(password)
-        )
+        user = UserCreate(username=username, password=password_helper.hash(password))
         user_id = await crud_create_user(user)
         token = uuid4()
 
@@ -105,11 +75,7 @@ async def register_form(
             "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Secure; Max-Age=86400"
         })
     else:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "User already exist"
-        })
+        return await t_error(request, 400, "User already exist")
 
 
 @router.post("/logout")
@@ -152,8 +118,4 @@ async def delete_me_form(request: Request, password: str = Form(...), user: User
             "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax; Secure'
         })
     else:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Forbidden",
-            "msg2": "Invalid password"
-        })
+        return await t_error(request, 403, "Invalid password")

@@ -45,4 +45,11 @@ async def active_user_opt(request: Request):
 
 async def active_user_ws(request: WebSocket):
     if "auth" in request.cookies:
-        return await get_active_user(request)
+        res = await get_active_user(request)
+
+        if res == 1:
+            raise HTTPException(403, "d|Forbidden")
+        elif res == 2:
+            raise HTTPException(401, "d|Unauthorized")
+        else:
+            return res

@@ -18,7 +18,9 @@
               </form>
             </div>
           </div>
-          <a class="btn0" href="/dashboard">dashboard</a>
+          {% if servers %}
+            <a class="btn0" href="/dashboard">dashboard</a>
+          {% endif %}
         {% endif %}
         <a class="btn0" href="/">store</a>
       </div>

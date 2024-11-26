@@ -18,8 +18,8 @@ async def vps_install(server: ServerRead, os: str) -> None:
     ram = PRODUCTS["vps"][str(server.vps_id)]["ram"]
     disk_size = PRODUCTS["vps"][str(server.vps_id)]["disk_size"]
 
-    with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-        try:
+    try:
+        with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
             vps = conn.lookupByName(str(server.id))
             state, _ = vps.state()
 
@@ -27,8 +27,8 @@ async def vps_install(server: ServerRead, os: str) -> None:
                 vps.destroy()
 
             vps.undefine()
-        except libvirtError:
-            pass
+    except Exception as e:
+        logger.error(e)
 
     subprocess.Popen(f"""ssh root@{node.ip} 'virt-install \
         --name {server.id} \
@@ -41,13 +41,13 @@ async def vps_install(server: ServerRead, os: str) -> None:
 
 
 async def vps_delete(node_ip: str, name: str) -> None:
-    with libvirt.open(f"qemu+ssh://{node_ip}/system") as conn:
-        try:
+    try:
+        with libvirt.open(f"qemu+ssh://{node_ip}/system") as conn:
             vps = conn.lookupByName(name)
             vps.destroy()
             vps.undefine()
-        except libvirtError:
-            pass
+    except Exception as e:
+        logger.error(e)
 
     await vps_delete_disk(node_ip, name)
 
@@ -57,8 +57,8 @@ async def vps_action(server_id: int) -> None:
     node = await crud_read_node(server.node_id)
 
     if server.is_active:
-        with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-            try:
+        try:
+            with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
                 vps = conn.lookupByName(str(server_id))
                 state, _ = vps.state()
 
@@ -66,32 +66,36 @@ async def vps_action(server_id: int) -> None:
                     vps.create()
                 else:
                     vps.destroy()
-            except libvirtError:
-                pass
+        except Exception as e:
+            logger.error(e)
 
 
 async def vps_status(server_id: int) -> str:
     server = await crud_read_server(server_id)
     node = await crud_read_node(server.node_id)
 
-    with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-        try:
-            vps = conn.lookupByName(str(server_id))
-            state, _ = vps.state()
+    try:
+        with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
+            try:
+                vps = conn.lookupByName(str(server_id))
+                state, _ = vps.state()
 
-            if state == libvirt.VIR_DOMAIN_RUNNING:
-                return "on"
-            elif state == libvirt.VIR_DOMAIN_REBOOT_SIGNAL:
-                return "reboot"
-            elif state == libvirt.VIR_DOMAIN_SHUTOFF:
-                return "off"
-            else:
+                if state == libvirt.VIR_DOMAIN_RUNNING:
+                    return "on"
+                elif state == libvirt.VIR_DOMAIN_REBOOT_SIGNAL:
+                    return "reboot"
+                elif state == libvirt.VIR_DOMAIN_SHUTOFF:
+                    return "off"
+                else:
+                    return "unknown"
+            except libvirtError:
+                return "uninstalled"
+            except Exception as e:
+                logger.error(e)
                 return "unknown"
-        except libvirtError:
-            return "uninstalled"
-        except Exception as e:
-            logger.error(e)
-            return "unknown"
+    except Exception as e:
+        logger.error(e)
+        return "unknown"
 
 
 async def vps_create_disk(node_ip: str, name: str, disk_size: int) -> None:
@@ -114,21 +118,24 @@ async def vps_upgrade(server_id: int, vps_id: int) -> None:
     node = await crud_read_node(server.node_id)
 
     if server.is_active:
-        with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-            vps = conn.lookupByName(str(server_id))
+        try:
+            with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
+                vps = conn.lookupByName(str(server_id))
 
-            vps.destroy()
+                vps.destroy()
 
-            cores = PRODUCTS["vps"][str(vps_id)]["cores"]
-            ram = PRODUCTS["vps"][str(vps_id)]["ram"]
-            disk_size = PRODUCTS["vps"][str(vps_id)]["disk_size"]
+                cores = PRODUCTS["vps"][str(vps_id)]["cores"]
+                ram = PRODUCTS["vps"][str(vps_id)]["ram"]
+                disk_size = PRODUCTS["vps"][str(vps_id)]["disk_size"]
 
-            if cores > server.cores:
-                vps.setVcpu(cores)
+                if cores > server.cores:
+                    vps.setVcpu(cores)
 
-            if ram > server.ram:
-                vps.setMemory(ram)
+                if ram > server.ram:
+                    vps.setMemory(ram)
 
-            if disk_size > server.disk_size:
-                subprocess.run(f"""ssh root@{node.ip} 'qemu-img \
-                    resize /var/lib/libvirt/images/{server_id}.qcow2 {disk_size}G'""")
+                if disk_size > server.disk_size:
+                    subprocess.run(f"""ssh root@{node.ip} 'qemu-img \
+                        resize /var/lib/libvirt/images/{server_id}.qcow2 {disk_size}G'""")
+        except Exception as e:
+            logger.error(e)

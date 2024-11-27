@@ -28,7 +28,7 @@ async def login_form(request: Request, username: str = Form(...), password: str 
 
         return RedirectResponse(url, status_code=301, headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Secure; Max-Age=86400"
+            "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age=86400;"
         })
     else:
         return await t_error(request, 401, "Invalid login or password")
@@ -72,7 +72,7 @@ async def register_form(
 
         return RedirectResponse('/', status_code=301, headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Secure; Max-Age=86400"
+            "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age=86400;"
         })
     else:
         return await t_error(request, 400, "User already exist")
@@ -82,7 +82,7 @@ async def register_form(
 async def logout(_: User = Depends(active_user)):
     return RedirectResponse('/', status_code=301, headers={
         "Content-Type": "application/x-www-form-urlencoded",
-        "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax; Secure'
+        "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax;'
     })
 
 
@@ -101,7 +101,7 @@ async def reset_password_form(
 
         return RedirectResponse('/', status_code=301, headers={
             "Content-Type": "application/x-www-form-urlencoded",
-            "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Secure; Max-Age=86400"
+            "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age=86400;"
         })
     else:
         return Response(status_code=401)
@@ -115,7 +115,7 @@ async def delete_me_form(request: Request, password: str = Form(...), user: User
 
         return RedirectResponse('/', status_code=301, headers={
             "content-type": "application/x-www-form-urlencoded",
-            "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax; Secure'
+            "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax;'
         })
     else:
         return await t_error(request, 403, "Invalid password")

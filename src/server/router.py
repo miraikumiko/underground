@@ -6,7 +6,7 @@ from src.server.vps import vps_install, vps_action, vps_status
 from src.node.crud import crud_read_node
 from src.user.models import User
 from src.auth.utils import active_user, active_user_ws
-from src.display.utils import templates
+from src.display.utils import t_error
 
 router = APIRouter(prefix="/api/server", tags=["servers"])
 
@@ -17,22 +17,14 @@ async def install(request: Request, server_id: int, os: str = Form(...), user: U
     server = await crud_read_server(server_id)
 
     if server is None or not server.is_active or server.user_id != user.id:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Forbidden",
-            "msg2": "Invalid server"
-        })
+        return await t_error(request, 403, "Invalid server")
 
     # Action logic
     try:
         await vps_install(server, os)
         return RedirectResponse("/dashboard", status_code=301)
     except ValueError as e:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Unprocessable Content",
-            "msg2": str(e)
-        })
+        return await t_error(request, 422, str(e))
 
 
 @router.post("/action/{server_id}")
@@ -41,11 +33,7 @@ async def action(request: Request, server_id: int, user: User = Depends(active_u
     server = await crud_read_server(server_id)
 
     if server is None or not server.is_active or server.user_id != user.id:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Forbidden",
-            "msg2": "Invalid server"
-        })
+        return await t_error(request, 403, "Invalid server")
 
     # Action logic
     await vps_action(server_id)

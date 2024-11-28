@@ -46,11 +46,7 @@ async def login(request: Request):
 @router.get("/register")
 async def register(request: Request):
     if not REGISTRATION:
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "msg1": "Bad Request",
-            "msg2": "Registration is disabled"
-        })
+        return await t_error(request, 400, "Registration is disabled")
 
     chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     text = ''.join(choice(chars) for _ in range(randint(5, 7)))

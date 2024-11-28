@@ -97,8 +97,8 @@ async def promo(request: Request, _: User = Depends(active_user)):
     return templates.TemplateResponse("promo.html", {"request": request})
 
 
-@router.get("/blog")
-async def blog(request: Request, user: User = Depends(active_user_opt)):
+@router.get("/faq")
+async def faq(request: Request, user: User = Depends(active_user_opt)):
     course = await xmr_course()
 
     if user is not None:
@@ -107,7 +107,7 @@ async def blog(request: Request, user: User = Depends(active_user_opt)):
     else:
         servers = None
 
-    return templates.TemplateResponse("blog.html", {
+    return templates.TemplateResponse("faq.html", {
         "request": request,
         "user": user,
         "servers": servers,

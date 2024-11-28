@@ -38,3 +38,5 @@ async def promo(request: Request, code: str = Form(...), user: User = Depends(ac
             return RedirectResponse("/dashboard", status_code=301)
         else:
             return await t_error(request, 400, "This promo code has been used")
+    else:
+        return await t_error(request, 422, "Invalid promo code")

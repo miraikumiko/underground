@@ -43,7 +43,7 @@
             <td>{{ server.end_at|to_days }}</td>
             <td>
               <form method="post" action="/api/server/action/{{ server.id }}">
-                <button class="btn0" style="display: contents" type="submit">power</button>
+                <button class="btn0" style="display: contents" type="submit"><i class="fas fa-power-off" style="font-size: 20px;"></i></button>
               </form>
             </td>
             <td><a class="btn0" style="display: contents" href="/install/{{ server.id }}">install</a></td>

@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 
 class Buy(BaseModel):
-    vps_id: int
+    vds_id: int
 
 
 class Pay(BaseModel):
@@ -11,13 +11,56 @@ class Pay(BaseModel):
 
 class Upgrade(BaseModel):
     server_id: int
-    vps_id: int
+    vds_id: int
+
+
+class VDSCreate(BaseModel):
+    cores: int
+    cores_desc: str
+    ram: int
+    ram_desc: str
+    disk_type: str
+    disk_size: int
+    disk_desc: str
+    ipv4: bool
+    ipv6: bool
+    traffic: int
+    price: int
+
+
+class VDSRead(BaseModel):
+    id: int
+    cores: int
+    cores_desc: str
+    ram: int
+    ram_desc: str
+    disk_type: str
+    disk_size: int
+    disk_desc: str
+    ipv4: bool
+    ipv6: bool
+    traffic: int
+    price: int
+
+
+class VDSUpdate(BaseModel):
+    cores: int
+    cores_desc: str
+    ram: int
+    ram_desc: str
+    disk_type: str
+    disk_size: int
+    disk_desc: str
+    ipv4: bool
+    ipv6: bool
+    traffic: int
+    price: int
 
 
 class PromoCreate(BaseModel):
     code: str
     used: bool = False
-    vps_id: int = 1
+    vds_id: int = 1
     days: int = 31
 
 
@@ -25,7 +68,7 @@ class PromoRead(BaseModel):
     id: int
     code: str
     used: bool
-    vps_id: int
+    vds_id: int
     days: int
 
 

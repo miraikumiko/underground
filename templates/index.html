@@ -32,16 +32,16 @@
   </header>
   <main>
     <div id="servers">
-      <div id="vps-container">
-        {% for i in products %}
-          <div class="vps">
-            <span>vCPU: {{ products[i]["cores"] }} [{{ products[i]["cores_desc"] }}]</span>
-            <span>RAM: {{ products[i]["ram"] }}GB [{{ products[i]["ram_desc"] }}]</span>
-            <span>Disk: {{ products[i]["disk_size"] }}GB [{{ products[i]["disk_desc"] }}]</span>
-            <span>IPv4: {% if products[i]["ipv4"] %} Yes {% else %} No {% endif %}</span>
-            <span>IPv6: {% if products[i]["ipv6"] %} Yes {% else %} No {% endif %}</span>
+      <div id="vds-container">
+        {% for vds in vdss %}
+          <div class="vds">
+            <span>vCPU: {{ vds.cores }} [{{ vds.cores_desc }}]</span>
+            <span>RAM: {{ vds.ram }}GB [{{ vds.ram_desc }}]</span>
+            <span>Disk: {{ vds.disk_size }}GB [{{ vds.disk_desc }}]</span>
+            <span>IPv4: {% if vds.ipv4 %} Yes {% else %} No {% endif %}</span>
+            <span>IPv6: {% if vds.ipv6 %} Yes {% else %} No {% endif %}</span>
             <div class="bottom">
-              <span>Total: $<span class="price">{{ products[i]["price"] }}</span>/mo</span>
+              <span>Total: $<span class="price">{{ vds.price }}</span>/mo</span>
               <a class="btn1" href="/buy/{{ i }}">Checkout</a>
             </div>
           </div>

@@ -1,24 +1,31 @@
 from datetime import timedelta
 from src.database import r
 from src.logger import logger
-from src.config import PRODUCTS
 from src.server.schemas import ServerUpdate
 from src.server.crud import crud_read_server, crud_update_server
-from src.server.vps import vps_upgrade
+from src.server.vds import vds_upgrade
+from src.payment.crud import crud_read_vds
 from src.payment.utils import monero_request, usd_to_xmr
 
 
-async def payment_request(ptype: str, server_id: int, vps_id: int = None) -> dict:
+async def payment_request(ptype: str, server_id: int, vds_id: int = None) -> dict:
     res = await monero_request("make_integrated_address")
     address = res["result"]["integrated_address"]
     payment_id = res["result"]["payment_id"]
 
     server = await crud_read_server(server_id)
 
-    if ptype == "upgrade":
-        amount = await usd_to_xmr(PRODUCTS["vps"][str(vps_id)]["price"])
+    if ptype == "upgrade" and vds_id:
+        if vds_id is not None:
+            vds = await crud_read_vds(vds_id)
+        else:
+            msg = "Missing vds_id parameter"
+            logger.error(msg)
+            raise Exception(msg)
     else:
-        amount = await usd_to_xmr(PRODUCTS["vps"][str(server.vps_id)]["price"])
+        vds = await crud_read_vds(server.vds_id)
+
+    amount = await usd_to_xmr(vds.price)
 
     res = await monero_request("make_uri", {"address": address, "amount": amount})
     payment_uri = res["result"]["uri"]
@@ -26,8 +33,8 @@ async def payment_request(ptype: str, server_id: int, vps_id: int = None) -> dic
 
     if server_id is not None:
         payment_data["server_id"] = server_id
-    if vps_id is not None:
-        payment_data["vps_id"] = vps_id
+    if vds_id is not None:
+        payment_data["vds_id"] = vds_id
 
     await r.hset(f"payment:{payment_id}", mapping=payment_data)
     await r.expire(f"payment:{payment_id}", 900)
@@ -57,7 +64,7 @@ async def payment_checkout(txid: str) -> None:
                 )
                 await crud_update_server(server_schema, payment["server_id"])
             elif payment["type"] == "upgrade":
-                await vps_upgrade(payment["server_id"], payment["vps_id"])
+                await vds_upgrade(payment["server_id"], payment["vds_id"])
 
             await r.delete(f"payment:{payment_id}")
             await r.delete(f'payment_uri:{server.user_id}')

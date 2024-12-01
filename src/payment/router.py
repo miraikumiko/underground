@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from src.database import r
 from src.payment.schemas import PromoUpdate
 from src.payment.crud import crud_read_promo, crud_update_promo
-from src.server.utils import request_vps
+from src.server.utils import request_vds
 from src.user.models import User
 from src.auth.utils import active_user
 from src.display.utils import t_error
@@ -29,7 +29,7 @@ async def promo(request: Request, code: str = Form(...), user: User = Depends(ac
 
     if promo_code is not None:
         if not promo_code.used:
-            await request_vps(promo_code.vps_id, user, True)
+            await request_vds(promo_code.vds_id, user, True)
 
             # Mark promo code as used
             promo_schema = PromoUpdate(used=True)

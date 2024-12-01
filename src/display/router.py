@@ -5,13 +5,14 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 from captcha.image import ImageCaptcha
 from src.database import r
-from src.config import REGISTRATION, PRODUCTS
+from src.config import REGISTRATION
 from src.user.models import User
 from src.auth.utils import active_user, active_user_opt
 from src.server.crud import crud_read_servers, crud_read_server
-from src.server.vps import vps_status
-from src.server.utils import request_vps
+from src.server.vds import vds_status
+from src.server.utils import request_vds
 from src.node.crud import crud_read_nodes
+from src.payment.crud import crud_read_vdss, crud_read_vds
 from src.payment.payments import payment_request
 from src.payment.utils import check_active_payment, check_payment_limit, draw_qrcode, xmr_course
 from src.display.utils import templates, t_error
@@ -29,12 +30,14 @@ async def index(request: Request, user: User = Depends(active_user_opt)):
     else:
         servers = None
 
+    vdss = await crud_read_vdss()
+
     return templates.TemplateResponse("index.html", {
         "request": request,
         "user": user,
         "servers": servers,
         "course": course,
-        "products": PRODUCTS["vps"]
+        "vdss": vdss
     })
 
 
@@ -81,7 +84,7 @@ async def dashboard(request: Request, user: User = Depends(active_user)):
     if not servers:
         return RedirectResponse('/', status_code=301)
 
-    statuses = [await vps_status(server.id) for server in servers]
+    statuses = [await vds_status(server.id) for server in servers]
     servers_and_statuses = zip(servers, statuses)
 
     return templates.TemplateResponse("dashboard.html", {
@@ -134,7 +137,7 @@ async def buy(product_id: int, request: Request, user: User = Depends(active_use
     if cpl:
         return await t_error(request, 400, "You can make only 3 payment requests per day")
 
-    server_id = await request_vps(product_id, user)
+    server_id = await request_vds(product_id, user)
 
     # Make payment request and return it uri
     await r.set(f"inactive_server:{server_id}", server_id, ex=900)
@@ -196,11 +199,12 @@ async def pay(server_id: int, request: Request, user: User = Depends(active_user
 @router.get("/upgrademenu/{server_id}")
 async def upgrade(server_id: int, request: Request, _: User = Depends(active_user)):
     server = await crud_read_server(server_id)
-    products = {key: value for key, value in PRODUCTS["vps"].items() if int(key) > server.vps_id}
+    vdss = await crud_read_vdss()
+    vdss = [vds for vds in vdss if vds.id > server.vds_id]
 
     return templates.TemplateResponse("upgrade.html", {
         "request": request,
-        "products": products,
+        "vdss": vdss,
         "server_id": server_id
     })
 
@@ -213,7 +217,7 @@ async def upgrade(
     # Check server
     server = await crud_read_server(server_id)
 
-    if server is None or server.user_id != user.id or server.vps_id >= product_id:
+    if server is None or server.user_id != user.id or server.vds_id >= product_id:
         return await t_error(request, 400, "Invalid server")
 
     # Check if user have active payment
@@ -234,15 +238,13 @@ async def upgrade(
         return await t_error(request, 400, "You can make only 3 payment requests per day")
 
     # Validate product id
-    if not [vps_id for vps_id in PRODUCTS["vps"] if int(vps_id) == product_id]:
+    vds = await crud_read_vds(product_id)
+
+    if not vds:
         return await t_error(request, 400, "This product doesn't exist")
 
     # Check availability of resources
-    cores = PRODUCTS["vps"][str(product_id)]["cores"]
-    ram = PRODUCTS["vps"][str(product_id)]["ram"]
-    disk_size = PRODUCTS["vps"][str(product_id)]["disk_size"]
-
-    nodes = await crud_read_nodes(cores, ram, disk_size)
+    nodes = await crud_read_nodes(vds.cores, vds.ram, vds.disk_size)
 
     if not nodes:
         return await t_error(request, 503, "We haven't available resources")

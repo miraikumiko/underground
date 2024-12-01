@@ -10,7 +10,7 @@ class ServerCreate(BaseModel):
     end_at: datetime = datetime.now(UTC) + timedelta(days=31)
     is_active: bool = True
     user_id: int
-    vps_id: int
+    vds_id: int
     node_id: int
 
 
@@ -23,7 +23,7 @@ class ServerRead(BaseModel):
     end_at: datetime
     is_active: bool
     user_id: int
-    vps_id: int
+    vds_id: int
     node_id: int
 
 
@@ -35,5 +35,5 @@ class ServerUpdate(BaseModel):
     end_at: datetime = None
     is_active: bool = None
     user_id: int = None
-    vps_id: int
+    vds_id: int
     node_id: int = None

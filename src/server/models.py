@@ -13,6 +13,6 @@ class Server(Base):
     start_at = Column(TIMESTAMP, nullable=False, default=datetime.now)
     end_at = Column(TIMESTAMP, nullable=False)
     is_active = Column(Boolean, nullable=False)
-    vps_id = Column(Integer, nullable=False)
+    vds_id = Column(Integer, ForeignKey("vds.id"), nullable=False)
     node_id = Column(Integer, ForeignKey("node.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)

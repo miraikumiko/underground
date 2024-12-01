@@ -2,83 +2,80 @@ import subprocess
 import libvirt
 from libvirt import libvirtError
 from src.logger import logger
-from src.config import PRODUCTS
 from src.server.schemas import ServerRead
 from src.server.crud import crud_read_server
 from src.node.crud import crud_read_node
+from src.payment.crud import crud_read_vds
 
 
-async def vps_install(server: ServerRead, os: str) -> None:
+async def vds_install(server: ServerRead, os: str) -> None:
     if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd"):
         raise ValueError("Invalid OS")
 
     node = await crud_read_node(server.node_id)
-
-    cores = PRODUCTS["vps"][str(server.vps_id)]["cores"]
-    ram = PRODUCTS["vps"][str(server.vps_id)]["ram"]
-    disk_size = PRODUCTS["vps"][str(server.vps_id)]["disk_size"]
+    vds = await crud_read_vds(server.vds_id)
 
     try:
         with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-            vps = conn.lookupByName(str(server.id))
-            state, _ = vps.state()
+            vds = conn.lookupByName(str(server.id))
+            state, _ = vds.state()
 
             if state == libvirt.VIR_DOMAIN_RUNNING:
-                vps.destroy()
+                vds.destroy()
 
-            vps.undefine()
+            vds.undefine()
     except Exception as e:
         logger.error(e)
 
     subprocess.Popen(f"""ssh root@{node.ip} 'virt-install \
         --name {server.id} \
-        --vcpus {cores} \
-        --memory {ram * 1000} \
-        --disk /var/lib/libvirt/images/{server.id}.qcow2,size={disk_size} \
+        --vcpus {vds.cores} \
+        --memory {vds.ram * 1000} \
+        --disk /var/lib/libvirt/images/{server.id}.qcow2,size={vds.disk_size} \
         --cdrom /opt/iso/{os}.iso \
         --os-variant unknown \
         --graphics vnc,listen={node.ip},port={server.vnc_port}'""", shell=True)
 
 
-async def vps_delete(node_ip: str, name: str) -> None:
+async def vds_delete(node_ip: str, name: str) -> None:
     try:
         with libvirt.open(f"qemu+ssh://{node_ip}/system") as conn:
-            vps = conn.lookupByName(name)
-            vps.destroy()
-            vps.undefine()
+            vds = conn.lookupByName(name)
+            vds.destroy()
+            vds.undefine()
     except Exception as e:
         logger.error(e)
 
-    await vps_delete_disk(node_ip, name)
+    await vds_delete_disk(node_ip, name)
 
 
-async def vps_action(server_id: int) -> None:
+async def vds_action(server_id: int) -> None:
     server = await crud_read_server(server_id)
     node = await crud_read_node(server.node_id)
 
     if server.is_active:
         try:
             with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-                vps = conn.lookupByName(str(server_id))
-                state, _ = vps.state()
+                vds = conn.lookupByName(str(server_id))
+                state, _ = vds.state()
 
                 if state == libvirt.VIR_DOMAIN_SHUTOFF:
-                    vps.create()
+                    vds.create()
                 else:
-                    vps.destroy()
+                    vds.destroy()
         except Exception as e:
             logger.error(e)
 
 
-async def vps_status(server_id: int) -> str:
+async def vds_status(server_id: int) -> str:
     server = await crud_read_server(server_id)
     node = await crud_read_node(server.node_id)
 
     try:
         with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
             try:
-                vps = conn.lookupByName(str(server_id))
-                state, _ = vps.state()
+                vds = conn.lookupByName(str(server_id))
+                state, _ = vds.state()
 
                 if state == libvirt.VIR_DOMAIN_RUNNING:
                     return "on"
@@ -98,7 +95,7 @@ async def vps_status(server_id: int) -> str:
         return "unknown"
 
 
-async def vps_create_disk(node_ip: str, name: str, disk_size: int) -> None:
+async def vds_create_disk(node_ip: str, name: str, disk_size: int) -> None:
     try:
         subprocess.run(f"""ssh root@{node_ip} 'qemu-img create /var/lib/libvirt/images/{name}.qcow2 \
             -f qcow2 {disk_size}G'""")
@@ -106,36 +103,34 @@ async def vps_create_disk(node_ip: str, name: str, disk_size: int) -> None:
         pass
 
 
-async def vps_delete_disk(node_ip: str, name: str) -> None:
+async def vds_delete_disk(node_ip: str, name: str) -> None:
     try:
         subprocess.run(f"ssh root@{node_ip} 'rm -f /var/lib/libvirt/images/{name}.qcow2'")
     except FileNotFoundError:
         pass
 
 
-async def vps_upgrade(server_id: int, vps_id: int) -> None:
+async def vds_upgrade(server_id: int, vds_id: int) -> None:
     server = await crud_read_server(server_id)
     node = await crud_read_node(server.node_id)
 
     if server.is_active:
         try:
             with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-                vps = conn.lookupByName(str(server_id))
+                vds = conn.lookupByName(str(server_id))
 
-                vps.destroy()
+                vds.destroy()
 
-                cores = PRODUCTS["vps"][str(vps_id)]["cores"]
-                ram = PRODUCTS["vps"][str(vps_id)]["ram"]
-                disk_size = PRODUCTS["vps"][str(vps_id)]["disk_size"]
+                vds = await crud_read_vds(vds_id)
 
-                if cores > server.cores:
-                    vps.setVcpu(cores)
+                if vds.cores > server.cores:
+                    vds.setVcpu(vds.cores)
 
-                if ram > server.ram:
-                    vps.setMemory(ram)
+                if vds.ram > server.ram:
+                    vds.setMemory(vds.ram)
 
-                if disk_size > server.disk_size:
+                if vds.disk_size > server.disk_size:
                     subprocess.run(f"""ssh root@{node.ip} 'qemu-img \
-                        resize /var/lib/libvirt/images/{server_id}.qcow2 {disk_size}G'""")
+                        resize /var/lib/libvirt/images/{server_id}.qcow2 {vds.disk_size}G'""")
         except Exception as e:
             logger.error(e)

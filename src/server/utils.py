@@ -1,19 +1,22 @@
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 from datetime import datetime, timedelta, UTC
 from src.database import r
-from src.config import PRODUCTS, SUBNET_IPV4, SUBNET_IPV6
+from src.config import SUBNET_IPV4, SUBNET_IPV6
 from src.logger import logger
 from src.user.models import User
 from src.server.schemas import ServerCreate
 from src.server.crud import crud_create_server, crud_read_servers, crud_delete_server
-from src.server.vps import vps_delete
+from src.server.vds import vds_delete
 from src.node.schemas import NodeUpdate
 from src.node.crud import crud_read_node, crud_read_nodes, crud_update_node
+from src.payment.crud import crud_read_vds
 
 
-async def request_vps(product_id: int, user: User, is_active: bool = False) -> int:
+async def request_vds(product_id: int, user: User, is_active: bool = False) -> int:
     # Validate product id
-    if not [vps_id for vps_id in PRODUCTS["vps"] if int(vps_id) == product_id]:
+    vds = await crud_read_vds(product_id)
+
+    if not vds:
         raise Exception("Bad Request|This product doesn't exist")
 
     # Define vars
@@ -22,7 +25,7 @@ async def request_vps(product_id: int, user: User, is_active: bool = False) -> i
     ipv6 = None
 
     # Check availability of IPv4
-    if PRODUCTS["vps"][str(product_id)]["ipv4"]:
+    if vds.ipv4:
         subnet = IPv4Network(SUBNET_IPV4)
 
         if servers:
@@ -30,7 +33,7 @@ async def request_vps(product_id: int, user: User, is_active: bool = False) -> i
             ipv4s = list(reversed([ipv4 for ipv4 in subnet if ipv4 not in reserved_ipv4s]))
 
             if not ipv4s:
-                logger.warn(f"Haven't available IPv4 for new VPS with id {product_id} for {user.username}")
+                logger.warn(f"Haven't available IPv4 for new vds with id {product_id} for {user.username}")
                 raise Exception("Service Unavailable|We haven't available resources")
 
             ipv4 = ipv4s[0]
@@ -39,7 +42,7 @@ async def request_vps(product_id: int, user: User, is_active: bool = False) -> i
 
     # Check availability of IPv6
     if not SUBNET_IPV6:
-        if PRODUCTS["vps"][str(product_id)]["ipv6"]:
+        if vds.ipv6:
             subnet = IPv6Network(SUBNET_IPV6)
 
             if servers:
@@ -47,7 +50,7 @@ async def request_vps(product_id: int, user: User, is_active: bool = False) -> i
                 ipv6s = list(reversed([ipv6 for ipv6 in subnet if ipv6 not in reserved_ipv6s]))
 
                 if not ipv6s:
-                    logger.warn(f"Haven't available IPv6 for new VPS with id {product_id} for {user.username}")
+                    logger.warn(f"Haven't available IPv6 for new vds with id {product_id} for {user.username}")
                     raise Exception("Service Unavailable|We haven't available resources")
 
                 ipv6 = ipv6s[0]
@@ -55,14 +58,10 @@ async def request_vps(product_id: int, user: User, is_active: bool = False) -> i
                 ipv6 = subnet[-1]
 
     # Check availability of resources
-    cores = PRODUCTS["vps"][str(product_id)]["cores"]
-    ram = PRODUCTS["vps"][str(product_id)]["ram"]
-    disk_size = PRODUCTS["vps"][str(product_id)]["disk_size"]
-
-    nodes = await crud_read_nodes(cores, ram, disk_size)
+    nodes = await crud_read_nodes(vds.cores, vds.ram, vds.disk_size)
 
     if not nodes:
-        logger.warn(f"Haven't available resources for new VPS with id {product_id} for {user.username}")
+        logger.warn(f"Haven't available resources for new vds with id {product_id} for {user.username}")
         raise Exception("Service Unavailable|We haven't available resources")
 
     node = nodes[0]
@@ -83,7 +82,7 @@ async def request_vps(product_id: int, user: User, is_active: bool = False) -> i
         start_at=datetime.now(UTC),
         end_at=datetime.now() + timedelta(days=31),
         is_active=False,
-        vps_id=product_id,
+        vds_id=product_id,
         node_id=node.id,
         user_id=user.id
     )
@@ -92,9 +91,9 @@ async def request_vps(product_id: int, user: User, is_active: bool = False) -> i
         server_schema.is_active = True
 
     node_schema = NodeUpdate(
-        cores_available=(node.cores_available - cores),
-        ram_available=(node.ram_available - ram),
-        disk_size_available=(node.disk_size_available - disk_size)
+        cores_available=(node.cores_available - vds.cores),
+        ram_available=(node.ram_available - vds.ram),
+        disk_size_available=(node.disk_size_available - vds.disk_size)
     )
 
     await crud_update_node(node_schema, node.id)
@@ -111,7 +110,7 @@ async def servers_expired_check():
             node = await crud_read_node(server.node_id)
 
             await crud_delete_server(server.id)
-            await vps_delete(node.ip, str(server.id))
+            await vds_delete(node.ip, str(server.id))
 
             logger.info(f"Server {server.id} has been expired and deleted")
         elif server.end_at <= datetime.now():
@@ -122,16 +121,16 @@ async def servers_expired_check():
 
             if is_expired is None:
                 node = await crud_read_node(server.node_id)
+                vds = await crud_read_vds(server.vds_id)
+                cores = vds.cores
+                ram = vds.ram
+                disk_size = vds.disk_size
 
-                cores = node.cores_available + PRODUCTS["vps"][str(server.vps_id)]["cores"]
-                ram = node.ram_available + PRODUCTS["vps"][str(server.vps_id)]["ram"]
-                disk_size = node.disk_size_available + PRODUCTS["vps"][str(server.vps_id)]["disk_size"]
-
-                if cores > node.cores:
+                if vds.cores > node.cores:
                     cores = node.cores
-                if ram > node.ram:
+                if vds.ram > node.ram:
                     ram = node.ram
-                if disk_size > node.disk_size:
+                if vds.disk_size > node.disk_size:
                     disk_size = node.disk_size
 
                 node_schema = NodeUpdate(

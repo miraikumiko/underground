@@ -69,7 +69,7 @@ footer {
   padding: 20px 0;
 }
 
-#vps-container {
+#vds-container {
   display: grid;
   grid-template-columns: auto auto;
 }
@@ -92,7 +92,7 @@ article {
   text-align: center;
 }
 
-.vps {
+.vds {
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
@@ -102,7 +102,7 @@ article {
   padding: 10px;
 }
 
-.vps, .vps>span { padding: 5px 10px; }
+.vds, .vds>span { padding: 5px 10px; }
 
 .bottom {
   display: grid;

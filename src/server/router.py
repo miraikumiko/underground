@@ -2,7 +2,7 @@ import asyncio
 from fastapi import APIRouter, Request, WebSocket, Form, Depends
 from fastapi.responses import RedirectResponse
 from src.server.crud import crud_read_server
-from src.server.vps import vps_install, vps_action, vps_status
+from src.server.vds import vds_install, vds_action, vds_status
 from src.node.crud import crud_read_node
 from src.user.models import User
 from src.auth.utils import active_user, active_user_ws
@@ -21,7 +21,7 @@ async def install(request: Request, server_id: int, os: str = Form(...), user: U
 
     # Action logic
     try:
-        await vps_install(server, os)
+        await vds_install(server, os)
         return RedirectResponse("/dashboard", status_code=301)
     except ValueError as e:
         return await t_error(request, 422, str(e))
@@ -36,7 +36,7 @@ async def action(request: Request, server_id: int, user: User = Depends(active_u
         return await t_error(request, 403, "Invalid server")
 
     # Action logic
-    await vps_action(server_id)
+    await vds_action(server_id)
 
     return RedirectResponse("/dashboard", status_code=301)
 
@@ -54,7 +54,7 @@ async def status(server_id: int, ws: WebSocket, user: User = Depends(active_user
 
     while True:
         try:
-            stat = await vps_status(server_id)
+            stat = await vds_status(server_id)
             await ws.send_text(stat)
             await asyncio.sleep(5)
         except Exception:

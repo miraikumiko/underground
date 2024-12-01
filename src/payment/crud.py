@@ -1,6 +1,32 @@
 from src.crud import crud_create, crud_reads, crud_read, crud_update, crud_delete
-from src.payment.models import Promo
-from src.payment.schemas import PromoCreate, PromoRead, PromoUpdate
+from src.payment.models import VDS, Promo
+from src.payment.schemas import VDSCreate, VDSRead, VDSUpdate, PromoCreate, PromoRead, PromoUpdate
+
+
+async def crud_create_vds(schema: VDSCreate) -> int:
+    vds_id = await crud_create(VDS, schema)
+
+    return vds_id
+
+
+async def crud_read_vdss() -> list[VDSRead]:
+    vdss = await crud_reads(VDS)
+
+    return vdss
+
+
+async def crud_read_vds(vds_id: int) -> VDSRead:
+    vds = await crud_read(VDS, attr1=VDS.id, attr2=vds_id)
+
+    return vds
+
+
+async def crud_update_vds(schema: VDSUpdate, vds_id: int) -> None:
+    await crud_update(VDS, schema, attr1=VDS.id, attr2=vds_id)
+
+
+async def crud_delete_vds(vds_id: int) -> None:
+    await crud_delete(VDS, attr1=VDS.id, attr2=vds_id)
 
 
 async def crud_create_promo(schema: PromoCreate) -> int:

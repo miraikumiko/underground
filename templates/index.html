@@ -42,7 +42,7 @@
             <span>IPv6: {% if vds.ipv6 %} Yes {% else %} No {% endif %}</span>
             <div class="bottom">
               <span>Total: $<span class="price">{{ vds.price }}</span>/mo</span>
-              <a class="btn1" href="/buy/{{ i }}">Checkout</a>
+              <a class="btn1" href="/buy/{{ vds.id }}">Checkout</a>
             </div>
           </div>
         {% endfor %}

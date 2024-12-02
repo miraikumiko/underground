@@ -6,6 +6,7 @@ After=network-online.target
 [Service]
 Type=simple
 User=root
+EnvironmentFile=/etc/environment
 ExecStart=/var/www/underground.pm/contrib/monero/run.sh
 
 [Install]

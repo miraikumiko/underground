@@ -178,6 +178,10 @@ article {
 
 .glow { text-shadow: 0 0 15px #ddd; }
 
+.faq-details {
+  margin: 30px 0;
+}
+
 @keyframes fadein {
   from { opacity: 0; }
   to { opacity: 1; }

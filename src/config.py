@@ -8,6 +8,8 @@ HOST = environ.get("HOST")
 PORT = environ.get("PORT")
 LOG_FILE = environ.get("LOG_FILE")
 REGISTRATION = environ.get("REGISTRATION")
+PAYMENT_TIME = environ.get("PAYMENT_TIME")
+VDS_DAYS = environ.get("VDS_DAYS")
 
 # Database
 DB_PATH = environ.get("DB_PATH")

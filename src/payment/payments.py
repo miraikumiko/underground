@@ -1,4 +1,5 @@
 from datetime import timedelta
+from src.config import PAYMENT_TIME, VDS_DAYS
 from src.database import r
 from src.logger import logger
 from src.server.schemas import ServerUpdate
@@ -37,10 +38,10 @@ async def payment_request(ptype: str, server_id: int, vds_id: int = None) -> dic
         payment_data["vds_id"] = vds_id
 
     await r.hset(f"payment:{payment_id}", mapping=payment_data)
-    await r.expire(f"payment:{payment_id}", 900)
-    await r.set(f"payment_uri:{server.user_id}", payment_uri, ex=900)
+    await r.expire(f"payment:{payment_id}", 60 * PAYMENT_TIME)
+    await r.set(f"payment_uri:{server.user_id}", payment_uri, ex=(60 * PAYMENT_TIME))
 
-    return {"payment_uri": payment_uri, "ttl": 900}
+    return {"payment_uri": payment_uri, "ttl": 60 * PAYMENT_TIME}
 
 
 async def payment_checkout(txid: str) -> None:
@@ -59,7 +60,7 @@ async def payment_checkout(txid: str) -> None:
                 await crud_update_server(server_schema, payment["server_id"])
             elif payment["type"] == "pay":
                 server_schema = ServerUpdate(
-                    end_at=(server.end_at - server.start_at + timedelta(days=31)),
+                    end_at=(server.end_at - server.start_at + timedelta(days=VDS_DAYS)),
                     active=True
                 )
                 await crud_update_server(server_schema, payment["server_id"])

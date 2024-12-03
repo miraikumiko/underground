@@ -5,7 +5,7 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 from captcha.image import ImageCaptcha
 from src.database import r
-from src.config import REGISTRATION
+from src.config import REGISTRATION, PAYMENT_TIME
 from src.user.models import User
 from src.auth.utils import active_user, active_user_opt
 from src.server.crud import crud_read_servers, crud_read_server
@@ -140,7 +140,7 @@ async def buy(product_id: int, request: Request, user: User = Depends(active_use
     server_id = await request_vds(product_id, user)
 
     # Make payment request and return it uri
-    await r.set(f"inactive_server:{server_id}", server_id, ex=900)
+    await r.set(f"inactive_server:{server_id}", server_id, ex=(60 * PAYMENT_TIME))
 
     payment_data = await payment_request("buy", server_id)
     qrcode = await draw_qrcode(payment_data["payment_uri"])

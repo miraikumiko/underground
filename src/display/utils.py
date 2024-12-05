@@ -5,7 +5,7 @@ from src.display.filters import to_days, to_minutes
 
 templates = Jinja2Templates(directory=f"{BASE_PATH}/templates")
 templates.env.filters["to_days"] = to_days
-templates.env.filters["to_days"] = to_minutes
+templates.env.filters["to_minutes"] = to_minutes
 
 
 async def t_error(request: Request, status_code: int, detail: str) -> templates.TemplateResponse:

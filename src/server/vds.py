@@ -2,8 +2,8 @@ import subprocess
 import libvirt
 from libvirt import libvirtError
 from src.logger import logger
-from src.server.schemas import ServerRead
-from src.server.crud import crud_read_server
+from src.server.schemas import ServerRead, ServerUpdate
+from src.server.crud import crud_read_server, crud_update_server
 from src.node.crud import crud_read_node
 from src.payment.crud import crud_read_vds
 
@@ -17,13 +17,13 @@ async def vds_install(server: ServerRead, os: str) -> None:
 
     try:
         with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-            vds = conn.lookupByName(str(server.id))
-            state, _ = vds.state()
+            active_vds = conn.lookupByName(str(server.id))
+            state, _ = active_vds.state()
 
             if state == libvirt.VIR_DOMAIN_RUNNING:
-                vds.destroy()
+                active_vds.destroy()
 
-            vds.undefine()
+            active_vds.undefine()
     except Exception as e:
         logger.error(e)
 
@@ -67,32 +67,48 @@ async def vds_action(server_id: int) -> None:
             logger.error(e)
 
 
-async def vds_status(server_id: int) -> str:
+async def vds_status(server_id: int) -> dict:
     server = await crud_read_server(server_id)
     node = await crud_read_node(server.node_id)
+
+    if server.ipv4:
+        ipv4 = server.ipv4
+    else:
+        ipv4 = "unknown"
 
     try:
         with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
             try:
                 vds = conn.lookupByName(str(server_id))
+                interfaces = vds.interfaceAddresses(libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
+
+                for _, iface_info in interfaces.items():
+                    for addr in iface_info["addrs"]:
+                        ipv4 = addr["addr"]
+
+                        if ipv4:
+                            if not server.ipv4 or server.ipv4 != ipv4:
+                                server_schema = ServerUpdate(ipv4=ipv4)
+                                server_schema = server_schema.rm_none_attrs()
+                                await crud_update_server(server_schema, server_id)
+
                 state, _ = vds.state()
 
                 if state == libvirt.VIR_DOMAIN_RUNNING:
-                    return "on"
+                    stat = "on"
                 elif state == libvirt.VIR_DOMAIN_REBOOT_SIGNAL:
-                    return "reboot"
+                    stat = "reboot"
                 elif state == libvirt.VIR_DOMAIN_SHUTOFF:
-                    return "off"
+                    stat = "off"
                 else:
-                    return "unknown"
+                    stat = "unknown"
+
+                return {"ipv4": ipv4, "status": stat}
             except libvirtError:
-                return "uninstalled"
-            except Exception as e:
-                logger.error(e)
-                return "unknown"
+                return {"ipv4": ipv4, "status": "uninstalled"}
     except Exception as e:
         logger.error(e)
-        return "unknown"
+        return {"ipv4": ipv4, "status": "unknown"}
 
 
 async def vds_create_disk(node_ip: str, name: str, disk_size: int) -> None:

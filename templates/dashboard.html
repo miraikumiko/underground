@@ -37,8 +37,8 @@
         </tr>
         {% for server, status in servers_and_statuses %}
           <tr>
-            <td>{% if server.ipv4 %} {{ server.ipv4 }} {% else %} - {% endif %}</td>
-            <td id="status-{{ server.id }}">{{ status }}</td>
+            <td id="ipv4-{{ server.id }}">{% if server.ipv4 %} {{ server.ipv4 }} {% else %} unknown {% endif %}</td>
+            <td id="status-{{ server.id }}">{{ status["status"] }}</td>
             <td>{{ server.end_at|to_days }}</td>
             <td>
               <form method="post" action="/api/server/action/{{ server.id }}">
@@ -52,8 +52,17 @@
           </tr>
           <script>
             const socket{{ server.id }} = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/server/status/{{ server.id }}`);
-            socket{{ server.id }}.onmessage = async (event) => { document.getElementById("status-{{ server.id }}").innerText = event.data; };
-            socket{{ server.id }}.onerror = (error) => { document.getElementById("status-{{ server.id }}").innerText = "unknown" };
+
+            socket{{ server.id }}.onmessage = async (event) => {
+              const data = JSON.parse(event.data);
+
+              document.getElementById("ipv4-{{ server.id }}").innerText = data.ipv4;
+              document.getElementById("status-{{ server.id }}").innerText = data.status;
+            };
+
+            socket{{ server.id }}.onerror = (error) => {
+              document.getElementById("status-{{ server.id }}").innerText = "unknown";
+            };
           </script>
         {% endfor %}
       </table>

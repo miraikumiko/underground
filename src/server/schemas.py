@@ -30,10 +30,13 @@ class ServerRead(BaseModel):
 class ServerUpdate(BaseModel):
     ipv4: str = None
     ipv6: str = None
-    vnc_port: int
+    vnc_port: int = None
     start_at: datetime = None
     end_at: datetime = None
     is_active: bool = None
     user_id: int = None
-    vds_id: int
+    vds_id: int = None
     node_id: int = None
+
+    def rm_none_attrs(self):
+        return {k: v for k, v in self.model_dump().items() if v is not None}

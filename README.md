@@ -1,4 +1,4 @@
-# underground.pm
+# Underground PM
 
 Privacy hosting
 
@@ -16,7 +16,7 @@ Privacy hosting
 
 ## Installing
 
-Clone repository into ```/var/www/underground.pm``` and download submodules:
+Clone repository into `/var/www/underground.pm` and download submodules:
 
 ```
 git submodule init
@@ -29,7 +29,7 @@ git submodule update
 
 For first edit environment varibles:
 
-```cp .env.example .env```
+`cp .env.example .env`
 
 And install requirements:
 
@@ -42,15 +42,15 @@ pip install -r requirements.txt
 
 ### Cronie
 
-```*/15 * * * * /var/www/underground.pm/venv/bin/python /var/www/underground.pm/run.py -e```
+`*/15 * * * * /var/www/underground.pm/venv/bin/python /var/www/underground.pm/run.py -e`
 
 ### OpenRC
 
-```cp contrib/openrc/underground.pm /etc/init.d/underground.pm```
+`cp contrib/openrc/underground.pm /etc/init.d/underground.pm`
 
 ### Systemd
 
-```cp contrib/systemd/underground.pm.service /etc/systemd/system/underground.pm.service```
+`cp contrib/systemd/underground.pm.service /etc/systemd/system/underground.pm.service`
 
 ### Nginx
 
@@ -77,4 +77,4 @@ rc-service nginx start
 
 ### Systemd
 
-```systemctl enable --now libvirtd redis underground.pm nginx```
+`systemctl enable --now libvirtd redis underground.pm nginx`

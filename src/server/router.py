@@ -55,7 +55,7 @@ async def status(server_id: int, ws: WebSocket, user: User = Depends(active_user
     while True:
         try:
             stat = await vds_status(server_id)
-            await ws.send_text(stat)
+            await ws.send_json(stat)
             await asyncio.sleep(5)
         except Exception:
             break

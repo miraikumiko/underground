@@ -4,9 +4,9 @@ from src.user.schemas import UserCreate, UserRead, UserUpdate
 
 
 async def crud_create_user(schema: UserCreate) -> int:
-	user_id = await crud_create(User, schema)
+    user_id = await crud_create(User, schema)
 
-	return user_id
+    return user_id
 
 
 async def crud_read_users() -> list[UserRead]:

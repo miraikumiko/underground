@@ -1,7 +1,7 @@
-from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
+from ipaddress import IPv4Address, IPv4Network
 from datetime import datetime, timedelta, UTC
 from src.database import r
-from src.config import SUBNET_IPV4, SUBNET_IPV6
+from src.config import SUBNET_IPV4
 from src.logger import logger
 from src.user.models import User
 from src.server.schemas import ServerCreate
@@ -19,43 +19,17 @@ async def request_vds(product_id: int, user: User, is_active: bool = False) -> i
     if not vds:
         raise Exception("Bad Request|This product doesn't exist")
 
-    # Define vars
     servers = await crud_read_servers()
-    ipv4 = None
-    ipv6 = None
 
     # Check availability of IPv4
     if vds.ipv4:
-        subnet = IPv4Network(SUBNET_IPV4)
-
         if servers:
-            reserved_ipv4s = [IPv4Address(server.ipv4) for server in servers]
-            ipv4s = list(reversed([ipv4 for ipv4 in subnet if ipv4 not in reserved_ipv4s]))
+            server_ipv4s = [IPv4Address(server.ipv4) for server in servers if not server.ipv4]
+            available_ipv4s = [ipv4 for ipv4 in IPv4Network(SUBNET_IPV4) if ipv4 not in server_ipv4s]
 
-            if not ipv4s:
+            if not available_ipv4s:
                 logger.warn(f"Haven't available IPv4 for new vds with id {product_id} for {user.username}")
                 raise Exception("Service Unavailable|We haven't available resources")
-
-            ipv4 = ipv4s[0]
-        else:
-            ipv4 = subnet[-1]
-
-    # Check availability of IPv6
-    if not SUBNET_IPV6:
-        if vds.ipv6:
-            subnet = IPv6Network(SUBNET_IPV6)
-
-            if servers:
-                reserved_ipv6s = [IPv6Address(server.ipv6) for server in servers]
-                ipv6s = list(reversed([ipv6 for ipv6 in subnet if ipv6 not in reserved_ipv6s]))
-
-                if not ipv6s:
-                    logger.warn(f"Haven't available IPv6 for new vds with id {product_id} for {user.username}")
-                    raise Exception("Service Unavailable|We haven't available resources")
-
-                ipv6 = ipv6s[0]
-            else:
-                ipv6 = subnet[-1]
 
     # Check availability of resources
     nodes = await crud_read_nodes(vds.cores, vds.ram, vds.disk_size)
@@ -77,8 +51,8 @@ async def request_vds(product_id: int, user: User, is_active: bool = False) -> i
     # Registration of new server
     server_schema = ServerCreate(
         vnc_port=vnc_port,
-        ipv4=str(ipv4),
-        ipv6=str(ipv6),
+        ipv4=None,
+        ipv6=None,
         start_at=datetime.now(UTC),
         end_at=datetime.now() + timedelta(days=31),
         is_active=False,

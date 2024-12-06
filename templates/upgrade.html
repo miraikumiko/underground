@@ -13,7 +13,7 @@
           <span>IPv6: {% if vds.ipv6 %} Yes {% else %} No {% endif %}</span>
           <div class="bottom">
             <span>Total: $<span class="price">{{ vds.price }}</span>/mo</span>
-            <a class="btn1" href="/api/payment/upgrade/{{ server_id }}?product_id={{ vds.id }}">Upgrade to</a>
+            <a class="btn1" href="/upgrade/{{ server_id }}?product_id={{ vds.id }}">Upgrade to</a>
           </div>
         </div>
       {% endfor %}

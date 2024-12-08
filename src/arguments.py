@@ -27,7 +27,8 @@ args_parser.add_argument(
 args_parser.add_argument(
     '-c',
     '--checkout',
-    action='store_true',
+    type=str,
+    default=None,
     dest='checkout',
     help='payment checkout'
 )

@@ -8,8 +8,8 @@ from qrcode.constants import ERROR_CORRECT_L
 from src.database import r
 from src.logger import logger
 from src.config import (
-    MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD,
-    MONERO_RECOVERY_COURSE
+    PAYMENT_LIMIT,
+    MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD, MONERO_RECOVERY_COURSE
 )
 
 
@@ -60,11 +60,11 @@ async def usd_to_xmr(usd: float) -> int:
 async def check_active_payment(user_id: int) -> dict | None:
     payment_uri = await r.get(f"payment_uri:{user_id}")
 
-    if payment_uri is not None:
+    if payment_uri:
         ttl = await r.ttl(f"payment_uri:{user_id}")
         qrcode = await draw_qrcode(payment_uri)
 
-        return {"qrcode": qrcode, "uri": payment_uri, "ttl": ttl}
+        return {"qrcode": qrcode, "payment_uri": payment_uri, "ttl": ttl}
 
 
 async def check_payment_limit(user_id: int) -> bool | None:
@@ -73,7 +73,7 @@ async def check_payment_limit(user_id: int) -> bool | None:
     if payments_count is not None:
         ttl = await r.ttl(f"payments_count:{user_id}")
 
-        if int(payments_count) < 3:
+        if int(payments_count) < PAYMENT_LIMIT:
             await r.set(
                 f"payments_count:{user_id}",
                 int(payments_count) + 1,

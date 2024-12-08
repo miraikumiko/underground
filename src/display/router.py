@@ -123,7 +123,7 @@ async def buy(product_id: int, request: Request, user: User = Depends(active_use
     # Check if user have active payment
     cap = await check_active_payment(user.id)
 
-    if cap is not None:
+    if cap:
         return templates.TemplateResponse("checkout.html", {
             "request": request,
             "qrcode": cap["qrcode"],

@@ -1,7 +1,8 @@
+from fastapi import HTTPException
 from ipaddress import IPv4Address, IPv4Network
 from datetime import datetime, timedelta, UTC
 from src.database import r
-from src.config import SUBNET_IPV4
+from src.config import VDS_EXPIRED_DAYS, SUBNET_IPV4
 from src.logger import logger
 from src.user.models import User
 from src.server.schemas import ServerCreate
@@ -24,19 +25,19 @@ async def request_vds(product_id: int, user: User, is_active: bool = False) -> i
     # Check availability of IPv4
     if vds.ipv4:
         if servers:
-            server_ipv4s = [IPv4Address(server.ipv4) for server in servers if not server.ipv4]
+            server_ipv4s = [IPv4Address(server.ipv4) for server in servers if server.ipv4]
             available_ipv4s = [ipv4 for ipv4 in IPv4Network(SUBNET_IPV4) if ipv4 not in server_ipv4s]
 
             if not available_ipv4s:
                 logger.warn(f"Haven't available IPv4 for new vds with id {product_id} for {user.username}")
-                raise Exception("Service Unavailable|We haven't available resources")
+                raise HTTPException(503, "d|We haven't available resources")
 
     # Check availability of resources
     nodes = await crud_read_nodes(vds.cores, vds.ram, vds.disk_size)
 
     if not nodes:
         logger.warn(f"Haven't available resources for new vds with id {product_id} for {user.username}")
-        raise Exception("Service Unavailable|We haven't available resources")
+        raise HTTPException(503, "d|We haven't available resources")
 
     node = nodes[0]
 
@@ -80,7 +81,7 @@ async def servers_expired_check():
     servers = await crud_read_servers()
 
     for server in servers:
-        if server.end_at + timedelta(days=3) <= datetime.now():
+        if server.end_at + timedelta(days=VDS_EXPIRED_DAYS) <= datetime.now():
             node = await crud_read_node(server.node_id)
 
             await crud_delete_server(server.id)
@@ -93,7 +94,7 @@ async def servers_expired_check():
         if not server.is_active:
             is_expired = await r.get(f"inactive_server:{server.id}")
 
-            if is_expired is None:
+            if not is_expired:
                 node = await crud_read_node(server.node_id)
                 vds = await crud_read_vds(server.vds_id)
                 cores = vds.cores

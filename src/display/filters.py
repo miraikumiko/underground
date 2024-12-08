@@ -6,4 +6,4 @@ def to_days(date: datetime):
 
 
 def to_minutes(ttl: int):
-    return ttl / 60
+    return ttl // 60

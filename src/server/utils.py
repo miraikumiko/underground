@@ -1,4 +1,3 @@
-from fastapi import HTTPException
 from ipaddress import IPv4Address, IPv4Network
 from datetime import datetime, timedelta, UTC
 from src.database import r
@@ -11,6 +10,7 @@ from src.server.vds import vds_delete
 from src.node.schemas import NodeUpdate
 from src.node.crud import crud_read_node, crud_read_nodes, crud_update_node
 from src.payment.crud import crud_read_vds
+from src.display.exceptions import DisplayException
 
 
 async def request_vds(product_id: int, user: User, is_active: bool = False) -> int:
@@ -30,14 +30,14 @@ async def request_vds(product_id: int, user: User, is_active: bool = False) -> i
 
             if not available_ipv4s:
                 logger.warn(f"Haven't available IPv4 for new vds with id {product_id} for {user.username}")
-                raise HTTPException(503, "d|We haven't available resources")
+                raise DisplayException(503, "We haven't available resources")
 
     # Check availability of resources
     nodes = await crud_read_nodes(vds.cores, vds.ram, vds.disk_size)
 
     if not nodes:
         logger.warn(f"Haven't available resources for new vds with id {product_id} for {user.username}")
-        raise HTTPException(503, "d|We haven't available resources")
+        raise DisplayException(503, "We haven't available resources")
 
     node = nodes[0]
 

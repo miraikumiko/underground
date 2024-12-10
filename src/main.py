@@ -30,9 +30,4 @@ app.include_router(display_router)
 
 @app.exception_handler(StarletteHTTPException)
 async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
-    detail = exc.detail.split('|')
-
-    if detail[0] == 'd':
-        return await t_error(request, exc.status_code, detail[1])
-    else:
-        return await t_error(request, exc.status_code, exc.detail)
+    return await t_error(request, exc.status_code, exc.detail)

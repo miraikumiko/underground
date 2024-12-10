@@ -46,7 +46,7 @@ async def status(server_id: int, ws: WebSocket, user: User = Depends(active_user
     # Check server
     server = await crud_read_server(server_id)
 
-    if server is None or not server.is_active or server.user_id != user.id:
+    if not server or not server.is_active or server.user_id != user.id:
         return None
 
     # Status logic

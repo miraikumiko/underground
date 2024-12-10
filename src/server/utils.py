@@ -2,11 +2,11 @@ from fastapi import HTTPException
 from ipaddress import IPv4Address, IPv4Network
 from datetime import datetime, timedelta, UTC
 from src.database import r
-from src.config import VDS_EXPIRED_DAYS, SUBNET_IPV4
+from src.config import VDS_DAYS, VDS_EXPIRED_DAYS, SUBNET_IPV4
 from src.logger import logger
 from src.user.models import User
-from src.server.schemas import ServerCreate
-from src.server.crud import crud_create_server, crud_read_servers, crud_delete_server
+from src.server.schemas import ServerCreate, ServerUpdate
+from src.server.crud import crud_create_server, crud_read_servers, crud_update_server, crud_delete_server
 from src.server.vds import vds_delete
 from src.node.schemas import NodeUpdate
 from src.node.crud import crud_read_node, crud_read_nodes, crud_update_node
@@ -55,7 +55,7 @@ async def request_vds(product_id: int, user: User, is_active: bool = False) -> i
         ipv4=None,
         ipv6=None,
         start_at=datetime.now(UTC),
-        end_at=datetime.now() + timedelta(days=31),
+        end_at=datetime.now() + timedelta(days=VDS_DAYS),
         is_active=False,
         vds_id=product_id,
         node_id=node.id,
@@ -81,6 +81,7 @@ async def servers_expired_check():
     servers = await crud_read_servers()
 
     for server in servers:
+        # Delete expired server
         if server.end_at + timedelta(days=VDS_EXPIRED_DAYS) <= datetime.now():
             node = await crud_read_node(server.node_id)
 
@@ -91,17 +92,49 @@ async def servers_expired_check():
         elif server.end_at <= datetime.now():
             logger.info(f"Server {server.id} has been expired")
 
-        if not server.is_active:
-            is_expired = await r.get(f"inactive_server:{server.id}")
+        # Free node specs from unpaid upgrade
+        if server.in_upgrade:
+            is_upgraded = await r.get(f"upgrade_server:{server.id}")
 
-            if not is_expired:
+            if not is_upgraded:
+                # Make server active again
+                server_schema = ServerUpdate(is_active=True)
+                server_schema = server_schema.rm_none_attrs()
+                await crud_update_server(server_schema, server.id)
+
+                # Update node specs
+                node = await crud_read_node(server.node_id)
+                server_vds = await crud_read_vds(server.vds_id)
+                upgrade_vds_id = await r.get(f"unupgraded_server:{server.id}")
+                upgrade_vds = await crud_read_vds(int(upgrade_vds_id))
+                node_schema = NodeUpdate(
+                    cores_available=node.cores_available + upgrade_vds.cores - server_vds.cores,
+                    ram_available=node.ram_available + upgrade_vds.ram - server_vds.ram,
+                    disk_size_available=node.disk_size_available + upgrade_vds.disk_size - server_vds.disk_size
+                )
+                await crud_update_node(node_schema, server.node_id)
+
+                # Update server
+                server_schema = ServerUpdate(in_upgrade=False)
+                server_schema = server_schema.rm_none_attrs()
+                await crud_update_server(server_schema, server.id)
+
+                # Delete marker
+                await r.delete(f"unupgraded_server:{server.id}")
+
+        # Delete unpaid server
+        if not server.is_active:
+            is_not_expired = await r.get(f"inactive_server:{server.id}")
+
+            if not is_not_expired:
+                # Update node specs
                 node = await crud_read_node(server.node_id)
                 vds = await crud_read_vds(server.vds_id)
-                cores = vds.cores
-                ram = vds.ram
-                disk_size = vds.disk_size
+                cores = node.cores_available + vds.cores
+                ram = node.ram_available + vds.ram
+                disk_size = node.disk_size_available + vds.disk_size
 
-                if vds.cores > node.cores:
+                if cores > node.cores:
                     cores = node.cores
                 if vds.ram > node.ram:
                     ram = node.ram
@@ -115,6 +148,8 @@ async def servers_expired_check():
                 )
 
                 await crud_update_node(node_schema, server.node_id)
+
+                # Delete server
                 await crud_delete_server(server.id)
 
                 logger.info(f"Server {server.id} has been deleted")

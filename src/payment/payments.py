@@ -17,12 +17,7 @@ async def payment_request(ptype: str, server_id: int, vds_id: int = None) -> dic
     server = await crud_read_server(server_id)
 
     if ptype == "upgrade" and vds_id:
-        if vds_id is not None:
-            vds = await crud_read_vds(vds_id)
-        else:
-            msg = "Missing vds_id parameter"
-            logger.error(msg)
-            raise Exception(msg)
+        vds = await crud_read_vds(vds_id)
     else:
         vds = await crud_read_vds(server.vds_id)
 
@@ -61,15 +56,22 @@ async def payment_checkout(txid: str) -> None:
                 await crud_update_server(server_schema, server.id)
             elif payment["type"] == "pay":
                 server_schema = ServerUpdate(
-                    end_at=(server.end_at - server.start_at + timedelta(days=VDS_DAYS)),
+                    end_at=server.end_at + timedelta(days=VDS_DAYS),
                     is_active=True
                 )
                 server_schema = server_schema.rm_none_attrs()
                 await crud_update_server(server_schema, server.id)
             elif payment["type"] == "upgrade":
-                await vds_upgrade(server.id, payment["vds_id"])
+                await vds_upgrade(server.id, int(payment["vds_id"]))
+
+                upgrade_vds_id = await r.get(f"unupgraded_server:{server.id}")
+                server_schema = ServerUpdate(in_upgrade=False, vds_id=int(upgrade_vds_id))
+                server_schema = server_schema.rm_none_attrs()
+                await crud_update_server(server_schema, server.id)
+
+                await r.delete(f"unupgraded_server:{server.id}")
 
             await r.delete(f"payment:{payment_id}")
-            await r.delete(f'payment_uri:{server.user_id}')
+            await r.delete(f"payment_uri:{server.user_id}")
 
-            logger.info(f'Checkout {payment_id} {server.id}')
+            logger.info(f"Checkout {payment_id} {server.id}")

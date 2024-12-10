@@ -5,13 +5,15 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 from captcha.image import ImageCaptcha
 from src.database import r
-from src.config import REGISTRATION, PAYMENT_TIME
+from src.config import REGISTRATION, VDS_DAYS, VDS_MAX_PAYED_DAYS, PAYMENT_TIME
 from src.user.models import User
 from src.auth.utils import active_user, active_user_opt
-from src.server.crud import crud_read_servers, crud_read_server
+from src.server.schemas import ServerUpdate
+from src.server.crud import crud_read_servers, crud_read_server, crud_update_server
 from src.server.vds import vds_status
 from src.server.utils import request_vds
-from src.node.crud import crud_read_nodes
+from src.node.schemas import NodeUpdate
+from src.node.crud import crud_read_node, crud_update_node
 from src.payment.crud import crud_read_vdss, crud_read_vds
 from src.payment.payments import payment_request
 from src.payment.utils import check_active_payment, check_payment_limit, draw_qrcode, xmr_course
@@ -181,8 +183,8 @@ async def pay(server_id: int, request: Request, user: User = Depends(active_user
     # Check expiring date
     server = await crud_read_server(server_id)
 
-    if server.end_at - server.start_at > timedelta(days=10):
-        return await t_error(request, 400, "You can't pay for more than 40 days")
+    if server.end_at - server.start_at > timedelta(days=VDS_MAX_PAYED_DAYS - VDS_DAYS):
+        return await t_error(request, 400, f"You can't pay for more than {VDS_MAX_PAYED_DAYS} days")
 
     # Make payment request and return it uri
     payment_data = await payment_request("pay", server_id)
@@ -197,10 +199,13 @@ async def pay(server_id: int, request: Request, user: User = Depends(active_user
 
 
 @router.get("/upgrademenu/{server_id}")
-async def upgrade(server_id: int, request: Request, _: User = Depends(active_user)):
+async def upgrademenu(server_id: int, request: Request, _: User = Depends(active_user)):
     server = await crud_read_server(server_id)
     vdss = await crud_read_vdss()
     vdss = [vds for vds in vdss if vds.id > server.vds_id]
+
+    if not vdss:
+        return await t_error(request, 400, "Your VDS is already fully upgraded")
 
     return templates.TemplateResponse("upgrade.html", {
         "request": request,
@@ -217,7 +222,7 @@ async def upgrade(
     # Check server
     server = await crud_read_server(server_id)
 
-    if server is None or server.user_id != user.id or server.vds_id >= product_id:
+    if not server or server.user_id != user.id or server.vds_id >= product_id:
         return await t_error(request, 400, "Invalid server")
 
     # Check if user have active payment
@@ -238,24 +243,43 @@ async def upgrade(
         return await t_error(request, 400, "You can make only 3 payment requests per day")
 
     # Validate product id
-    vds = await crud_read_vds(product_id)
+    upgrade_vds = await crud_read_vds(product_id)
 
-    if not vds:
+    if not upgrade_vds:
         return await t_error(request, 400, "This product doesn't exist")
 
     # Check availability of resources
-    nodes = await crud_read_nodes(vds.cores, vds.ram, vds.disk_size)
+    node = await crud_read_node(server.node_id)
+    server_vds = await crud_read_vds(server.vds_id)
 
-    if not nodes:
+    if upgrade_vds.cores - server_vds.cores > node.cores_available:
+        return await t_error(request, 503, "We haven't available resources")
+    if upgrade_vds.ram - server_vds.ram > node.ram_available:
+        return await t_error(request, 503, "We haven't available resources")
+    if upgrade_vds.disk_size - server_vds.disk_size > node.disk_size_available:
         return await t_error(request, 503, "We haven't available resources")
 
+    node_schema = NodeUpdate(
+        cores_available=node.cores_available - upgrade_vds.cores + server_vds.cores,
+        ram_available=node.ram_available - upgrade_vds.ram + server_vds.ram,
+        disk_size_available=node.disk_size_available - upgrade_vds.disk_size + server_vds.disk_size
+    )
+    await crud_update_node(node_schema, server.node_id)
+
+    server_schema = ServerUpdate(in_upgrade=True)
+    server_schema = server_schema.rm_none_attrs()
+    await crud_update_server(server_schema, server.id)
+
     # Make payment request and return it uri
+    await r.set(f"upgrade_server:{server_id}", server_id, ex=(60 * PAYMENT_TIME))
+    await r.set(f"unupgraded_server:{server.id}", upgrade_vds.id)
+
     payment_data = await payment_request("upgrade", server_id, product_id)
-    qrc = await draw_qrcode(payment_data["payment_uri"])
+    qrcode = await draw_qrcode(payment_data["payment_uri"])
 
     return templates.TemplateResponse("checkout.html", {
         "request": request,
-        "qrcode": qrc,
+        "qrcode": qrcode,
         "uri": payment_data["payment_uri"],
         "ttl": payment_data["ttl"]
     })

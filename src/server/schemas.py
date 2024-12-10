@@ -9,6 +9,7 @@ class ServerCreate(BaseModel):
     start_at: datetime = datetime.now(UTC)
     end_at: datetime = datetime.now(UTC) + timedelta(days=31)
     is_active: bool = True
+    in_upgrade: bool = False
     user_id: int
     vds_id: int
     node_id: int
@@ -22,6 +23,7 @@ class ServerRead(BaseModel):
     start_at: datetime
     end_at: datetime
     is_active: bool
+    in_upgrade: bool
     user_id: int
     vds_id: int
     node_id: int
@@ -34,6 +36,7 @@ class ServerUpdate(BaseModel):
     start_at: datetime = None
     end_at: datetime = None
     is_active: bool = None
+    in_upgrade: bool = None
     user_id: int = None
     vds_id: int = None
     node_id: int = None

@@ -1,6 +1,7 @@
 import subprocess
 import libvirt
 from libvirt import libvirtError
+from xml.etree import ElementTree
 from src.logger import logger
 from src.server.schemas import ServerRead, ServerUpdate
 from src.server.crud import crud_read_server, crud_update_server
@@ -133,20 +134,37 @@ async def vds_upgrade(server_id: int, vds_id: int) -> None:
     if server.is_active:
         try:
             with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-                vds = conn.lookupByName(str(server_id))
+                dom = conn.lookupByName(str(server_id))
+                state, _ = dom.state()
 
-                vds.destroy()
+                if state == libvirt.VIR_DOMAIN_RUNNING:
+                    dom.destroy()
 
                 vds = await crud_read_vds(vds_id)
 
-                if vds.cores > server.cores:
-                    vds.setVcpu(vds.cores)
+                # Update cores and ram
+                xml_desc = dom.XMLDesc()
+                root = ElementTree.fromstring(xml_desc)
 
-                if vds.ram > server.ram:
-                    vds.setMemory(vds.ram)
+                vcpu_element = root.find("vcpu")
 
-                if vds.disk_size > server.disk_size:
-                    subprocess.run(f"""ssh root@{node.ip} 'qemu-img \
-                        resize /var/lib/libvirt/images/{server_id}.qcow2 {vds.disk_size}G'""")
+                if vcpu_element is not None:
+                    vcpu_element.text = f"{vds.cores}"
+
+                memory_element = root.find("memory")
+
+                if memory_element is not None:
+                    memory_element.text = f"{1024 * 1024 * vds.ram}"
+
+                current_memory_element = root.find("currentMemory")
+
+                if current_memory_element is not None:
+                    current_memory_element.text = f"{1024 * 1024 * vds.ram}"
+
+                new_xml_desc = ElementTree.tostring(root, encoding="unicode")
+                conn.createXML(new_xml_desc)
+
+                # Update disk size
+                subprocess.run(f"ssh root@{node.ip} 'qemu-img resize /var/lib/libvirt/images/{server_id}.qcow2 {vds.disk_size}G'")
         except Exception as e:
             logger.error(e)

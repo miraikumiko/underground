@@ -1,4 +1,11 @@
-* { scrollbar-width: none; }
+* {
+  scrollbar-color: rgba(255, 255, 255, 0.8) rgba(0, 0, 0, 0);
+  scrollbar-width: thin;
+}
+
+html {
+  scrollbar-width: none;
+}
 
 body, a {
   color: #fff;
@@ -71,17 +78,11 @@ footer {
 
 #vds-container {
   display: grid;
-  grid-template-columns: auto auto;
-}
-
-#vnc-status {
-  text-align: center;
-  padding-top: 20px;
+  grid-template-columns: 50% 50%;
 }
 
 #vnc-screen {
   box-shadow: 0 4px 16px 0 rgba(255, 255, 255, 0.3);
-  margin: 30px 0;
 }
 
 #articles a {
@@ -99,7 +100,6 @@ article {
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 16px 0 rgba(255, 255, 255, 0.3);
   margin: 10px;
-  padding: 10px;
 }
 
 .vds, .vds>span { padding: 5px 10px; }

@@ -1,7 +1,7 @@
 import asyncio
 from fastapi import APIRouter, Request, WebSocket, Form, Depends
 from fastapi.responses import RedirectResponse
-from src.server.crud import crud_read_server
+from src.server.crud import crud_read_servers, crud_read_server
 from src.server.vds import vds_install, vds_action, vds_status
 from src.node.crud import crud_read_node
 from src.user.models import User
@@ -41,24 +41,46 @@ async def action(request: Request, server_id: int, user: User = Depends(active_u
     return RedirectResponse("/dashboard", status_code=301)
 
 
+@router.websocket("/statuses")
+async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
+    # Check server
+    servers = await crud_read_servers()
+
+    # Statuses logic
+    if servers:
+        await ws.accept()
+
+        while True:
+            try:
+                stats = []
+
+                for server in servers:
+                    if server and server.is_active and server.user_id == user.id:
+                        stat = await vds_status(server.id)
+                        stats.append(stat)
+
+                await ws.send_json(stats)
+                await asyncio.sleep(5)
+            except Exception:
+                break
+
+
 @router.websocket("/status/{server_id}")
 async def status(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
     # Check server
     server = await crud_read_server(server_id)
 
-    if not server or not server.is_active or server.user_id != user.id:
-        return None
+    if server and server.is_active and server.user_id == user.id:
+        # Status logic
+        await ws.accept()
 
-    # Status logic
-    await ws.accept()
-
-    while True:
-        try:
-            stat = await vds_status(server_id)
-            await ws.send_json(stat)
-            await asyncio.sleep(5)
-        except Exception:
-            break
+        while True:
+            try:
+                stat = await vds_status(server_id)
+                await ws.send_json(stat)
+                await asyncio.sleep(5)
+            except Exception:
+                break
 
 
 @router.websocket("/vnc/{server_id}")

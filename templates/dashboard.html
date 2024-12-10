@@ -38,7 +38,7 @@
         {% for server, status in servers_and_statuses %}
           <tr>
             <td id="ipv4-{{ server.id }}">{% if server.ipv4 %} {{ server.ipv4 }} {% else %} unknown {% endif %}</td>
-            <td id="status-{{ server.id }}">{{ status["status"] }}</td>
+            <td id="status-{{ server.id }}" class="vds-status">{{ status["status"] }}</td>
             <td>{{ server.end_at|to_days }}</td>
             <td>
               <form method="post" action="/api/server/action/{{ server.id }}">
@@ -50,21 +50,28 @@
             <td><a class="btn0" style="display: contents" href="/pay/{{ server.id }}">pay</a></td>
             <td><a class="btn0" style="display: contents" href="/upgrademenu/{{ server.id }}">upgrade</a></td>
           </tr>
-          <script>
-            const socket{{ server.id }} = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/server/status/{{ server.id }}`);
-
-            socket{{ server.id }}.onmessage = async (event) => {
-              const data = JSON.parse(event.data);
-
-              document.getElementById("ipv4-{{ server.id }}").innerText = data.ipv4;
-              document.getElementById("status-{{ server.id }}").innerText = data.status;
-            };
-
-            socket{{ server.id }}.onerror = (error) => {
-              document.getElementById("status-{{ server.id }}").innerText = "unknown";
-            };
-          </script>
         {% endfor %}
+        <script>
+          const socket = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/server/statuses`);
+
+          socket.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+
+            for (let i in data) {
+              i = Number.parseInt(i, 5);
+              document.getElementById(`ipv4-${i + 1}`).innerText = data[i].ipv4;
+              document.getElementById(`status-${i + 1}`).innerText = data[i].status;
+            }
+          };
+
+          socket.onerror = (error) => {
+            const elements = document.getElementsByClassName("vds-status");
+
+            for (let element of elements) {
+              element.innerText = "unknown";
+            }
+          };
+        </script>
       </table>
     </div>
   </main>

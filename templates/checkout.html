@@ -2,27 +2,13 @@
 
 {% block content %}
   <form class="form0" method="post" action="/api/payment/close">
-    <h1>Pay at this time:</h1>
-    <h2>{{ ttl|to_minutes }} minutes</h2>
+    <div>
+      <h2>Pay within {{ ttl|to_minutes }} minutes</h2>
+      <h5>(Reload page to update time)</h5>
+      <h5 style="color: yellow">Include fee before transfer!</h5>
+    </div>
     <img src="data:image/png;base64,{{ qrcode }}" alt="qrcode">
     <input name="uri" value="{{ uri }}" disabled>
     <button class="btn1" type="submit">End payment request</button>
   </form>
-  <script>
-    let ttl = {{ ttl }};
-
-    setInterval(() => {
-      let minutes = Math.floor(ttl / 60);
-      let seconds = ttl % 60;
-
-      if (minutes >= 0 && seconds >= 0) {
-        if (minutes < 10) minutes = `0${minutes}`;
-        if (seconds < 10) seconds = `0${seconds}`;
-        document.querySelector("h2").innerText = `${minutes}:${seconds}`;
-        ttl--;
-      } else {
-        window.location.href = "/";
-      }
-    }, 1000);
-  </script>
 {% endblock %}

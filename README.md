@@ -78,3 +78,8 @@ rc-service nginx start
 ### Systemd
 
 `systemctl enable --now libvirtd redis underground.pm nginx`
+
+## TODO
+
+* Make vds migration to node with free resources
+* Make other ways to install OS

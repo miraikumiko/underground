@@ -1,0 +1,13 @@
+[Unit]
+Description=Monero Test Wallet RPC
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+EnvironmentFile=/etc/environment
+ExecStart=/var/www/underground.pm/contrib/monero/run-test.sh
+
+[Install]
+WantedBy=multi-user.target

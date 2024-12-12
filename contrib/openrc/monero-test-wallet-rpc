@@ -1,0 +1,26 @@
+#!/sbin/openrc-run
+
+description="Monero Test Wallet RPC"
+command="/var/www/underground.pm/contrib/monero/run-test.sh"
+
+depend() {
+    need net
+}
+
+start() {
+    ebegin "Starting Monero Test Wallet RPC"
+    start-stop-daemon --start --exec $command --background --user root
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping Monero Test Wallet RPC"
+    start-stop-daemon --stop --exec $command
+    eend $?
+}
+
+restart() {
+	stop
+	sleep 1
+	start
+}

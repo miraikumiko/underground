@@ -9,7 +9,7 @@ class Server(Base):
     id = Column(Integer, primary_key=True, index=True)
     ipv4 = Column(String)
     ipv6 = Column(String)
-    vnc_port = Column(Integer, nullable=False, unique=True)
+    vnc_port = Column(Integer, nullable=False)
     start_at = Column(TIMESTAMP, nullable=False, default=datetime.now)
     end_at = Column(TIMESTAMP, nullable=False)
     is_active = Column(Boolean, nullable=False)

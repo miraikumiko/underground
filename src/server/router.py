@@ -53,14 +53,18 @@ async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
         while True:
             try:
                 stats = []
+                time = 10
 
                 for server in servers:
                     if server and server.is_active and server.user_id == user.id:
                         stat = await vds_status(server.id)
                         stats.append(stat)
 
+                        if len(servers) > time:
+                            time = time + 1
+
                 await ws.send_json(stats)
-                await asyncio.sleep(5)
+                await asyncio.sleep(time)
             except Exception:
                 break
 

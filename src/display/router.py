@@ -13,7 +13,7 @@ from src.server.crud import crud_read_servers, crud_read_server, crud_update_ser
 from src.server.vds import vds_status
 from src.server.utils import request_vds
 from src.node.schemas import NodeUpdate
-from src.node.crud import crud_read_node, crud_update_node
+from src.node.crud import crud_read_nodes, crud_read_node, crud_update_node
 from src.payment.crud import crud_read_vdss, crud_read_vds
 from src.payment.payments import payment_request
 from src.payment.utils import check_active_payment, check_payment_limit, draw_qrcode, xmr_course
@@ -82,11 +82,17 @@ async def dashboard(request: Request, user: User = Depends(active_user)):
     course = await xmr_course()
     servers = await crud_read_servers(user.id)
     servers = [server for server in servers if server.is_active]
+    statuses = []
 
     if not servers:
         return RedirectResponse('/', status_code=301)
 
-    statuses = [await vds_status(server.id) for server in servers]
+    for server in servers:
+        node = await crud_read_node(server.node_id)
+        status = await vds_status(server, node)
+
+        statuses.append(status)
+
     servers_and_statuses = zip(servers, statuses)
 
     return templates.TemplateResponse("dashboard.html", {
@@ -215,14 +221,11 @@ async def upgrademenu(server_id: int, request: Request, _: User = Depends(active
 
 
 @router.get("/upgrade/{server_id}")
-async def upgrade(
-    server_id: int, product_id: int,
-    request: Request, user: User = Depends(active_user)
-):
+async def upgrade(server_id: int, product_id: int, request: Request, user: User = Depends(active_user)):
     # Check server
     server = await crud_read_server(server_id)
 
-    if not server or server.user_id != user.id or server.vds_id >= product_id:
+    if not server or not server.is_active or server.user_id != user.id or server.vds_id >= product_id:
         return await t_error(request, 400, "Invalid server")
 
     # Check if user have active payment
@@ -252,37 +255,46 @@ async def upgrade(
     node = await crud_read_node(server.node_id)
     server_vds = await crud_read_vds(server.vds_id)
 
-    if upgrade_vds.cores - server_vds.cores > node.cores_available:
+    nodes = await crud_read_nodes(upgrade_vds.cores, upgrade_vds.ram, upgrade_vds.disk_size)
+
+    if nodes:
+        if node not in nodes:
+            dst_node = nodes[0]
+            await r.set(f"node_to_migrate:{server_id}", dst_node.id, ex=(60 * PAYMENT_TIME))
+
+            node_schema = NodeUpdate(
+                cores_available=dst_node.cores_available - upgrade_vds.cores + server_vds.cores,
+                ram_available=dst_node.ram_available - upgrade_vds.ram + server_vds.ram,
+                disk_size_available=dst_node.disk_size_available - upgrade_vds.disk_size + server_vds.disk_size
+            )
+            await crud_update_node(node_schema, dst_node.id)
+        else:
+            node_schema = NodeUpdate(
+                cores_available=node.cores_available - upgrade_vds.cores + server_vds.cores,
+                ram_available=node.ram_available - upgrade_vds.ram + server_vds.ram,
+                disk_size_available=node.disk_size_available - upgrade_vds.disk_size + server_vds.disk_size
+            )
+            await crud_update_node(node_schema, server.node_id)
+
+        server_schema = ServerUpdate(in_upgrade=True)
+        server_schema = server_schema.rm_none_attrs()
+        await crud_update_server(server_schema, server.id)
+
+        # Make payment request and return it uri
+        await r.set(f"upgrade_server:{server_id}", server_id, ex=(60 * PAYMENT_TIME))
+        await r.set(f"unupgraded_server:{server.id}", upgrade_vds.id)
+
+        payment_data = await payment_request("upgrade", server_id, product_id)
+        qrcode = await draw_qrcode(payment_data["payment_uri"])
+
+        return templates.TemplateResponse("checkout.html", {
+            "request": request,
+            "qrcode": qrcode,
+            "uri": payment_data["payment_uri"],
+            "ttl": payment_data["ttl"]
+        })
+    else:
         return await t_error(request, 503, "We haven't available resources")
-    if upgrade_vds.ram - server_vds.ram > node.ram_available:
-        return await t_error(request, 503, "We haven't available resources")
-    if upgrade_vds.disk_size - server_vds.disk_size > node.disk_size_available:
-        return await t_error(request, 503, "We haven't available resources")
-
-    node_schema = NodeUpdate(
-        cores_available=node.cores_available - upgrade_vds.cores + server_vds.cores,
-        ram_available=node.ram_available - upgrade_vds.ram + server_vds.ram,
-        disk_size_available=node.disk_size_available - upgrade_vds.disk_size + server_vds.disk_size
-    )
-    await crud_update_node(node_schema, server.node_id)
-
-    server_schema = ServerUpdate(in_upgrade=True)
-    server_schema = server_schema.rm_none_attrs()
-    await crud_update_server(server_schema, server.id)
-
-    # Make payment request and return it uri
-    await r.set(f"upgrade_server:{server_id}", server_id, ex=(60 * PAYMENT_TIME))
-    await r.set(f"unupgraded_server:{server.id}", upgrade_vds.id)
-
-    payment_data = await payment_request("upgrade", server_id, product_id)
-    qrcode = await draw_qrcode(payment_data["payment_uri"])
-
-    return templates.TemplateResponse("checkout.html", {
-        "request": request,
-        "qrcode": qrcode,
-        "uri": payment_data["payment_uri"],
-        "ttl": payment_data["ttl"]
-    })
 
 
 @router.get("/install/{server_id}")

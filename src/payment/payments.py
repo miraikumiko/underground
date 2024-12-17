@@ -2,9 +2,10 @@ from datetime import timedelta
 from src.config import PAYMENT_TIME, VDS_DAYS
 from src.database import r
 from src.logger import logger
+from src.node.crud import crud_read_node
 from src.server.schemas import ServerUpdate
 from src.server.crud import crud_read_server, crud_update_server
-from src.server.vds import vds_upgrade
+from src.server.vds import vds_migrate, vds_upgrade
 from src.payment.crud import crud_read_vds
 from src.payment.utils import monero_request, usd_to_xmr
 
@@ -62,10 +63,21 @@ async def payment_checkout(txid: str) -> None:
                 server_schema = server_schema.rm_none_attrs()
                 await crud_update_server(server_schema, server.id)
             elif payment["type"] == "upgrade":
-                await vds_upgrade(server.id, int(payment["vds_id"]))
+                node = await crud_read_node(server.node_id)
+                vds = await crud_read_vds(server.vds_id)
 
+                await vds_upgrade(server, node, vds)
+                dst_node_id = await r.get(f"node_to_migrate:{server.id}")
                 upgrade_vds_id = await r.get(f"unupgraded_server:{server.id}")
                 server_schema = ServerUpdate(in_upgrade=False, vds_id=int(upgrade_vds_id))
+
+                if dst_node_id:
+                    server_node = await crud_read_node(server.node_id)
+                    dst_node = await crud_read_node(int(dst_node_id))
+                    server_schema = server_schema.node_id = dst_node.id
+
+                    await vds_migrate(server, server_node, dst_node)
+
                 server_schema = server_schema.rm_none_attrs()
                 await crud_update_server(server_schema, server.id)
 

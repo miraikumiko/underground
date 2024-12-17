@@ -1,170 +1,115 @@
 import subprocess
 import libvirt
-from libvirt import libvirtError
 from xml.etree import ElementTree
-from src.logger import logger
-from src.server.schemas import ServerRead, ServerUpdate
-from src.server.crud import crud_read_server, crud_update_server
-from src.node.crud import crud_read_node
-from src.payment.crud import crud_read_vds
+from src.node.schemas import NodeRead
+from src.server.schemas import ServerRead
+from src.payment.schemas import VDSRead
 
 
-async def vds_install(server: ServerRead, os: str) -> None:
+async def vds_install(server: ServerRead, server_node: NodeRead, server_vds: VDSRead, os: str) -> None:
     if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd"):
         raise ValueError("Invalid OS")
 
-    node = await crud_read_node(server.node_id)
-    vds = await crud_read_vds(server.vds_id)
+    with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
+        active_vds = conn.lookupByName(str(server.id))
+        state, _ = active_vds.state()
 
-    try:
-        with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-            active_vds = conn.lookupByName(str(server.id))
-            state, _ = active_vds.state()
+        if state == libvirt.VIR_DOMAIN_RUNNING:
+            active_vds.destroy()
 
-            if state == libvirt.VIR_DOMAIN_RUNNING:
-                active_vds.destroy()
+        active_vds.undefine()
 
-            active_vds.undefine()
-    except Exception as e:
-        logger.error(e)
-
-    subprocess.Popen(f"""ssh root@{node.ip} 'virt-install \
+    subprocess.Popen(f"""ssh root@{server_node.ip} 'virt-install \
         --name {server.id} \
-        --vcpus {vds.cores} \
-        --memory {vds.ram * 1000} \
-        --disk /var/lib/libvirt/images/{server.id}.qcow2,size={vds.disk_size} \
+        --vcpus {server_vds.cores} \
+        --memory {server_vds.ram * 1024} \
+        --disk /var/lib/libvirt/images/{server.id}.qcow2,size={server_vds.disk_size} \
         --cdrom /opt/iso/{os}.iso \
         --os-variant unknown \
-        --graphics vnc,listen={node.ip},port={server.vnc_port}'""", shell=True)
+        --graphics vnc,listen={server_node.ip},port={server.vnc_port}'""", shell=True)
 
 
 async def vds_delete(node_ip: str, name: str) -> None:
-    try:
-        with libvirt.open(f"qemu+ssh://{node_ip}/system") as conn:
-            vds = conn.lookupByName(name)
-            vds.destroy()
-            vds.undefine()
-    except Exception as e:
-        logger.error(e)
+    with libvirt.open(f"qemu+ssh://{node_ip}/system") as conn:
+        vds = conn.lookupByName(name)
+        vds.destroy()
+        vds.undefine()
 
-    await vds_delete_disk(node_ip, name)
+    subprocess.run(f"ssh root@{node_ip} 'rm -f /var/lib/libvirt/images/{name}.qcow2'")
 
 
-async def vds_action(server_id: int) -> None:
-    server = await crud_read_server(server_id)
-    node = await crud_read_node(server.node_id)
+async def vds_action(server: ServerRead, server_node: NodeRead) -> None:
+   with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
+       vds = conn.lookupByName(str(server.id))
+       state, _ = vds.state()
 
-    if server.is_active:
-        try:
-            with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-                vds = conn.lookupByName(str(server_id))
-                state, _ = vds.state()
-
-                if state == libvirt.VIR_DOMAIN_SHUTOFF:
-                    vds.create()
-                else:
-                    vds.destroy()
-        except Exception as e:
-            logger.error(e)
+       if state == libvirt.VIR_DOMAIN_SHUTOFF:
+           vds.create()
+       else:
+           vds.destroy()
 
 
-async def vds_status(server_id: int) -> dict:
-    server = await crud_read_server(server_id)
-    node = await crud_read_node(server.node_id)
+async def vds_status(server: ServerRead, server_node: NodeRead) -> dict:
+    with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
+        vds = conn.lookupByName(str(server.id))
+        interfaces = vds.interfaceAddresses(libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 
-    if server.ipv4:
-        ipv4 = server.ipv4
-    else:
-        ipv4 = "unknown"
+        for _, iface_info in interfaces.items():
+            for addr in iface_info["addrs"]:
+                ipv4 = addr["addr"]
 
-    try:
-        with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-            try:
-                vds = conn.lookupByName(str(server_id))
-                interfaces = vds.interfaceAddresses(libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
+        state, _ = vds.state()
 
-                for _, iface_info in interfaces.items():
-                    for addr in iface_info["addrs"]:
-                        ipv4 = addr["addr"]
+        if state == libvirt.VIR_DOMAIN_RUNNING:
+            stat = "on"
+        elif state == libvirt.VIR_DOMAIN_REBOOT_SIGNAL:
+            stat = "reboot"
+        elif state == libvirt.VIR_DOMAIN_SHUTOFF:
+            stat = "off"
+        else:
+            stat = "uninstalled"
 
-                        if ipv4:
-                            if not server.ipv4 or server.ipv4 != ipv4:
-                                server_schema = ServerUpdate(ipv4=ipv4)
-                                server_schema = server_schema.rm_none_attrs()
-                                await crud_update_server(server_schema, server_id)
-
-                state, _ = vds.state()
-
-                if state == libvirt.VIR_DOMAIN_RUNNING:
-                    stat = "on"
-                elif state == libvirt.VIR_DOMAIN_REBOOT_SIGNAL:
-                    stat = "reboot"
-                elif state == libvirt.VIR_DOMAIN_SHUTOFF:
-                    stat = "off"
-                else:
-                    stat = "unknown"
-
-                return {"ipv4": ipv4, "status": stat}
-            except libvirtError:
-                return {"ipv4": ipv4, "status": "uninstalled"}
-    except Exception as e:
-        logger.error(e)
-        return {"ipv4": ipv4, "status": "unknown"}
+        return {"ipv4": ipv4, "status": stat}
 
 
-async def vds_create_disk(node_ip: str, name: str, disk_size: int) -> None:
-    try:
-        subprocess.run(f"""ssh root@{node_ip} 'qemu-img create /var/lib/libvirt/images/{name}.qcow2 \
-            -f qcow2 {disk_size}G'""")
-    except FileExistsError:
-        pass
+async def vds_migrate(server: ServerRead, server_node: NodeRead, dst_node: NodeRead) -> None:
+    with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
+        dom = conn.lookupByName(str(server.id))
+        dom.migrateToURI(f"qemu+ssh://{dst_node.ip}/system", 0, None, 0)
+
+        subprocess.run(f"scp root@{server_node.ip}:/var/lib/libvirt/images/{server.id}.qcow2 root@{dst_node.ip}:/var/lib/libvirt/images/{server.id}.qcow2")
+        subprocess.run(f"ssh root@{server_node.ip} 'rm -f /var/lib/libvirt/images/{server.id}.qcow2'")
 
 
-async def vds_delete_disk(node_ip: str, name: str) -> None:
-    try:
-        subprocess.run(f"ssh root@{node_ip} 'rm -f /var/lib/libvirt/images/{name}.qcow2'")
-    except FileNotFoundError:
-        pass
+async def vds_upgrade(server: ServerRead, server_node: NodeRead, server_vds: VDSRead) -> None:
+    with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
+        dom = conn.lookupByName(str(server.id))
+        state, _ = dom.state()
 
+        if state == libvirt.VIR_DOMAIN_RUNNING:
+            dom.destroy()
 
-async def vds_upgrade(server_id: int, vds_id: int) -> None:
-    server = await crud_read_server(server_id)
-    node = await crud_read_node(server.node_id)
+        # Update cores and ram
+        xml_desc = dom.XMLDesc()
+        root = ElementTree.fromstring(xml_desc)
 
-    if server.is_active:
-        try:
-            with libvirt.open(f"qemu+ssh://{node.ip}/system") as conn:
-                dom = conn.lookupByName(str(server_id))
-                state, _ = dom.state()
+        vcpu_element = root.find("vcpu")
 
-                if state == libvirt.VIR_DOMAIN_RUNNING:
-                    dom.destroy()
+        if vcpu_element is not None:
+            vcpu_element.text = f"{server_vds.cores}"
 
-                vds = await crud_read_vds(vds_id)
+        memory_element = root.find("memory")
 
-                # Update cores and ram
-                xml_desc = dom.XMLDesc()
-                root = ElementTree.fromstring(xml_desc)
+        if memory_element is not None:
+            memory_element.text = f"{1024 * 1024 * server_vds.ram}"
 
-                vcpu_element = root.find("vcpu")
+        current_memory_element = root.find("currentMemory")
 
-                if vcpu_element is not None:
-                    vcpu_element.text = f"{vds.cores}"
+        if current_memory_element is not None:
+            current_memory_element.text = f"{1024 * 1024 * server_vds.ram}"
 
-                memory_element = root.find("memory")
+        new_xml_desc = ElementTree.tostring(root, encoding="unicode")
+        conn.createXML(new_xml_desc)
 
-                if memory_element is not None:
-                    memory_element.text = f"{1024 * 1024 * vds.ram}"
-
-                current_memory_element = root.find("currentMemory")
-
-                if current_memory_element is not None:
-                    current_memory_element.text = f"{1024 * 1024 * vds.ram}"
-
-                new_xml_desc = ElementTree.tostring(root, encoding="unicode")
-                conn.createXML(new_xml_desc)
-
-                # Update disk size
-                subprocess.run(f"ssh root@{node.ip} 'qemu-img resize /var/lib/libvirt/images/{server_id}.qcow2 {vds.disk_size}G'")
-        except Exception as e:
-            logger.error(e)
+        # Update disk size
+        subprocess.run(f"ssh root@{server_node.ip} 'qemu-img resize /var/lib/libvirt/images/{server.id}.qcow2 {server_vds.disk_size}G'")

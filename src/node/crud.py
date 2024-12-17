@@ -17,13 +17,11 @@ async def crud_read_nodes(
     nodes = await crud_reads(Node)
 
     if nodes:
-        if cores_available is not None:
+        if cores_available:
             nodes = [node for node in nodes if node.cores_available >= cores_available]
-
-        if ram_available is not None:
+        if ram_available:
             nodes = [node for node in nodes if node.ram_available >= ram_available]
-
-        if disk_size_available is not None:
+        if disk_size_available:
             nodes = [node for node in nodes if node.disk_size_available >= disk_size_available]
 
     return nodes

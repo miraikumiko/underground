@@ -1,11 +1,13 @@
 import asyncio
 from fastapi import APIRouter, Request, WebSocket, Form, Depends
 from fastapi.responses import RedirectResponse
-from src.server.crud import crud_read_servers, crud_read_server
-from src.server.vds import vds_install, vds_action, vds_status
-from src.node.crud import crud_read_node
 from src.user.models import User
 from src.auth.utils import active_user, active_user_ws
+from src.node.crud import crud_read_node
+from src.server.schemas import ServerUpdate
+from src.server.crud import crud_read_servers, crud_read_server, crud_update_server
+from src.server.vds import vds_install, vds_action, vds_status
+from src.payment.crud import crud_read_vds
 from src.display.utils import t_error
 
 router = APIRouter(prefix="/api/server", tags=["servers"])
@@ -19,9 +21,12 @@ async def install(request: Request, server_id: int, os: str = Form(...), user: U
     if server is None or not server.is_active or server.user_id != user.id:
         return await t_error(request, 403, "Invalid server")
 
-    # Action logic
+    # Installation logic
+    node = await crud_read_node(server.node_id)
+    vds = await crud_read_vds(server.vds_id)
+
     try:
-        await vds_install(server, os)
+        await vds_install(server, node, vds, os)
         return RedirectResponse("/dashboard", status_code=301)
     except ValueError as e:
         return await t_error(request, 422, str(e))
@@ -32,11 +37,13 @@ async def action(request: Request, server_id: int, user: User = Depends(active_u
     # Check server
     server = await crud_read_server(server_id)
 
-    if server is None or not server.is_active or server.user_id != user.id:
+    if not server or not server.is_active or server.user_id != user.id:
         return await t_error(request, 403, "Invalid server")
 
     # Action logic
-    await vds_action(server_id)
+    node = await crud_read_node(server.node_id)
+
+    await vds_action(server, node)
 
     return RedirectResponse("/dashboard", status_code=301)
 
@@ -44,7 +51,7 @@ async def action(request: Request, server_id: int, user: User = Depends(active_u
 @router.websocket("/statuses")
 async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
     # Check server
-    servers = await crud_read_servers()
+    servers = await crud_read_servers(user.id)
 
     # Statuses logic
     if servers:
@@ -56,8 +63,16 @@ async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
                 time = 10
 
                 for server in servers:
-                    if server and server.is_active and server.user_id == user.id:
-                        stat = await vds_status(server.id)
+                    if server and server.is_active:
+                        node = await crud_read_node(server.node_id)
+                        stat = await vds_status(server, node)
+
+                        if stat["ipv4"]:
+                            if not server.ipv4 or server.ipv4 != stat["ipv4"]:
+                                server_schema = ServerUpdate(ipv4=stat["ipv4"])
+                                server_schema = server_schema.rm_none_attrs()
+                                await crud_update_server(server_schema, server.id)
+
                         stats.append(stat)
 
                         if len(servers) > time:
@@ -65,24 +80,6 @@ async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
 
                 await ws.send_json(stats)
                 await asyncio.sleep(time)
-            except Exception:
-                break
-
-
-@router.websocket("/status/{server_id}")
-async def status(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
-    # Check server
-    server = await crud_read_server(server_id)
-
-    if server and server.is_active and server.user_id == user.id:
-        # Status logic
-        await ws.accept()
-
-        while True:
-            try:
-                stat = await vds_status(server_id)
-                await ws.send_json(stat)
-                await asyncio.sleep(5)
             except Exception:
                 break
 

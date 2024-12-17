@@ -91,6 +91,12 @@ async def dashboard(request: Request, user: User = Depends(active_user)):
         node = await crud_read_node(server.node_id)
         status = await vds_status(server, node)
 
+        if not status["ipv4"]:
+            status["ipv4"] = "unknown"
+
+        if not status["status"]:
+            status["status"] = "unknown"
+
         statuses.append(status)
 
     servers_and_statuses = zip(servers, statuses)

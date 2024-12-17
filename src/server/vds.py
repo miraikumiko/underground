@@ -11,13 +11,13 @@ async def vds_install(server: ServerRead, server_node: NodeRead, server_vds: VDS
         raise ValueError("Invalid OS")
 
     with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
-        active_vds = conn.lookupByName(str(server.id))
-        state, _ = active_vds.state()
+        dom = conn.lookupByName(str(server.id))
+        state, _ = dom.state()
 
         if state == libvirt.VIR_DOMAIN_RUNNING:
-            active_vds.destroy()
+            dom.destroy()
 
-        active_vds.undefine()
+        dom.undefine()
 
     subprocess.Popen(f"""ssh root@{server_node.ip} 'virt-install \
         --name {server.id} \
@@ -31,43 +31,49 @@ async def vds_install(server: ServerRead, server_node: NodeRead, server_vds: VDS
 
 async def vds_delete(node_ip: str, name: str) -> None:
     with libvirt.open(f"qemu+ssh://{node_ip}/system") as conn:
-        vds = conn.lookupByName(name)
-        vds.destroy()
-        vds.undefine()
+        dom = conn.lookupByName(name)
+        dom.destroy()
+        dom.undefine()
 
     subprocess.run(f"ssh root@{node_ip} 'rm -f /var/lib/libvirt/images/{name}.qcow2'")
 
 
 async def vds_action(server: ServerRead, server_node: NodeRead) -> None:
    with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
-       vds = conn.lookupByName(str(server.id))
-       state, _ = vds.state()
+       dom = conn.lookupByName(str(server.id))
+       state, _ = dom.state()
 
        if state == libvirt.VIR_DOMAIN_SHUTOFF:
-           vds.create()
+           dom.create()
        else:
-           vds.destroy()
+           dom.destroy()
 
 
 async def vds_status(server: ServerRead, server_node: NodeRead) -> dict:
     with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
-        vds = conn.lookupByName(str(server.id))
-        interfaces = vds.interfaceAddresses(libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
+        ipv4 = None
+        stat = None
 
-        for _, iface_info in interfaces.items():
-            for addr in iface_info["addrs"]:
-                ipv4 = addr["addr"]
+        try:
+            dom = conn.lookupByName(str(server.id))
+            interfaces = dom.interfaceAddresses(libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 
-        state, _ = vds.state()
+            for _, iface_info in interfaces.items():
+                for addr in iface_info["addrs"]:
+                    ipv4 = addr["addr"]
 
-        if state == libvirt.VIR_DOMAIN_RUNNING:
-            stat = "on"
-        elif state == libvirt.VIR_DOMAIN_REBOOT_SIGNAL:
-            stat = "reboot"
-        elif state == libvirt.VIR_DOMAIN_SHUTOFF:
-            stat = "off"
-        else:
-            stat = "uninstalled"
+            state, _ = dom.state()
+
+            if state == libvirt.VIR_DOMAIN_RUNNING:
+                stat = "on"
+            elif state == libvirt.VIR_DOMAIN_REBOOT_SIGNAL:
+                stat = "reboot"
+            elif state == libvirt.VIR_DOMAIN_SHUTOFF:
+                stat = "off"
+            else:
+                stat = "uninstalled"
+        except libvirt.libvirtError:
+            pass
 
         return {"ipv4": ipv4, "status": stat}
 

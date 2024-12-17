@@ -108,6 +108,10 @@ article {
   padding: 5px 10px;
 }
 
+.vds-status {
+  width: 2px;
+}
+
 .bottom {
   display: grid;
   grid-template-columns: auto auto;

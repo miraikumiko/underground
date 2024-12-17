@@ -31,18 +31,20 @@
     <div id="servers">
       <table>
         <tr>
+          <th></th>
           <th>IPv4</th>
-          <th>Status</th>
+          <th>IPv6</th>
           <th>Days</th>
         </tr>
         {% for server, status in servers_and_statuses %}
           <tr>
+            <td id="status-{{ server.id }}" class="vds-status" style="background-color: {% if status['status'] == 'on' %}green{% else %}grey{% endif %}"></td>
             <td id="ipv4-{{ server.id }}">{% if server.ipv4 %} {{ server.ipv4 }} {% else %} unknown {% endif %}</td>
-            <td id="status-{{ server.id }}" class="vds-status">{{ status["status"] }}</td>
+            <td id="ipv6-{{ server.id }}">{% if server.ipv6 %} {{ server.ipv6 }} {% else %} unknown {% endif %}</td>
             <td>{{ server.end_at|to_days }}</td>
             <td>
               <form method="post" action="/api/server/action/{{ server.id }}">
-                <button class="btn0" style="display: contents" type="submit"><i class="fas fa-power-off" style="font-size: 20px;"></i></button>
+                <button class="btn0" style="display: contents" type="submit"><i class="fas fa-power-off" style="font-size: 20px; width: 40px;"></i></button>
               </form>
             </td>
             <td><a class="btn0" style="display: contents" href="/install/{{ server.id }}">install</a></td>
@@ -60,7 +62,12 @@
             for (let i in data) {
               i = Number.parseInt(i, 5);
               document.getElementById(`ipv4-${i + 1}`).innerText = data[i].ipv4;
-              document.getElementById(`status-${i + 1}`).innerText = data[i].status;
+
+              if (data[i].status === "on") {
+                document.getElementById(`status-${i + 1}`).style.backgroundColor = "green";
+              } else {
+                document.getElementById(`status-${i + 1}`).style.backgroundColor = "grey";
+              }
             }
           };
 
@@ -68,7 +75,7 @@
             const elements = document.getElementsByClassName("vds-status");
 
             for (let element of elements) {
-              element.innerText = "unknown";
+              element.style.backgroundColor = "grey";
             }
           };
         </script>

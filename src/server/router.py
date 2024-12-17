@@ -60,7 +60,7 @@ async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
         while True:
             try:
                 stats = []
-                time = 10
+                time = 5
 
                 for server in servers:
                     if server and server.is_active:
@@ -72,6 +72,14 @@ async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
                                 server_schema = ServerUpdate(ipv4=stat["ipv4"])
                                 server_schema = server_schema.rm_none_attrs()
                                 await crud_update_server(server_schema, server.id)
+                        else:
+                            if not server.ipv4:
+                                stat["ipv4"] = "unknown"
+                            else:
+                                stat["ipv4"] = server.ipv4
+
+                        if not stat["status"]:
+                            stat["status"] = "unknown"
 
                         stats.append(stat)
 

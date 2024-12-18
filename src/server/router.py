@@ -67,19 +67,29 @@ async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
                         node = await crud_read_node(server.node_id)
                         stat = await vds_status(server, node)
 
-                        if stat["ipv4"]:
+                        if stat["ipv4"] or stat["ipv6"]:
                             if not server.ipv4 or server.ipv4 != stat["ipv4"]:
                                 server_schema = ServerUpdate(ipv4=stat["ipv4"])
                                 server_schema = server_schema.rm_none_attrs()
                                 await crud_update_server(server_schema, server.id)
+
+                            if not server.ipv6 or server.ipv6 != stat["ipv6"]:
+                                server_schema = ServerUpdate(ipv6=stat["ipv6"])
+                                server_schema = server_schema.rm_none_attrs()
+                                await crud_update_server(server_schema, server.id)
                         else:
                             if not server.ipv4:
-                                stat["ipv4"] = "unknown"
+                                stat["ipv4"] = '-'
                             else:
                                 stat["ipv4"] = server.ipv4
 
+                            if not server.ipv6:
+                                stat["ipv6"] = '-'
+                            else:
+                                stat["ipv6"] = server.ipv6
+
                         if not stat["status"]:
-                            stat["status"] = "unknown"
+                            stat["status"] = '-'
 
                         stats.append(stat)
 

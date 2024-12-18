@@ -52,15 +52,20 @@ async def vds_action(server: ServerRead, server_node: NodeRead) -> None:
 async def vds_status(server: ServerRead, server_node: NodeRead) -> dict:
     with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
         ipv4 = None
+        ipv6 = None
         stat = None
+        status = {"ipv4": ipv4, "ipv6": ipv6, "status": stat}
 
         try:
             dom = conn.lookupByName(str(server.id))
             interfaces = dom.interfaceAddresses(libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 
             for _, iface_info in interfaces.items():
-                for addr in iface_info["addrs"]:
-                    ipv4 = addr["addr"]
+                status = {
+                    "ipv4": iface_info["addrs"][1]["addr"],
+                    "ipv6": iface_info["addrs"][0]["addr"],
+                    "status": stat
+                }
 
             state, _ = dom.state()
 
@@ -72,10 +77,12 @@ async def vds_status(server: ServerRead, server_node: NodeRead) -> dict:
                 stat = "off"
             else:
                 stat = "uninstalled"
+
+            status["status"] = stat
         except libvirt.libvirtError:
             pass
 
-        return {"ipv4": ipv4, "status": stat}
+        return status
 
 
 async def vds_migrate(server: ServerRead, server_node: NodeRead, dst_node: NodeRead) -> None:

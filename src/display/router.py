@@ -92,10 +92,10 @@ async def dashboard(request: Request, user: User = Depends(active_user)):
         status = await vds_status(server, node)
 
         if not status["ipv4"]:
-            status["ipv4"] = "unknown"
+            status["ipv4"] = '-'
 
         if not status["status"]:
-            status["status"] = "unknown"
+            status["status"] = '-'
 
         statuses.append(status)
 

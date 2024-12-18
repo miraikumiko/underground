@@ -1,4 +1,5 @@
 import logging
+import libvirt
 from src.config import LOG_FILE
 
 logger = logging.getLogger("logger")
@@ -23,3 +24,11 @@ fh.setFormatter(formatter)
 
 logger.addHandler(ch)
 logger.addHandler(fh)
+
+
+# Disable libvirt error messages in console
+
+def libvirt_callback(*args):
+    pass
+
+libvirt.registerErrorHandler(libvirt_callback, None)

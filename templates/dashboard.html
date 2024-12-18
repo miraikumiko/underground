@@ -39,8 +39,8 @@
         {% for server, status in servers_and_statuses %}
           <tr>
             <td id="status-{{ server.id }}" class="vds-status" style="background-color: {% if status['status'] == 'on' %}green{% else %}grey{% endif %}"></td>
-            <td id="ipv4-{{ server.id }}">{% if server.ipv4 %} {{ server.ipv4 }} {% else %} unknown {% endif %}</td>
-            <td id="ipv6-{{ server.id }}">{% if server.ipv6 %} {{ server.ipv6 }} {% else %} unknown {% endif %}</td>
+            <td id="ipv4-{{ server.id }}">{% if server.ipv4 %} {{ server.ipv4 }} {% else %} - {% endif %}</td>
+            <td id="ipv6-{{ server.id }}">{% if server.ipv6 %} {{ server.ipv6 }} {% else %} - {% endif %}</td>
             <td>{{ server.end_at|to_days }}</td>
             <td>
               <form method="post" action="/api/server/action/{{ server.id }}">
@@ -62,6 +62,7 @@
             for (let i in data) {
               i = Number.parseInt(i, 5);
               document.getElementById(`ipv4-${i + 1}`).innerText = data[i].ipv4;
+              document.getElementById(`ipv6-${i + 1}`).innerText = data[i].ipv6;
 
               if (data[i].status === "on") {
                 document.getElementById(`status-${i + 1}`).style.backgroundColor = "green";

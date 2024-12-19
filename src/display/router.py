@@ -1,9 +1,6 @@
-import base64
-from random import choice, randint
 from datetime import timedelta
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
-from captcha.image import ImageCaptcha
 from src.database import r
 from src.config import REGISTRATION, VDS_DAYS, VDS_MAX_PAYED_DAYS, PAYMENT_TIME
 from src.user.models import User
@@ -16,22 +13,21 @@ from src.node.schemas import NodeUpdate
 from src.node.crud import crud_read_nodes, crud_read_node, crud_update_node
 from src.payment.crud import crud_read_vdss, crud_read_vds
 from src.payment.payments import payment_request
-from src.payment.utils import check_active_payment, check_payment_limit, draw_qrcode, xmr_course
-from src.display.utils import templates, t_error
+from src.payment.utils import check_active_payment, check_payment_limit, xmr_course
+from src.display.utils import templates, t_error, t_checkout, get_captcha_base64, draw_qrcode
 
 router = APIRouter()
 
 
 @router.get("/")
 async def index(request: Request, user: User = Depends(active_user_opt)):
-    course = await xmr_course()
-
-    if user is not None:
+    if user:
         servers = await crud_read_servers(user.id)
         servers = [server for server in servers if server.is_active]
     else:
         servers = None
 
+    course = await xmr_course()
     vdss = await crud_read_vdss()
 
     return templates.TemplateResponse("index.html", {
@@ -53,17 +49,10 @@ async def register(request: Request):
     if not REGISTRATION:
         return await t_error(request, 400, "Registration is disabled")
 
-    chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    text = ''.join(choice(chars) for _ in range(randint(5, 7)))
-    captcha_id = randint(10000000, 99999999)
-
-    image = ImageCaptcha(width=218, height=50)
-    captcha = base64.b64encode(image.generate(text).getvalue()).decode("utf-8")
-
-    await r.set(f"captcha:{captcha_id}", text, ex=90)
+    captcha_id, captcha_base64 = await get_captcha_base64()
 
     return templates.TemplateResponse("register.html", {
-        "request": request, "captcha_id": captcha_id, "captcha": captcha
+        "request": request, "captcha_id": captcha_id, "captcha_base64": captcha_base64
     })
 
 
@@ -94,8 +83,8 @@ async def dashboard(request: Request, user: User = Depends(active_user)):
         if not status["ipv4"]:
             status["ipv4"] = '-'
 
-        if not status["status"]:
-            status["status"] = '-'
+        if not status["ipv6"]:
+            status["ipv6"] = '-'
 
         statuses.append(status)
 
@@ -116,19 +105,34 @@ async def promo(request: Request, _: User = Depends(active_user)):
 
 @router.get("/faq")
 async def faq(request: Request, user: User = Depends(active_user_opt)):
+    active_servers = []
     course = await xmr_course()
 
-    if user is not None:
+    if user:
         servers = await crud_read_servers(user.id)
-        servers = [server for server in servers if server.is_active]
-    else:
-        servers = None
+        active_servers = [server for server in servers if server.is_active]
 
     return templates.TemplateResponse("faq.html", {
         "request": request,
         "user": user,
-        "servers": servers,
+        "servers": active_servers,
         "course": course
+    })
+
+
+@router.get("/install/{server_id}")
+async def install(server_id: int, request: Request, _: User = Depends(active_user)):
+    return templates.TemplateResponse("install.html", {
+        "request": request,
+        "server_id": server_id
+    })
+
+
+@router.get("/vnc/{server_id}")
+async def vnc(server_id: int, request: Request, _: User = Depends(active_user)):
+    return templates.TemplateResponse("vnc.html", {
+        "request": request,
+        "server_id": server_id
     })
 
 
@@ -138,12 +142,7 @@ async def buy(product_id: int, request: Request, user: User = Depends(active_use
     cap = await check_active_payment(user.id)
 
     if cap:
-        return templates.TemplateResponse("checkout.html", {
-            "request": request,
-            "qrcode": cap["qrcode"],
-            "uri": cap["payment_uri"],
-            "ttl": cap["ttl"]
-        })
+        return await t_checkout(request, cap["qrcode"], cap["payment_uri"], cap["ttl"])
 
     # Check user's payment limit
     cpl = await check_payment_limit(user.id)
@@ -159,12 +158,7 @@ async def buy(product_id: int, request: Request, user: User = Depends(active_use
     payment_data = await payment_request("buy", server_id)
     qrcode = await draw_qrcode(payment_data["payment_uri"])
 
-    return templates.TemplateResponse("checkout.html", {
-        "request": request,
-        "qrcode": qrcode,
-        "uri": payment_data["payment_uri"],
-        "ttl": payment_data["ttl"]
-    })
+    return await t_checkout(request, qrcode, cap["payment_uri"], cap["ttl"])
 
 
 @router.get("/pay/{server_id}")
@@ -172,19 +166,14 @@ async def pay(server_id: int, request: Request, user: User = Depends(active_user
     # Check server
     server = await crud_read_server(server_id)
 
-    if server is None or server.user_id != user.id:
+    if not server or server.user_id != user.id:
         return await t_error(request, 400, "Invalid server")
  
     # Check if user have active payment
     cap = await check_active_payment(user.id)
 
-    if cap is not None:
-        return templates.TemplateResponse("checkout.html", {
-            "request": request,
-            "qrcode": cap["qrcode"],
-            "uri": cap["payment_uri"],
-            "ttl": cap["ttl"]
-        })
+    if cap:
+        return await t_checkout(request, cap["qrcode"], cap["payment_uri"], cap["ttl"])
 
     # Check user's payment limit
     cpl = await check_payment_limit(user.id)
@@ -202,12 +191,7 @@ async def pay(server_id: int, request: Request, user: User = Depends(active_user
     payment_data = await payment_request("pay", server_id)
     qrcode = await draw_qrcode(payment_data["payment_uri"])
 
-    return templates.TemplateResponse("checkout.html", {
-        "request": request,
-        "qrcode": qrcode,
-        "uri": payment_data["payment_uri"],
-        "ttl": payment_data["ttl"]
-    })
+    return await t_checkout(request, qrcode, cap["payment_uri"], cap["ttl"])
 
 
 @router.get("/upgrademenu/{server_id}")
@@ -237,13 +221,8 @@ async def upgrade(server_id: int, product_id: int, request: Request, user: User 
     # Check if user have active payment
     cap = await check_active_payment(user.id)
 
-    if cap is not None:
-        return templates.TemplateResponse("checkout.html", {
-            "request": request,
-            "qrcode": cap["qrcode"],
-            "uri": cap["payment_uri"],
-            "ttl": cap["ttl"]
-        })
+    if cap:
+        return await t_checkout(request, cap["qrcode"], cap["payment_uri"], cap["ttl"])
 
     # Check user's payment limit
     cpl = await check_payment_limit(user.id)
@@ -293,27 +272,6 @@ async def upgrade(server_id: int, product_id: int, request: Request, user: User 
         payment_data = await payment_request("upgrade", server_id, product_id)
         qrcode = await draw_qrcode(payment_data["payment_uri"])
 
-        return templates.TemplateResponse("checkout.html", {
-            "request": request,
-            "qrcode": qrcode,
-            "uri": payment_data["payment_uri"],
-            "ttl": payment_data["ttl"]
-        })
+        return await t_checkout(request, qrcode, cap["payment_uri"], cap["ttl"])
     else:
         return await t_error(request, 503, "We haven't available resources")
-
-
-@router.get("/install/{server_id}")
-async def install(server_id: int, request: Request, _: User = Depends(active_user)):
-    return templates.TemplateResponse("install.html", {
-        "request": request,
-        "server_id": server_id
-    })
-
-
-@router.get("/vnc/{server_id}")
-async def vnc(server_id: int, request: Request, _: User = Depends(active_user)):
-    return templates.TemplateResponse("vnc.html", {
-        "request": request,
-        "server_id": server_id
-    })

@@ -1,12 +1,9 @@
-import base64
 from decimal import Decimal
-from io import BytesIO
 import requests
 from requests.auth import HTTPDigestAuth
-from qrcode import QRCode
-from qrcode.constants import ERROR_CORRECT_L
 from src.database import r
 from src.config import PAYMENT_LIMIT, MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD
+from src.display.utils import draw_qrcode
 
 
 async def monero_request(method: str, params: dict = None) -> dict | None:
@@ -71,25 +68,8 @@ async def check_payment_limit(user_id: int) -> bool | None:
         ttl = await r.ttl(f"payments_count:{user_id}")
 
         if int(payments_count) < PAYMENT_LIMIT:
-            await r.set(
-                f"payments_count:{user_id}",
-                int(payments_count) + 1,
-                ex=ttl
-            )
+            await r.set(f"payments_count:{user_id}", int(payments_count) + 1, ex=ttl)
         else:
             return True
     else:
         await r.set(f"payments_count:{user_id}", 1, ex=86400)
-
-
-async def draw_qrcode(text: str):
-    qr = QRCode(version=1, error_correction=ERROR_CORRECT_L, box_size=10, border=4)
-    qr.add_data(text)
-    qr.make()
-    img = qr.make_image()
-    img_bytes = BytesIO()
-    img.save(img_bytes, format="PNG")
-    img_bytes.seek(0)
-    qrcode = base64.b64encode(img_bytes.getvalue()).decode("utf-8")
-
-    return qrcode

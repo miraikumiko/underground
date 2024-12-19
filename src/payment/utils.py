@@ -6,11 +6,7 @@ from requests.auth import HTTPDigestAuth
 from qrcode import QRCode
 from qrcode.constants import ERROR_CORRECT_L
 from src.database import r
-from src.logger import logger
-from src.config import (
-    PAYMENT_LIMIT,
-    MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD, MONERO_RECOVERY_COURSE
-)
+from src.config import PAYMENT_LIMIT, MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD
 
 
 async def monero_request(method: str, params: dict = None) -> dict | None:
@@ -29,22 +25,23 @@ async def monero_request(method: str, params: dict = None) -> dict | None:
 
 
 async def xmr_course() -> float:
-    try:
-        usd = await r.get("xmr_course")
+    usd = await r.get("xmr_course")
 
-        if usd is None:
-            res = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
+    if not usd:
+        res = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
 
-            if res.status_code == 200:
-                usd = res.json()["monero"]["usd"]
+        if res.status_code == 200:
+            usd = res.json()["monero"]["usd"]
 
-                await r.set("xmr_course", usd, ex=28800)
+            await r.set("xmr_old_course", usd, ex=24 * 60 * 60 * 7)
+            await r.set("xmr_course", usd, ex=12 * 60 * 60)
 
-        return usd
-    except Exception as e:
-        logger.error(e)
-        await r.set("xmr_course", MONERO_RECOVERY_COURSE, ex=28800)
-        return MONERO_RECOVERY_COURSE
+            return usd
+        else:
+            usd = await r.get("xmr_old_course")
+            await r.set("xmr_course", usd, ex=12 * 60 * 60)
+
+            return usd
 
 
 async def usd_to_xmr(usd: float) -> int:

@@ -1,15 +1,13 @@
 import subprocess
 import libvirt
 from xml.etree import ElementTree
+from src.config import IMAGES_PATH
 from src.node.schemas import NodeRead
 from src.server.schemas import ServerRead
 from src.payment.schemas import VDSRead
 
 
 async def vds_install(server: ServerRead, server_node: NodeRead, server_vds: VDSRead, os: str) -> None:
-    if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd"):
-        raise ValueError("Invalid OS")
-
     with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
         dom = conn.lookupByName(str(server.id))
         state, _ = dom.state()
@@ -23,7 +21,7 @@ async def vds_install(server: ServerRead, server_node: NodeRead, server_vds: VDS
         --name {server.id} \
         --vcpus {server_vds.cores} \
         --memory {server_vds.ram * 1024} \
-        --disk /var/lib/libvirt/images/{server.id}.qcow2,size={server_vds.disk_size} \
+        --disk {IMAGES_PATH}/{server.id}.qcow2,size={server_vds.disk_size} \
         --cdrom /opt/iso/{os}.iso \
         --os-variant unknown \
         --graphics vnc,listen={server_node.ip},port={server.vnc_port}'""", shell=True)
@@ -35,7 +33,7 @@ async def vds_delete(node_ip: str, name: str) -> None:
         dom.destroy()
         dom.undefine()
 
-    subprocess.run(f"ssh root@{node_ip} 'rm -f /var/lib/libvirt/images/{name}.qcow2'")
+    subprocess.run(f"ssh root@{node_ip} 'rm -f {IMAGES_PATH}/{name}.qcow2'")
 
 
 async def vds_action(server: ServerRead, server_node: NodeRead) -> None:
@@ -93,8 +91,8 @@ async def vds_migrate(server: ServerRead, server_node: NodeRead, dst_node: NodeR
         dom = conn.lookupByName(str(server.id))
         dom.migrateToURI(f"qemu+ssh://{dst_node.ip}/system", 0, None, 0)
 
-        subprocess.run(f"scp root@{server_node.ip}:/var/lib/libvirt/images/{server.id}.qcow2 root@{dst_node.ip}:/var/lib/libvirt/images/{server.id}.qcow2")
-        subprocess.run(f"ssh root@{server_node.ip} 'rm -f /var/lib/libvirt/images/{server.id}.qcow2'")
+        subprocess.run(f"scp root@{server_node.ip}:{IMAGES_PATH}/{server.id}.qcow2 root@{dst_node.ip}:{IMAGES_PATH}/{server.id}.qcow2")
+        subprocess.run(f"ssh root@{server_node.ip} 'rm -f {IMAGES_PATH}/{server.id}.qcow2'")
 
 
 async def vds_upgrade(server: ServerRead, server_node: NodeRead, server_vds: VDSRead) -> None:
@@ -128,4 +126,4 @@ async def vds_upgrade(server: ServerRead, server_node: NodeRead, server_vds: VDS
         conn.createXML(new_xml_desc)
 
         # Update disk size
-        subprocess.run(f"ssh root@{server_node.ip} 'qemu-img resize /var/lib/libvirt/images/{server.id}.qcow2 {server_vds.disk_size}G'")
+        subprocess.run(f"ssh root@{server_node.ip} 'qemu-img resize {IMAGES_PATH}/{server.id}.qcow2 {server_vds.disk_size}G'")

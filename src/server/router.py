@@ -18,18 +18,19 @@ async def install(request: Request, server_id: int, os: str = Form(...), user: U
     # Check server
     server = await crud_read_server(server_id)
 
-    if server is None or not server.is_active or server.user_id != user.id:
+    if not server or not server.is_active or server.user_id != user.id:
         return await t_error(request, 403, "Invalid server")
+
+    if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd"):
+        return await t_error(request, 422, "Invalid OS")
 
     # Installation logic
     node = await crud_read_node(server.node_id)
     vds = await crud_read_vds(server.vds_id)
 
-    try:
-        await vds_install(server, node, vds, os)
-        return RedirectResponse("/dashboard", status_code=301)
-    except ValueError as e:
-        return await t_error(request, 422, str(e))
+    await vds_install(server, node, vds, os)
+
+    return RedirectResponse("/dashboard", status_code=301)
 
 
 @router.post("/action/{server_id}")

@@ -13,6 +13,7 @@ PAYMENT_LIMIT = environ.get("PAYMENT_LIMIT")
 VDS_DAYS = environ.get("VDS_DAYS")
 VDS_MAX_PAYED_DAYS = environ.get("VDS_MAX_PAYED_DAYS")
 VDS_EXPIRED_DAYS = environ.get("VDS_EXPIRED_DAYS")
+IMAGES_PATH = environ.get("IMAGES_PATH")
 
 # Database
 DB_PATH = environ.get("DB_PATH")
@@ -26,7 +27,6 @@ MONERO_RPC_IP = environ.get("MONERO_RPC_IP")
 MONERO_RPC_PORT = environ.get("MONERO_RPC_PORT")
 MONERO_RPC_USER = environ.get("MONERO_RPC_USER")
 MONERO_RPC_PASSWORD = environ.get("MONERO_RPC_PASSWORD")
-MONERO_RECOVERY_COURSE = environ.get("MONERO_RECOVERY_COURSE")
 
 # Subnet
 SUBNET_IPV4 = environ.get("SUBNET_IPV4")
@@ -42,7 +42,6 @@ VDS_MAX_PAYED_DAYS = int(VDS_MAX_PAYED_DAYS)
 VDS_EXPIRED_DAYS = int(VDS_EXPIRED_DAYS)
 REDIS_PORT = int(REDIS_PORT)
 MONERO_RPC_PORT = int(MONERO_RPC_PORT)
-MONERO_RECOVERY_COURSE = float(MONERO_RECOVERY_COURSE)
 
 # Base path of project
 BASE_PATH = path.dirname(path.dirname(path.realpath(__file__)))

@@ -1,14 +1,14 @@
 import logging
 import libvirt
-from src.config import LOG_FILE
+from src.config import LOG_PATH
 
 logger = logging.getLogger("logger")
 logger.setLevel(logging.DEBUG)
 
-if LOG_FILE is None or LOG_FILE == '':
-    LOG_FILE = "logs.log"
+if not LOG_PATH or LOG_PATH == '':
+    LOG_PATH = "/dev/null"
 
-fh = logging.FileHandler(LOG_FILE)
+fh = logging.FileHandler(LOG_PATH)
 fh.setLevel(logging.INFO)
 
 ch = logging.StreamHandler()

@@ -83,6 +83,11 @@ footer {
   grid-template-columns: 50% 50%;
 }
 
+#vnc-status {
+  text-align: center;
+  padding-bottom: 30px;
+}
+
 #vnc-screen {
   box-shadow: 0 4px 16px 0 rgba(255, 255, 255, 0.3);
 }

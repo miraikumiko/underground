@@ -60,12 +60,15 @@ async def vds_status(server: ServerRead, server_node: NodeRead) -> dict:
             dom = conn.lookupByName(str(server.id))
             interfaces = dom.interfaceAddresses(libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 
-            for _, iface_info in interfaces.items():
-                status = {
-                    "ipv4": iface_info["addrs"][1]["addr"],
-                    "ipv6": iface_info["addrs"][0]["addr"],
-                    "status": stat
-                }
+            try:
+                for _, iface_info in interfaces.items():
+                    status = {
+                        "ipv4": iface_info["addrs"][1]["addr"],
+                        "ipv6": iface_info["addrs"][0]["addr"],
+                        "status": stat
+                    }
+            except IndexError:
+                pass
 
             state, _ = dom.state()
 

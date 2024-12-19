@@ -28,9 +28,10 @@ async def payment_request(ptype: str, server_id: int, vds_id: int = None) -> dic
     payment_uri = res["result"]["uri"]
     payment_data = {"type": ptype, "payment_id": payment_id, "amount": amount}
 
-    if server_id is not None:
+    if server_id:
         payment_data["server_id"] = server_id
-    if vds_id is not None:
+
+    if vds_id:
         payment_data["vds_id"] = vds_id
 
     await r.hset(f"payment:{payment_id}", mapping=payment_data)

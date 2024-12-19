@@ -153,7 +153,7 @@ async def buy(product_id: int, request: Request, user: User = Depends(active_use
     server_id = await request_vds(product_id, user)
 
     # Make payment request and return it uri
-    await r.set(f"inactive_server:{server_id}", server_id, ex=(60 * PAYMENT_TIME))
+    await r.set(f"inactive_server:{server_id}", server_id, ex=60 * PAYMENT_TIME)
 
     payment_data = await payment_request("buy", server_id)
     qrcode = await draw_qrcode(payment_data["payment_uri"])

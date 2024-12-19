@@ -158,7 +158,7 @@ async def buy(product_id: int, request: Request, user: User = Depends(active_use
     payment_data = await payment_request("buy", server_id)
     qrcode = await draw_qrcode(payment_data["payment_uri"])
 
-    return await t_checkout(request, qrcode, cap["payment_uri"], cap["ttl"])
+    return await t_checkout(request, qrcode, payment_data["payment_uri"], payment_data["ttl"])
 
 
 @router.get("/pay/{server_id}")
@@ -191,7 +191,7 @@ async def pay(server_id: int, request: Request, user: User = Depends(active_user
     payment_data = await payment_request("pay", server_id)
     qrcode = await draw_qrcode(payment_data["payment_uri"])
 
-    return await t_checkout(request, qrcode, cap["payment_uri"], cap["ttl"])
+    return await t_checkout(request, qrcode, payment_data["payment_uri"], payment_data["ttl"])
 
 
 @router.get("/upgrademenu/{server_id}")
@@ -272,6 +272,6 @@ async def upgrade(server_id: int, product_id: int, request: Request, user: User 
         payment_data = await payment_request("upgrade", server_id, product_id)
         qrcode = await draw_qrcode(payment_data["payment_uri"])
 
-        return await t_checkout(request, qrcode, cap["payment_uri"], cap["ttl"])
+        return await t_checkout(request, qrcode, payment_data["payment_uri"], payment_data["ttl"])
     else:
         return await t_error(request, 503, "We haven't available resources")

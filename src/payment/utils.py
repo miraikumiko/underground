@@ -32,13 +32,11 @@ async def xmr_course() -> float:
 
             await r.set("xmr_old_course", usd, ex=24 * 60 * 60 * 7)
             await r.set("xmr_course", usd, ex=12 * 60 * 60)
-
-            return usd
         else:
             usd = await r.get("xmr_old_course")
             await r.set("xmr_course", usd, ex=12 * 60 * 60)
 
-            return usd
+    return usd
 
 
 async def usd_to_xmr(usd: float) -> int:

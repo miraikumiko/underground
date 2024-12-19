@@ -89,9 +89,6 @@ async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
                             else:
                                 stat["ipv6"] = server.ipv6
 
-                        if not stat["status"]:
-                            stat["status"] = '-'
-
                         stats.append(stat)
 
                         if len(servers) > time:
@@ -124,7 +121,7 @@ async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws
     async def read_from_vnc():
         while True:
             try:
-                data = await reader.read(32768)
+                data = await reader.read(4096)
                 if not data:
                     break
                 await ws.send_bytes(data)

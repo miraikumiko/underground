@@ -49,37 +49,27 @@ async def vds_action(server: ServerRead, server_node: NodeRead) -> None:
 
 async def vds_status(server: ServerRead, server_node: NodeRead) -> dict:
     with libvirt.open(f"qemu+ssh://{server_node.ip}/system") as conn:
-        ipv4 = None
-        ipv6 = None
-        stat = None
-        status = {"ipv4": ipv4, "ipv6": ipv6, "status": stat}
+        status = {"ipv4": None, "ipv6": None, "status": None}
 
         try:
             dom = conn.lookupByName(str(server.id))
             interfaces = dom.interfaceAddresses(libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 
-            try:
-                for _, iface_info in interfaces.items():
-                    status = {
-                        "ipv4": iface_info["addrs"][1]["addr"],
-                        "ipv6": iface_info["addrs"][0]["addr"],
-                        "status": stat
-                    }
-            except IndexError:
-                pass
+            for _, iface_info in interfaces.items():
+                addrs = iface_info.get("addrs", [])
+
+                if len(addrs) > 1:
+                    status["ipv4"] = addrs[1].get("addr")
+
+                if len(addrs) > 0:
+                    status["ipv6"] = addrs[0].get("addr")
 
             state, _ = dom.state()
 
             if state == libvirt.VIR_DOMAIN_RUNNING:
-                stat = "on"
-            elif state == libvirt.VIR_DOMAIN_REBOOT_SIGNAL:
-                stat = "reboot"
-            elif state == libvirt.VIR_DOMAIN_SHUTOFF:
-                stat = "off"
+                status["status"] = "on"
             else:
-                stat = "uninstalled"
-
-            status["status"] = stat
+                status["status"] = "off"
         except libvirt.libvirtError:
             pass
 
@@ -103,7 +93,7 @@ async def vds_upgrade(server: ServerRead, server_node: NodeRead, server_vds: VDS
         if state == libvirt.VIR_DOMAIN_RUNNING:
             dom.destroy()
 
-        # Update cores and ram
+        # Update count of cores and ram
         xml_desc = dom.XMLDesc()
         root = ElementTree.fromstring(xml_desc)
 
@@ -125,5 +115,5 @@ async def vds_upgrade(server: ServerRead, server_node: NodeRead, server_vds: VDS
         new_xml_desc = ElementTree.tostring(root, encoding="unicode")
         conn.createXML(new_xml_desc)
 
-        # Update disk size
+        # Resize the disk
         subprocess.run(f"ssh root@{server_node.ip} 'qemu-img resize {IMAGES_PATH}/{server.id}.qcow2 {server_vds.disk_size}G'")

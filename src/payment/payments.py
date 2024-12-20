@@ -81,6 +81,8 @@ async def payment_checkout(txid: str) -> None:
                 server_schema = server_schema.rm_none_attrs()
                 await crud_update_server(server_schema, server.id)
 
+                # Delete markers
+                await r.delete(f"node_to_migrate:{server.id}")
                 await r.delete(f"unupgraded_server:{server.id}")
 
             await r.delete(f"payment:{payment_id}")

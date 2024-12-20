@@ -58,11 +58,15 @@ async def vds_status(server: ServerRead, server_node: NodeRead) -> dict:
             for _, iface_info in interfaces.items():
                 addrs = iface_info.get("addrs", [])
 
-                if len(addrs) > 1:
-                    status["ipv4"] = addrs[1].get("addr")
+                if addrs:
+                    for i in range(2):
+                        if len(addrs) > i:
+                            prefix = addrs[i].get("prefix")
 
-                if len(addrs) > 0:
-                    status["ipv6"] = addrs[0].get("addr")
+                            if prefix <= 32:
+                                status["ipv4"] = addrs[i].get("addr")
+                            else:
+                                status["ipv6"] = addrs[i].get("addr")
 
             state, _ = dom.state()
 

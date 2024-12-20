@@ -4,8 +4,7 @@ from fastapi.responses import RedirectResponse
 from src.user.models import User
 from src.auth.utils import active_user, active_user_ws
 from src.node.crud import crud_read_node
-from src.server.schemas import ServerUpdate
-from src.server.crud import crud_read_servers, crud_read_server, crud_update_server
+from src.server.crud import crud_read_servers, crud_read_server
 from src.server.vds import vds_install, vds_action, vds_status
 from src.payment.crud import crud_read_vds
 from src.display.utils import t_error
@@ -51,53 +50,35 @@ async def action(request: Request, server_id: int, user: User = Depends(active_u
 
 @router.websocket("/statuses")
 async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
-    # Check server
     servers = await crud_read_servers(user.id)
 
-    # Statuses logic
     if servers:
         await ws.accept()
 
         while True:
+            stats = []
+            time = 5
+
+            for server in servers:
+                if server and server.is_active:
+                    node = await crud_read_node(server.node_id)
+                    status = await vds_status(server, node)
+
+                    if not status["ipv4"]:
+                        status["ipv4"] = '-'
+
+                    if not status["ipv6"]:
+                        status["ipv6"] = '-'
+
+                    stats.append(status)
+
+                    if len(servers) > time:
+                        time = time + 1
             try:
-                stats = []
-                time = 5
-
-                for server in servers:
-                    if server and server.is_active:
-                        node = await crud_read_node(server.node_id)
-                        stat = await vds_status(server, node)
-
-                        if stat["ipv4"] or stat["ipv6"]:
-                            if not server.ipv4 or server.ipv4 != stat["ipv4"]:
-                                server_schema = ServerUpdate(ipv4=stat["ipv4"])
-                                server_schema = server_schema.rm_none_attrs()
-                                await crud_update_server(server_schema, server.id)
-
-                            if not server.ipv6 or server.ipv6 != stat["ipv6"]:
-                                server_schema = ServerUpdate(ipv6=stat["ipv6"])
-                                server_schema = server_schema.rm_none_attrs()
-                                await crud_update_server(server_schema, server.id)
-                        else:
-                            if not server.ipv4:
-                                stat["ipv4"] = '-'
-                            else:
-                                stat["ipv4"] = server.ipv4
-
-                            if not server.ipv6:
-                                stat["ipv6"] = '-'
-                            else:
-                                stat["ipv6"] = server.ipv6
-
-                        stats.append(stat)
-
-                        if len(servers) > time:
-                            time = time + 1
-
                 await ws.send_json(stats)
                 await asyncio.sleep(time)
             except Exception:
-                break
+                pass
 
 
 @router.websocket("/vnc/{server_id}")
@@ -122,8 +103,10 @@ async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws
         while True:
             try:
                 data = await reader.read(4096)
+
                 if not data:
                     break
+
                 await ws.send_bytes(data)
             except Exception:
                 break
@@ -132,6 +115,10 @@ async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws
         while True:
             try:
                 data = await ws.receive()
+
+                if not data:
+                    break
+
                 writer.write(data["bytes"])
                 await writer.drain()
             except Exception:

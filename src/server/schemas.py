@@ -3,8 +3,6 @@ from datetime import datetime, timedelta, UTC
 
 
 class ServerCreate(BaseModel):
-    ipv4: str | None
-    ipv6: str | None
     vnc_port: int
     start_at: datetime = datetime.now(UTC)
     end_at: datetime = datetime.now(UTC) + timedelta(days=31)
@@ -17,8 +15,6 @@ class ServerCreate(BaseModel):
 
 class ServerRead(BaseModel):
     id: int
-    ipv4: str
-    ipv6: str
     vnc_port: int
     start_at: datetime
     end_at: datetime
@@ -30,8 +26,6 @@ class ServerRead(BaseModel):
 
 
 class ServerUpdate(BaseModel):
-    ipv4: str = None
-    ipv6: str = None
     vnc_port: int = None
     start_at: datetime = None
     end_at: datetime = None

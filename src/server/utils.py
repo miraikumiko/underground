@@ -1,7 +1,6 @@
-from ipaddress import IPv4Address, IPv4Network
 from datetime import datetime, timedelta, UTC
 from src.database import r
-from src.config import VDS_DAYS, VDS_EXPIRED_DAYS, SUBNET_IPV4
+from src.config import VDS_DAYS, VDS_EXPIRED_DAYS
 from src.logger import logger
 from src.user.models import User
 from src.server.schemas import ServerCreate, ServerUpdate
@@ -21,16 +20,6 @@ async def request_vds(product_id: int, user: User, is_active: bool = False) -> i
         raise Exception("Bad Request|This product doesn't exist")
 
     servers = await crud_read_servers()
-
-    # Check availability of IPv4
-    if vds.ipv4:
-        if servers:
-            server_ipv4s = [IPv4Address(server.ipv4) for server in servers if server.ipv4]
-            available_ipv4s = [ipv4 for ipv4 in IPv4Network(SUBNET_IPV4) if ipv4 not in server_ipv4s]
-
-            if not available_ipv4s:
-                logger.warn(f"Haven't available IPv4 for new vds with id {product_id} for {user.username}")
-                raise DisplayException(503, "We haven't available resources")
 
     # Check availability of resources
     nodes = await crud_read_nodes(vds.cores, vds.ram, vds.disk_size)
@@ -52,8 +41,6 @@ async def request_vds(product_id: int, user: User, is_active: bool = False) -> i
     # Registration of new server
     server_schema = ServerCreate(
         vnc_port=vnc_port,
-        ipv4=None,
-        ipv6=None,
         start_at=datetime.now(UTC),
         end_at=datetime.now() + timedelta(days=VDS_DAYS),
         is_active=False,

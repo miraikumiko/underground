@@ -1,7 +1,7 @@
 import asyncio
 from fastapi import APIRouter, Request, WebSocket, Form, Depends
 from fastapi.responses import RedirectResponse
-from src.user.models import User
+from src.auth.models import User
 from src.auth.utils import active_user, active_user_ws
 from src.node.crud import crud_read_node
 from src.server.crud import crud_read_servers, crud_read_server

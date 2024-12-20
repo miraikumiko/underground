@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, UTC
 from src.database import r
 from src.config import VDS_DAYS, VDS_EXPIRED_DAYS
 from src.logger import logger
-from src.user.models import User
+from src.auth.models import User
 from src.server.schemas import ServerCreate, ServerUpdate
 from src.server.crud import crud_create_server, crud_read_servers, crud_update_server, crud_delete_server
 from src.server.vds import vds_delete
@@ -25,7 +25,7 @@ async def request_vds(product_id: int, user: User, is_active: bool = False) -> i
     nodes = await crud_read_nodes(vds.cores, vds.ram, vds.disk_size)
 
     if not nodes:
-        logger.warn(f"Haven't available resources for new vds with id {product_id} for {user.username}")
+        logger.warn(f"Haven't available resources for new vds {product_id} for {user.id}")
         raise DisplayException(503, "We haven't available resources")
 
     node = nodes[0]

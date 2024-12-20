@@ -4,10 +4,13 @@ from sqlalchemy import ColumnElement
 from src.database import async_session_maker
 
 
-async def crud_create(model, schema: BaseModel) -> int:
+async def crud_create(model, schema: BaseModel | dict) -> int:
     async with async_session_maker() as session:
         async with session.begin():
-            obj = model(schema.model_dump())
+            if type(schema) is not dict:
+                schema = schema.model_dump()
+
+            obj = model(schema)
 
             session.add(obj)
             await session.commit()

@@ -4,7 +4,7 @@ from src.database import r
 from src.payment.schemas import PromoUpdate
 from src.payment.crud import crud_read_promo, crud_update_promo
 from src.server.utils import request_vds
-from src.user.models import User
+from src.auth.models import User
 from src.auth.utils import active_user
 from src.display.utils import t_error
 

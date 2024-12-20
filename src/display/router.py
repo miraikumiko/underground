@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 from src.database import r
 from src.config import REGISTRATION, VDS_DAYS, VDS_MAX_PAYED_DAYS, PAYMENT_TIME
-from src.user.models import User
+from src.auth.models import User
 from src.auth.utils import active_user, active_user_opt
 from src.server.schemas import ServerUpdate
 from src.server.crud import crud_read_servers, crud_read_server, crud_update_server
@@ -32,7 +32,6 @@ async def index(request: Request, user: User = Depends(active_user_opt)):
 
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "user": user,
         "servers": servers,
         "course": course,
         "vdss": vdss
@@ -92,7 +91,6 @@ async def dashboard(request: Request, user: User = Depends(active_user)):
 
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
-        "user": user,
         "course": course,
         "servers_and_statuses": servers_and_statuses
     })
@@ -114,7 +112,6 @@ async def faq(request: Request, user: User = Depends(active_user_opt)):
 
     return templates.TemplateResponse("faq.html", {
         "request": request,
-        "user": user,
         "servers": active_servers,
         "course": course
     })

@@ -34,6 +34,10 @@ async def crud_read_node(node_id: int) -> NodeRead:
 
 
 async def crud_update_node(schema: NodeUpdate, node_id: int) -> None:
+    """
+
+    @rtype: object
+    """
     await crud_update(Node, schema, attr1=Node.id, attr2=node_id)
 
 

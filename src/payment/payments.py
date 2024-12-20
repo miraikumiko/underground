@@ -57,10 +57,7 @@ async def payment_checkout(txid: str) -> None:
                 server_schema = server_schema.rm_none_attrs()
                 await crud_update_server(server_schema, server.id)
             elif payment["type"] == "pay":
-                server_schema = ServerUpdate(
-                    end_at=server.end_at + timedelta(days=VDS_DAYS),
-                    is_active=True
-                )
+                server_schema = ServerUpdate(end_at=server.end_at + timedelta(days=VDS_DAYS), is_active=True)
                 server_schema = server_schema.rm_none_attrs()
                 await crud_update_server(server_schema, server.id)
             elif payment["type"] == "upgrade":
@@ -68,14 +65,16 @@ async def payment_checkout(txid: str) -> None:
                 vds = await crud_read_vds(server.vds_id)
 
                 await vds_upgrade(server, node, vds)
+
                 dst_node_id = await r.get(f"node_to_migrate:{server.id}")
                 upgrade_vds_id = await r.get(f"unupgraded_server:{server.id}")
                 server_schema = ServerUpdate(in_upgrade=False, vds_id=int(upgrade_vds_id))
 
+                # Migrate if needed
                 if dst_node_id:
                     server_node = await crud_read_node(server.node_id)
                     dst_node = await crud_read_node(int(dst_node_id))
-                    server_schema = server_schema.node_id = dst_node.id
+                    server_schema.node_id = dst_node.id
 
                     await vds_migrate(server, server_node, dst_node)
 

@@ -70,8 +70,8 @@ async def request_vds(product_id: int, user: User, is_active: bool = False) -> i
         ram_available=(node.ram_available - vds.ram),
         disk_size_available=(node.disk_size_available - vds.disk_size)
     )
-
     await crud_update_node(node_schema, node.id)
+
     server_id = await crud_create_server(server_schema)
 
     return server_id
@@ -97,22 +97,28 @@ async def servers_expired_check():
             is_upgraded = await r.get(f"upgrade_server:{server.id}")
 
             if not is_upgraded:
-                # Make server active again
-                server_schema = ServerUpdate(is_active=True)
-                server_schema = server_schema.rm_none_attrs()
-                await crud_update_server(server_schema, server.id)
-
                 # Update node specs
                 node = await crud_read_node(server.node_id)
                 server_vds = await crud_read_vds(server.vds_id)
+                dst_node_id = await r.get(f"node_to_migrate:{server.id}")
                 upgrade_vds_id = await r.get(f"unupgraded_server:{server.id}")
                 upgrade_vds = await crud_read_vds(int(upgrade_vds_id))
-                node_schema = NodeUpdate(
-                    cores_available=node.cores_available + upgrade_vds.cores - server_vds.cores,
-                    ram_available=node.ram_available + upgrade_vds.ram - server_vds.ram,
-                    disk_size_available=node.disk_size_available + upgrade_vds.disk_size - server_vds.disk_size
-                )
-                await crud_update_node(node_schema, server.node_id)
+
+                if dst_node_id:
+                    dst_node = await crud_read_node(int(dst_node_id))
+                    node_schema = NodeUpdate(
+                        cores_available=dst_node.cores_available + upgrade_vds.cores - server_vds.cores,
+                        ram_available=dst_node.ram_available + upgrade_vds.ram - server_vds.ram,
+                        disk_size_available=dst_node.disk_size_available + upgrade_vds.disk_size - server_vds.disk_size
+                    )
+                    await crud_update_node(node_schema, dst_node.id)
+                else:
+                    node_schema = NodeUpdate(
+                        cores_available=node.cores_available + upgrade_vds.cores - server_vds.cores,
+                        ram_available=node.ram_available + upgrade_vds.ram - server_vds.ram,
+                        disk_size_available=node.disk_size_available + upgrade_vds.disk_size - server_vds.disk_size
+                    )
+                    await crud_update_node(node_schema, server.node_id)
 
                 # Update server
                 server_schema = ServerUpdate(in_upgrade=False)

@@ -243,9 +243,16 @@ async def upgrade(server_id: int, product_id: int, request: Request, user: User 
     nodes = await crud_read_nodes(upgrade_vds.cores, upgrade_vds.ram, upgrade_vds.disk_size)
 
     if nodes:
-        if node not in nodes:
+        if node in nodes:
+            node_schema = NodeUpdate(
+                cores_available=node.cores_available - upgrade_vds.cores + server_vds.cores,
+                ram_available=node.ram_available - upgrade_vds.ram + server_vds.ram,
+                disk_size_available=node.disk_size_available - upgrade_vds.disk_size + server_vds.disk_size
+            )
+            await crud_update_node(node_schema, server.node_id)
+        else:
             dst_node = nodes[0]
-            await r.set(f"node_to_migrate:{server_id}", dst_node.id, ex=(60 * PAYMENT_TIME))
+            await r.set(f"node_to_migrate:{server_id}", dst_node.id)
 
             node_schema = NodeUpdate(
                 cores_available=dst_node.cores_available - upgrade_vds.cores + server_vds.cores,
@@ -253,21 +260,14 @@ async def upgrade(server_id: int, product_id: int, request: Request, user: User 
                 disk_size_available=dst_node.disk_size_available - upgrade_vds.disk_size + server_vds.disk_size
             )
             await crud_update_node(node_schema, dst_node.id)
-        else:
-            node_schema = NodeUpdate(
-                cores_available=node.cores_available - upgrade_vds.cores + server_vds.cores,
-                ram_available=node.ram_available - upgrade_vds.ram + server_vds.ram,
-                disk_size_available=node.disk_size_available - upgrade_vds.disk_size + server_vds.disk_size
-            )
-            await crud_update_node(node_schema, server.node_id)
 
         server_schema = ServerUpdate(in_upgrade=True)
         server_schema = server_schema.rm_none_attrs()
         await crud_update_server(server_schema, server.id)
 
         # Make payment request and return it uri
-        await r.set(f"upgrade_server:{server_id}", server_id, ex=(60 * PAYMENT_TIME))
-        await r.set(f"unupgraded_server:{server.id}", upgrade_vds.id)
+        await r.set(f"upgrade_server:{server_id}", server_id, ex=60 * PAYMENT_TIME)
+        await r.set(f"unupgraded_server:{server_id}", upgrade_vds.id)
 
         payment_data = await payment_request("upgrade", server_id, product_id)
         qrcode = await draw_qrcode(payment_data["payment_uri"])

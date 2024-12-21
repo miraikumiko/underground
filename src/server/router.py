@@ -1,101 +1,115 @@
 import asyncio
-from fastapi import APIRouter, Request, WebSocket, Form, Depends
+from fastapi import APIRouter, Request, WebSocket, Form
 from fastapi.responses import RedirectResponse
-from src.auth.models import User
+from src.database import Database
 from src.auth.utils import active_user, active_user_ws
-from src.node.crud import crud_read_node
-from src.server.crud import crud_read_servers, crud_read_server
 from src.server.vds import vds_install, vds_action, vds_status
-from src.payment.crud import crud_read_vds
 from src.display.utils import t_error
 
 router = APIRouter(prefix="/api/server", tags=["servers"])
 
 
 @router.post("/install/{server_id}")
-async def install(request: Request, server_id: int, os: str = Form(...), user: User = Depends(active_user)):
-    # Check server
-    server = await crud_read_server(server_id)
+async def install(request: Request, server_id: int, os: str = Form(...)):
+    user = await active_user(request)
 
-    if not server or not server.is_active or server.user_id != user.id:
+    # Check server
+    async with Database() as db:
+        server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+
+    if not server or not server[4] or server[8] != user[0]:
         return await t_error(request, 403, "Invalid server")
 
     if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd"):
         return await t_error(request, 422, "Invalid OS")
 
     # Installation logic
-    node = await crud_read_node(server.node_id)
-    vds = await crud_read_vds(server.vds_id)
+    async with Database() as db:
+        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server[7],))
+        vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server[6],))
 
-    await vds_install(server, node, vds, os)
+    await vds_install(server, node[1], vds, os)
 
     return RedirectResponse("/dashboard", status_code=301)
 
 
 @router.post("/action/{server_id}")
-async def action(request: Request, server_id: int, user: User = Depends(active_user)):
-    # Check server
-    server = await crud_read_server(server_id)
+async def action(request: Request, server_id: int):
+    user = await active_user(request)
 
-    if not server or not server.is_active or server.user_id != user.id:
+    # Check server
+    async with Database() as db:
+        server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+
+    if not server or not server[4] or server[8] != user[0]:
         return await t_error(request, 403, "Invalid server")
 
     # Action logic
-    node = await crud_read_node(server.node_id)
+    async with Database() as db:
+        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server[7],))
 
-    await vds_action(server, node)
+    await vds_action(server[0], node[1])
 
     return RedirectResponse("/dashboard", status_code=301)
 
 
 @router.websocket("/statuses")
-async def statuses(ws: WebSocket, user: User = Depends(active_user_ws)):
-    servers = await crud_read_servers(user.id)
+async def statuses(ws: WebSocket):
+    user = await active_user_ws(ws)
+
+    async with Database() as db:
+        servers = await db.fetchall("SELECT * FROM server WHERE user_id = ?", (user[0],))
 
     if servers:
         await ws.accept()
 
-        while True:
-            stats = []
-            time = 5
+        try:
+            while True:
+                stats = []
+                time = 5
 
-            for server in servers:
-                if server and server.is_active:
-                    node = await crud_read_node(server.node_id)
-                    status = await vds_status(server, node)
+                for server in servers:
+                    if server[4]:
+                        async with Database() as db:
+                            node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server[7],))
+                            status = await vds_status(server[0], node[1])
 
-                    if not status["ipv4"]:
-                        status["ipv4"] = '-'
+                        if not status["ipv4"]:
+                            status["ipv4"] = '-'
 
-                    if not status["ipv6"]:
-                        status["ipv6"] = '-'
+                        if not status["ipv6"]:
+                            status["ipv6"] = '-'
 
-                    stats.append(status)
+                        stats.append(status)
 
-                    if len(servers) > time:
-                        time = time + 1
-            try:
-                await ws.send_json(stats)
-                await asyncio.sleep(time)
-            except Exception:
-                pass
+                        if len(servers) > time:
+                            time = time + 1
+
+                        await ws.send_json(stats)
+                        await asyncio.sleep(time)
+        except Exception:
+            pass
 
 
 @router.websocket("/vnc/{server_id}")
-async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws)):
-    # Check server
-    server = await crud_read_server(server_id)
+async def vnc(server_id: int, ws: WebSocket):
+    user = await active_user_ws(ws)
 
-    if server is None or not server.is_active or server.user_id != user.id:
-        return None
+    # Check server
+    async with Database() as db:
+        server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+
+    if not server or not server[4] or server[8] != user[0]:
+        return
 
     # VNC logic
     await ws.accept()
 
-    node = await crud_read_node(server.node_id)
+    async with Database() as db:
+        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server[7],))
 
     try:
-        reader, writer = await asyncio.open_connection(node.ip, server.vnc_port)
+        reader, writer = await asyncio.open_connection(node[1], server[1])
     except ConnectionRefusedError:
         return await ws.close(1013, "VNC Server isn't running now")
 
@@ -103,10 +117,8 @@ async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws
         while True:
             try:
                 data = await reader.read(4096)
-
                 if not data:
                     break
-
                 await ws.send_bytes(data)
             except Exception:
                 break
@@ -115,10 +127,6 @@ async def vnc(server_id: int, ws: WebSocket, user: User = Depends(active_user_ws
         while True:
             try:
                 data = await ws.receive()
-
-                if not data:
-                    break
-
                 writer.write(data["bytes"])
                 await writer.drain()
             except Exception:

@@ -7,7 +7,7 @@ from src.display.utils import draw_qrcode
 
 
 async def monero_request(method: str, params: dict = None) -> dict | None:
-    if params is None:
+    if not params:
         params = {}
 
     res = requests.post(
@@ -62,7 +62,7 @@ async def check_active_payment(user_id: int) -> dict | None:
 async def check_payment_limit(user_id: int) -> bool | None:
     payments_count = await r.get(f"payments_count:{user_id}")
 
-    if payments_count is not None:
+    if payments_count:
         ttl = await r.ttl(f"payments_count:{user_id}")
 
         if int(payments_count) < PAYMENT_LIMIT:

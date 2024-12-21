@@ -35,14 +35,14 @@
       <div id="vds-container">
         {% for vds in vdss %}
           <div class="vds">
-            <span>vCPU: {{ vds.cores }} [{{ vds.cores_desc }}]</span>
-            <span>RAM: {{ vds.ram }}GB [{{ vds.ram_desc }}]</span>
-            <span>Disk: {{ vds.disk_size }}GB [{{ vds.disk_desc }}]</span>
-            <span>IPv4: {% if vds.ipv4 %} Yes {% else %} No {% endif %}</span>
-            <span>IPv6: {% if vds.ipv6 %} Yes {% else %} No {% endif %}</span>
+            <span>vCPU: {{ vds[1] }}</span>
+            <span>RAM: {{ vds[2] }}GB</span>
+            <span>Disk: {{ vds[3] }}GB</span>
+            <span>IPv4: {% if vds[4] %} Yes {% else %} No {% endif %}</span>
+            <span>IPv6: {% if vds[5] %} Yes {% else %} No {% endif %}</span>
             <div class="bottom">
-              <span>Total: $<span class="price">{{ vds.price }}</span>/mo</span>
-              <a class="btn1" href="/buy/{{ vds.id }}">Checkout</a>
+              <span>Total: $<span class="price">{{ vds[6] }}</span>/mo</span>
+              <a class="btn1" href="/buy/{{ vds[0] }}">Checkout</a>
             </div>
           </div>
         {% endfor %}

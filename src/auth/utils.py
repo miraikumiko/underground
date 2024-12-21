@@ -1,9 +1,6 @@
-from fastapi import Request, WebSocket
+from fastapi import Request, WebSocket, HTTPException
 from websockets.exceptions import ConnectionClosed
-from src.database import r
-from src.crud import crud_read
-from src.auth.models import User
-from src.display.exceptions import DisplayException
+from src.database import Database, r
 
 
 async def get_user(request):
@@ -11,7 +8,8 @@ async def get_user(request):
         user_id = await r.get(f"auth:{request.cookies['auth']}")
 
         if user_id:
-            user = await crud_read(User, User.id, int(user_id))
+            async with Database() as db:
+                user = await db.fetchone("SELECT * from user where id = ?", (user_id,))
 
             return user
 
@@ -22,7 +20,7 @@ async def active_user(request: Request):
     if res:
         return res
     else:
-        raise DisplayException(401, "Unauthorized")
+        raise HTTPException(401, "Unauthorized")
 
 
 async def active_user_opt(request: Request):

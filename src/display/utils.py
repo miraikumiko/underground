@@ -1,6 +1,7 @@
 import base64
 from io import BytesIO
 from random import choice, randint
+from datetime import datetime
 from captcha.image import ImageCaptcha
 from qrcode import QRCode
 from qrcode.constants import ERROR_CORRECT_L
@@ -8,11 +9,10 @@ from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
 from src.database import r
 from src.config import BASE_PATH
-from src.display.filters import to_days, to_minutes
 
 templates = Jinja2Templates(directory=f"{BASE_PATH}/templates")
-templates.env.filters["to_days"] = to_days
-templates.env.filters["to_minutes"] = to_minutes
+templates.env.filters["to_days"] = lambda date: (datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f") - datetime.now()).days
+templates.env.filters["to_minutes"] = lambda ttl: ttl // 60
 
 
 async def t_error(request: Request, status_code: int, detail: str) -> templates.TemplateResponse:

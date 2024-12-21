@@ -46,11 +46,17 @@ pip install -r requirements.txt
 
 ### OpenRC
 
-`cp contrib/openrc/underground.pm /etc/init.d/underground.pm`
+```
+cp contrib/openrc/underground.pm /etc/init.d/underground.pm
+cp contrib/openrc/monero-wallet-rpc /etc/init.d/monero-wallet-rpc
+```
 
 ### Systemd
 
-`cp contrib/systemd/underground.pm.service /etc/systemd/system/underground.pm.service`
+```
+cp contrib/systemd/underground.pm.service /etc/systemd/system/underground.pm.service
+cp contrib/systemd/monero-wallet-rpc.service /etc/systemd/system/monero-wallet-rpc.service
+```
 
 ### Nginx
 
@@ -64,17 +70,21 @@ ln -s /etc/nginx/sites-available/underground.pm.conf /etc/nginx/sites-enabled/un
 ### OpenRC
 
 ```
+rc-update add sshd default
 rc-update add libvirtd default
 rc-update add redis default
-rc-update add underground.pm default
 rc-update add nginx default
+rc-update add underground.pm default
+rc-update add monero-wallet-rpc default
 
+rc-service sshd start
 rc-service libvirtd start
 rc-service redis start
-rc-service underground.pm start
 rc-service nginx start
+rc-service underground.pm start
+rc-service monero-wallet-rpc start
 ```
 
 ### Systemd
 
-`systemctl enable --now libvirtd redis underground.pm nginx`
+`systemctl enable --now sshd libvirtd redis nginx underground.pm monero-wallet-rpc`

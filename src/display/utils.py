@@ -5,8 +5,8 @@ from datetime import datetime
 from captcha.image import ImageCaptcha
 from qrcode import QRCode
 from qrcode.constants import ERROR_CORRECT_L
-from fastapi.templating import Jinja2Templates
-from fastapi.requests import Request
+from starlette.requests import Request
+from starlette.templating import Jinja2Templates
 from src.database import r
 from src.config import BASE_PATH
 

@@ -1,4 +1,6 @@
-from fastapi import Request, WebSocket, HTTPException
+from starlette.requests import Request
+from starlette.websockets import WebSocket
+from starlette.exceptions import HTTPException
 from websockets.exceptions import ConnectionClosed
 from src.database import Database, r
 

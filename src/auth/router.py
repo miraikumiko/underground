@@ -1,16 +1,17 @@
 from uuid import uuid4
-from fastapi import APIRouter, Request, Form
-from fastapi.responses import RedirectResponse
+from starlette.requests import Request
+from starlette.responses import RedirectResponse
+from starlette.routing import Route
 from src.config import REGISTRATION
 from src.database import Database, r
 from src.auth.utils import active_user
 from src.display.utils import t_error
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+async def login(request: Request):
+    form = await request.form()
+    password = form.get("password")
 
-@router.post("/login")
-async def login_form(request: Request, password: str = Form(...)):
     async with Database() as db:
         user = await db.fetchone("SELECT * FROM user WHERE password = ?", (password,))
 
@@ -32,10 +33,14 @@ async def login_form(request: Request, password: str = Form(...)):
         return await t_error(request, 401, "Invalid password")
 
 
-@router.post("/register")
-async def register_form(request: Request, password: str = Form(...), captcha_id: str = Form(...), captcha_text: str = Form(...)):
+async def register(request: Request):
     if not REGISTRATION:
         return await t_error(request, 400, "Registration is disabled")
+
+    form = await request.form()
+    password = form.get("password")
+    captcha_id = form.get("captcha_id")
+    captcha_text = form.get("captcha_text")
 
     captcha = await r.get(f"captcha:{captcha_id}")
     await r.delete(f"captcha:{captcha_id}")
@@ -69,7 +74,6 @@ async def register_form(request: Request, password: str = Form(...), captcha_id:
     })
 
 
-@router.post("/logout")
 async def logout(request: Request):
     _ = await active_user(request)
 
@@ -79,9 +83,11 @@ async def logout(request: Request):
     })
 
 
-@router.post("/reset-password")
-async def reset_password_form(request: Request, old_password: str = Form(...), new_password: str = Form(...)):
+async def reset_password(request: Request):
     user = await active_user(request)
+    form = await request.form()
+    old_password = form.get("old_password")
+    new_password = form.get("new_password")
 
     if user[1] != old_password:
         return await t_error(request, 403, "Invalid password")
@@ -104,9 +110,10 @@ async def reset_password_form(request: Request, old_password: str = Form(...), n
     })
 
 
-@router.post("/delete-account")
-async def delete_me_form(request: Request, password: str = Form(...)):
+async def delete_account(request: Request):
     user = await active_user(request)
+    form = await request.form()
+    password = form.get("password")
 
     if user[1] != password:
         return await t_error(request, 403, "Invalid password")
@@ -119,3 +126,12 @@ async def delete_me_form(request: Request, password: str = Form(...)):
         "content-type": "application/x-www-form-urlencoded",
         "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax;'
     })
+
+
+router = [
+    Route("/login", login, methods=["POST"]),
+    Route("/register", register, methods=["POST"]),
+    Route("/logout", logout, methods=["POST"]),
+    Route("/reset_password", reset_password, methods=["POST"]),
+    Route("/delete_account", delete_account, methods=["POST"])
+]

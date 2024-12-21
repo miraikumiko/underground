@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, UTC
-from fastapi import HTTPException
+from starlette.exceptions import HTTPException
 from src.database import Database, r
 from src.config import VDS_DAYS, VDS_EXPIRED_DAYS
 from src.logger import logger

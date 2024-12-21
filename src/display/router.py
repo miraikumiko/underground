@@ -1,6 +1,7 @@
 from datetime import timedelta
-from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
+from starlette.requests import Request
+from starlette.responses import RedirectResponse
+from starlette.routing import Route
 from src.database import Database, r
 from src.config import REGISTRATION, VDS_DAYS, VDS_MAX_PAYED_DAYS, PAYMENT_TIME
 from src.auth.utils import active_user, active_user_opt
@@ -10,10 +11,7 @@ from src.payment.payments import payment_request
 from src.payment.utils import check_active_payment, check_payment_limit, xmr_course
 from src.display.utils import templates, t_error, t_checkout, get_captcha_base64, draw_qrcode
 
-router = APIRouter()
 
-
-@router.get("/")
 async def index(request: Request):
     user = await active_user_opt(request)
 
@@ -39,12 +37,10 @@ async def index(request: Request):
     })
 
 
-@router.get("/login")
 async def login(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 
-@router.get("/register")
 async def register(request: Request):
     if not REGISTRATION:
         return await t_error(request, 400, "Registration is disabled")
@@ -56,21 +52,18 @@ async def register(request: Request):
     })
 
 
-@router.get("/reset-password")
-async def change_password(request: Request):
+async def reset_password(request: Request):
     _ = await active_user(request)
 
     return templates.TemplateResponse("change-password.html", {"request": request})
 
 
-@router.get("/delete-account")
 async def delete_account(request: Request):
     _ = await active_user(request)
 
     return templates.TemplateResponse("delete-account.html", {"request": request})
 
 
-@router.get("/dashboard")
 async def dashboard(request: Request):
     user = await active_user(request)
     course = await xmr_course()
@@ -107,14 +100,12 @@ async def dashboard(request: Request):
     })
 
 
-@router.get("/promo")
 async def promo(request: Request):
     _ = await active_user(request)
 
     return templates.TemplateResponse("promo.html", {"request": request})
 
 
-@router.get("/faq")
 async def faq(request: Request):
     user = await active_user_opt(request)
     active_servers = []
@@ -134,7 +125,6 @@ async def faq(request: Request):
     })
 
 
-@router.get("/install/{server_id}")
 async def install(server_id: int, request: Request):
     _ = await active_user(request)
 
@@ -144,7 +134,6 @@ async def install(server_id: int, request: Request):
     })
 
 
-@router.get("/vnc/{server_id}")
 async def vnc(server_id: int, request: Request):
     _ = await active_user(request)
 
@@ -154,7 +143,6 @@ async def vnc(server_id: int, request: Request):
     })
 
 
-@router.get("/buy/{product_id}")
 async def buy(product_id: int, request: Request):
     user = await active_user(request)
 
@@ -181,7 +169,6 @@ async def buy(product_id: int, request: Request):
     return await t_checkout(request, qrcode, payment_data["payment_uri"], payment_data["ttl"])
 
 
-@router.get("/pay/{server_id}")
 async def pay(server_id: int, request: Request):
     user = await active_user(request)
 
@@ -215,7 +202,6 @@ async def pay(server_id: int, request: Request):
     return await t_checkout(request, qrcode, payment_data["payment_uri"], payment_data["ttl"])
 
 
-@router.get("/upgrademenu/{server_id}")
 async def upgrademenu(server_id: int, request: Request):
     _ = await active_user(request)
 
@@ -235,7 +221,6 @@ async def upgrademenu(server_id: int, request: Request):
     })
 
 
-@router.get("/upgrade/{server_id}")
 async def upgrade(server_id: int, product_id: int, request: Request):
     user = await active_user(request)
 
@@ -314,3 +299,21 @@ async def upgrade(server_id: int, product_id: int, request: Request):
         return await t_checkout(request, qrcode, payment_data["payment_uri"], payment_data["ttl"])
     else:
         return await t_error(request, 503, "We haven't available resources")
+
+
+router = [
+    Route("/", index, methods=["GET"]),
+    Route("/login", login, methods=["GET"]),
+    Route("/register", register, methods=["GET"]),
+    Route("/reset-password", reset_password, methods=["GET"]),
+    Route("/delete-account", delete_account, methods=["GET"]),
+    Route("/dashboard", dashboard, methods=["GET"]),
+    Route("/promo", promo, methods=["GET"]),
+    Route("/faq", faq, methods=["GET"]),
+    Route("/install/{server_id}", install, methods=["GET"]),
+    Route("/vnc/{server_id}", vnc, methods=["GET"]),
+    Route("/buy/{product_id}", buy, methods=["GET"]),
+    Route("/pay/{server_id}", pay, methods=["GET"]),
+    Route("/upgrademenu/{server_id}", upgrademenu, methods=["GET"]),
+    Route("/upgrade/{server_id}", upgrade, methods=["GET"])
+]

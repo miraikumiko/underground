@@ -12,7 +12,7 @@ from src.payment.utils import check_active_payment, check_payment_limit, xmr_cou
 from src.display.utils import templates, t_error, t_checkout, get_captcha_base64, draw_qrcode
 
 
-async def index(request: Request):
+async def index_display(request: Request):
     user = await active_user_opt(request)
 
     if user:
@@ -37,11 +37,11 @@ async def index(request: Request):
     })
 
 
-async def login(request: Request):
+async def login_display(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 
-async def register(request: Request):
+async def register_display(request: Request):
     if not REGISTRATION:
         return await t_error(request, 400, "Registration is disabled")
 
@@ -52,19 +52,19 @@ async def register(request: Request):
     })
 
 
-async def reset_password(request: Request):
+async def reset_password_display(request: Request):
     _ = await active_user(request)
 
     return templates.TemplateResponse("change-password.html", {"request": request})
 
 
-async def delete_account(request: Request):
+async def delete_account_display(request: Request):
     _ = await active_user(request)
 
     return templates.TemplateResponse("delete-account.html", {"request": request})
 
 
-async def dashboard(request: Request):
+async def dashboard_display(request: Request):
     user = await active_user(request)
     course = await xmr_course()
 
@@ -100,13 +100,13 @@ async def dashboard(request: Request):
     })
 
 
-async def promo(request: Request):
+async def promo_display(request: Request):
     _ = await active_user(request)
 
     return templates.TemplateResponse("promo.html", {"request": request})
 
 
-async def faq(request: Request):
+async def faq_display(request: Request):
     user = await active_user_opt(request)
     active_servers = []
     course = await xmr_course()
@@ -125,8 +125,9 @@ async def faq(request: Request):
     })
 
 
-async def install(server_id: int, request: Request):
+async def install_display(request: Request):
     _ = await active_user(request)
+    server_id = request.path_params["server_id"]
 
     return templates.TemplateResponse("install.html", {
         "request": request,
@@ -134,8 +135,9 @@ async def install(server_id: int, request: Request):
     })
 
 
-async def vnc(server_id: int, request: Request):
+async def vnc_display(request: Request):
     _ = await active_user(request)
+    server_id = request.path_params["server_id"]
 
     return templates.TemplateResponse("vnc.html", {
         "request": request,
@@ -143,8 +145,9 @@ async def vnc(server_id: int, request: Request):
     })
 
 
-async def buy(product_id: int, request: Request):
+async def buy_display(request: Request):
     user = await active_user(request)
+    product_id = request.path_params["product_id"]
 
     # Check if user have active payment
     cap = await check_active_payment(user["id"])
@@ -169,8 +172,9 @@ async def buy(product_id: int, request: Request):
     return await t_checkout(request, qrcode, payment_data["payment_uri"], payment_data["ttl"])
 
 
-async def pay(server_id: int, request: Request):
+async def pay_display(request: Request):
     user = await active_user(request)
+    server_id = request.path_params["server_id"]
 
     # Check server
     async with Database() as db:
@@ -202,8 +206,9 @@ async def pay(server_id: int, request: Request):
     return await t_checkout(request, qrcode, payment_data["payment_uri"], payment_data["ttl"])
 
 
-async def upgrademenu(server_id: int, request: Request):
+async def upgrademenu_display(request: Request):
     _ = await active_user(request)
+    server_id = request.path_params["server_id"]
 
     async with Database() as db:
         server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
@@ -221,8 +226,9 @@ async def upgrademenu(server_id: int, request: Request):
     })
 
 
-async def upgrade(server_id: int, product_id: int, request: Request):
+async def upgrade_display(product_id: int, request: Request):
     user = await active_user(request)
+    server_id = request.path_params["server_id"]
 
     # Check server
     async with Database() as db:
@@ -302,18 +308,18 @@ async def upgrade(server_id: int, product_id: int, request: Request):
 
 
 router = [
-    Route("/", index, methods=["GET"]),
-    Route("/login", login, methods=["GET"]),
-    Route("/register", register, methods=["GET"]),
-    Route("/reset-password", reset_password, methods=["GET"]),
-    Route("/delete-account", delete_account, methods=["GET"]),
-    Route("/dashboard", dashboard, methods=["GET"]),
-    Route("/promo", promo, methods=["GET"]),
-    Route("/faq", faq, methods=["GET"]),
-    Route("/install/{server_id}", install, methods=["GET"]),
-    Route("/vnc/{server_id}", vnc, methods=["GET"]),
-    Route("/buy/{product_id}", buy, methods=["GET"]),
-    Route("/pay/{server_id}", pay, methods=["GET"]),
-    Route("/upgrademenu/{server_id}", upgrademenu, methods=["GET"]),
-    Route("/upgrade/{server_id}", upgrade, methods=["GET"])
+    Route("/", index_display, methods=["GET"]),
+    Route("/login", login_display, methods=["GET"]),
+    Route("/register", register_display, methods=["GET"]),
+    Route("/reset-password", reset_password_display, methods=["GET"]),
+    Route("/delete-account", delete_account_display, methods=["GET"]),
+    Route("/dashboard", dashboard_display, methods=["GET"]),
+    Route("/promo", promo_display, methods=["GET"]),
+    Route("/faq", faq_display, methods=["GET"]),
+    Route("/install/{server_id:int}", install_display, methods=["GET"]),
+    Route("/vnc/{server_id:int}", vnc_display, methods=["GET"]),
+    Route("/buy/{product_id:int}", buy_display, methods=["GET"]),
+    Route("/pay/{server_id:int}", pay_display, methods=["GET"]),
+    Route("/upgrademenu/{server_id:int}", upgrademenu_display, methods=["GET"]),
+    Route("/upgrade/{server_id:int}", upgrade_display, methods=["GET"])
 ]

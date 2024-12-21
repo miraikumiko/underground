@@ -2,15 +2,16 @@ import asyncio
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.websockets import WebSocket
-from starlette.routing import Route
+from starlette.routing import Route, WebSocketRoute
 from src.database import Database
 from src.auth.utils import active_user, active_user_ws
 from src.server.vds import vds_install, vds_action, vds_status
 from src.display.utils import t_error
 
 
-async def install(request: Request, server_id: int):
+async def install(request: Request):
     user = await active_user(request)
+    server_id = request.path_params["server_id"]
     form = await request.form()
     os = form.get("os")
 
@@ -34,8 +35,9 @@ async def install(request: Request, server_id: int):
     return RedirectResponse("/dashboard", status_code=301)
 
 
-async def action(request: Request, server_id: int):
+async def action(request: Request):
     user = await active_user(request)
+    server_id = request.path_params["server_id"]
 
     # Check server
     async with Database() as db:
@@ -90,8 +92,9 @@ async def statuses(ws: WebSocket):
             pass
 
 
-async def vnc(server_id: int, ws: WebSocket):
+async def vnc(ws: WebSocket):
     user = await active_user_ws(ws)
+    server_id = ws.path_params["server_id"]
 
     # Check server
     async with Database() as db:
@@ -134,8 +137,8 @@ async def vnc(server_id: int, ws: WebSocket):
 
 
 router = [
-    Route("/install/{server_id}", install, methods=["POST"]),
-    Route("/action/{server_id}", action, methods=["POST"]),
-    Route("/statuses", statuses),
-    Route("/vnc/{server_id}", vnc)
+    Route("/install/{server_id:int}", install, methods=["POST"]),
+    Route("/action/{server_id:int}", action, methods=["POST"]),
+    WebSocketRoute("/statuses", statuses),
+    WebSocketRoute("/vnc/{server_id:int}", vnc)
 ]

@@ -1,22 +1,15 @@
 from starlette.applications import Starlette
-from starlette.requests import Request
 from starlette.routing import Mount
 from starlette.staticfiles import StaticFiles
-from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
+from starlette.middleware.exceptions import HTTPException, WebSocketException
 from starlette.middleware.cors import CORSMiddleware
-from starlette.middleware.errors import ServerErrorMiddleware
+from src.exceptions import handle_error, http_exception, websocket_exception
 from src.config import BASE_PATH
-from src.display.utils import t_error
 from src.auth.router import router as auth_router
 from src.payment.router import router as payment_router
 from src.server.router import router as server_router
 from src.display.router import router as display_router
-
-
-async def custom_http_exception_handler(request: Request, exc: HTTPException):
-    return await t_error(request, exc.status_code, exc.detail)
-
 
 routes = [
     Mount("/static", StaticFiles(directory=f"{BASE_PATH}/static"), name="static"),
@@ -33,8 +26,13 @@ middleware = [
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"]
-    ),
-    Middleware(ServerErrorMiddleware, handler=custom_http_exception_handler)
+    )
 ]
 
-app = Starlette(routes=routes, middleware=middleware)
+exception_handlers = {
+    Exception: handle_error,
+    HTTPException: http_exception,
+    WebSocketException: websocket_exception
+}
+
+app = Starlette(routes=routes, middleware=middleware, exception_handlers=exception_handlers)

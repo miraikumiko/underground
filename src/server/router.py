@@ -18,7 +18,7 @@ async def install(request: Request, server_id: int):
     async with Database() as db:
         server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
-    if not server or not server[4] or server[8] != user[0]:
+    if not server or not server["is_active"] or server["user_id"] != user["id"]:
         return await t_error(request, 403, "Invalid server")
 
     if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd"):
@@ -26,10 +26,10 @@ async def install(request: Request, server_id: int):
 
     # Installation logic
     async with Database() as db:
-        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server[7],))
-        vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server[6],))
+        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
+        vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
 
-    await vds_install(server, node[1], vds, os)
+    await vds_install(server, node["ip"], vds, os)
 
     return RedirectResponse("/dashboard", status_code=301)
 
@@ -41,14 +41,14 @@ async def action(request: Request, server_id: int):
     async with Database() as db:
         server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
-    if not server or not server[4] or server[8] != user[0]:
+    if not server or not server["is_active"] or server["user_id"] != user["id"]:
         return await t_error(request, 403, "Invalid server")
 
     # Action logic
     async with Database() as db:
-        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server[7],))
+        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
 
-    await vds_action(server[0], node[1])
+    await vds_action(server["id"], node["ip"])
 
     return RedirectResponse("/dashboard", status_code=301)
 
@@ -57,7 +57,7 @@ async def statuses(ws: WebSocket):
     user = await active_user_ws(ws)
 
     async with Database() as db:
-        servers = await db.fetchall("SELECT * FROM server WHERE user_id = ?", (user[0],))
+        servers = await db.fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
 
     if servers:
         await ws.accept()
@@ -68,10 +68,10 @@ async def statuses(ws: WebSocket):
                 time = 5
 
                 for server in servers:
-                    if server[4]:
+                    if server["is_active"]:
                         async with Database() as db:
-                            node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server[7],))
-                            status = await vds_status(server[0], node[1])
+                            node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
+                            status = await vds_status(server["id"], node["ip"])
 
                         if not status["ipv4"]:
                             status["ipv4"] = '-'
@@ -97,17 +97,17 @@ async def vnc(server_id: int, ws: WebSocket):
     async with Database() as db:
         server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
-    if not server or not server[4] or server[8] != user[0]:
+    if not server or not server["is_active"] or server["user_id"] != user["id"]:
         return
 
     # VNC logic
     await ws.accept()
 
     async with Database() as db:
-        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server[7],))
+        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
 
     try:
-        reader, writer = await asyncio.open_connection(node[1], server[1])
+        reader, writer = await asyncio.open_connection(node["ip"], server["vnc_port"])
     except ConnectionRefusedError:
         return await ws.close(1013, "VNC Server isn't running now")
 

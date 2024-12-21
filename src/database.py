@@ -10,6 +10,7 @@ class Database:
 
     async def connect(self):
         self.connection = await aiosqlite.connect(f"{BASE_PATH}/{DB_PATH}")
+        self.connection.row_factory = aiosqlite.Row
         self.cursor = await self.connection.cursor()
 
     async def close(self):

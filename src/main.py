@@ -1,6 +1,6 @@
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.routing import Route, Mount
+from starlette.routing import Mount
 from starlette.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
@@ -19,7 +19,7 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
 
 
 routes = [
-    Route("/static", StaticFiles(directory=f"{BASE_PATH}/static"), name="static"),
+    Mount("/static", StaticFiles(directory=f"{BASE_PATH}/static"), name="static"),
     Mount("/api/auth", routes=auth_router),
     Mount("/api/payment", routes=payment_router),
     Mount("/api/server", routes=server_router),

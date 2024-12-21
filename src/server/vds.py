@@ -4,9 +4,9 @@ from xml.etree import ElementTree
 from src.config import IMAGES_PATH
 
 
-async def vds_install(server: tuple, server_node_ip: str, server_vds: tuple, os: str) -> None:
+async def vds_install(server: dict, server_node_ip: str, server_vds: dict, os: str) -> None:
     with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
-        dom = conn.lookupByName(str(server[0]))
+        dom = conn.lookupByName(str(server["id"]))
         state, _ = dom.state()
 
         if state == libvirt.VIR_DOMAIN_RUNNING:
@@ -15,13 +15,13 @@ async def vds_install(server: tuple, server_node_ip: str, server_vds: tuple, os:
         dom.undefine()
 
     subprocess.Popen(f"""ssh root@{server_node_ip} 'virt-install \
-        --name {server[0]} \
-        --vcpus {server_vds[1]} \
-        --memory {server_vds[2] * 1024} \
-        --disk {IMAGES_PATH}/{server[0]}.qcow2,size={server_vds[3]} \
+        --name {server['id']} \
+        --vcpus {server_vds['cores']} \
+        --memory {server_vds['ram'] * 1024} \
+        --disk {IMAGES_PATH}/{server['id']}.qcow2,size={server_vds['disk_size']} \
         --cdrom /opt/iso/{os}.iso \
         --os-variant unknown \
-        --graphics vnc,listen={server_node_ip},port={server[1]}'""", shell=True)
+        --graphics vnc,listen={server_node_ip},port={server['vnc_port']}'""", shell=True)
 
 
 async def vds_delete(server_id: int, server_node_ip: str) -> None:
@@ -86,7 +86,7 @@ async def vds_migrate(server_id: int, server_node_ip: str, dst_node_ip: str) -> 
         subprocess.run(f"ssh root@{server_node_ip} 'rm -f {IMAGES_PATH}/{server_id}.qcow2'")
 
 
-async def vds_upgrade(server_id: int, server_node_ip: str, server_vds: tuple) -> None:
+async def vds_upgrade(server_id: int, server_node_ip: str, server_vds: dict) -> None:
     with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
         dom = conn.lookupByName(str(server_id))
         state, _ = dom.state()
@@ -101,20 +101,20 @@ async def vds_upgrade(server_id: int, server_node_ip: str, server_vds: tuple) ->
         vcpu_element = root.find("vcpu")
 
         if vcpu_element is not None:
-            vcpu_element.text = f"{server_vds[1]}"
+            vcpu_element.text = f"{server_vds['cores']}"
 
         memory_element = root.find("memory")
 
         if memory_element is not None:
-            memory_element.text = f"{1024 * 1024 * server_vds[2]}"
+            memory_element.text = f"{1024 * 1024 * server_vds['ram']}"
 
         current_memory_element = root.find("currentMemory")
 
         if current_memory_element is not None:
-            current_memory_element.text = f"{1024 * 1024 * server_vds[2]}"
+            current_memory_element.text = f"{1024 * 1024 * server_vds['ram']}"
 
         new_xml_desc = ElementTree.tostring(root, encoding="unicode")
         conn.createXML(new_xml_desc)
 
         # Resize the disk
-        subprocess.run(f"ssh root@{server_node_ip} 'qemu-img resize {IMAGES_PATH}/{server_id}.qcow2 {server_vds[3]}G'")
+        subprocess.run(f"ssh root@{server_node_ip} 'qemu-img resize {IMAGES_PATH}/{server_id}.qcow2 {server_vds['disk_size']}G'")

@@ -9,10 +9,10 @@ from src.display.utils import t_error
 
 async def close(request: Request):
     user = await active_user(request)
-    payment_uri = await r.get(f"payment_uri:{user[0]}")
+    payment_uri = await r.get(f"payment_uri:{user['id']}")
 
     if payment_uri:
-        await r.delete(f"payment_uri:{user[0]}")
+        await r.delete(f"payment_uri:{user['id']}")
 
         return RedirectResponse('/', status_code=301)
 
@@ -30,11 +30,11 @@ async def promo(request: Request):
     if not promo_code:
         return await t_error(request, 422, "Invalid promo code")
 
-    await request_vds(promo_code[3], user, True)
+    await request_vds(promo_code["vds_id"], user, True)
 
     # Mark promo code as used
     async with Database() as db:
-        await db.execute("DELETE FROM promo WHERE id = ?", (promo_code[0],))
+        await db.execute("DELETE FROM promo WHERE id = ?", (promo_code["id"],))
 
     return RedirectResponse("/dashboard", status_code=301)
 

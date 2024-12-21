@@ -27,7 +27,6 @@ logger.addHandler(fh)
 
 
 # Disable libvirt error messages in console
-
 def libvirt_callback(*args):
     pass
 

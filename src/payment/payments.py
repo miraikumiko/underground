@@ -17,9 +17,9 @@ async def payment_request(ptype: str, server_id: int, vds_id: int = None) -> dic
         if ptype == "upgrade" and vds_id:
             vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (vds_id,))
         else:
-            vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server[6],))
+            vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
 
-    amount = await usd_to_xmr(vds[6])
+    amount = await usd_to_xmr(vds["price"])
 
     res = await monero_request("make_uri", {"address": address, "amount": amount})
     payment_uri = res["result"]["uri"]
@@ -33,7 +33,7 @@ async def payment_request(ptype: str, server_id: int, vds_id: int = None) -> dic
 
     await r.hset(f"payment:{payment_id}", mapping=payment_data)
     await r.expire(f"payment:{payment_id}", 60 * PAYMENT_TIME)
-    await r.set(f"payment_uri:{server[8]}", payment_uri, ex=60 * PAYMENT_TIME)
+    await r.set(f"payment_uri:{server['user_id']}", payment_uri, ex=60 * PAYMENT_TIME)
 
     return {"payment_uri": payment_uri, "ttl": 60 * PAYMENT_TIME}
 
@@ -52,39 +52,39 @@ async def payment_checkout(txid: str) -> None:
 
             if payment["type"] == "buy":
                 async with Database() as db:
-                    await db.execute("UPDATE server SET is_active = ? WHERE id = ?", (1, server[0]))
+                    await db.execute("UPDATE server SET is_active = ? WHERE id = ?", (1, server["id"]))
             elif payment["type"] == "pay":
                 async with Database() as db:
                     await db.execute(
                         "UPDATE server SET end_at = ?, is_active = ? WHERE id = ?",
-                        (server.end_at + timedelta(days=VDS_DAYS), 1, server[0])
+                        (server.end_at + timedelta(days=VDS_DAYS), 1, server["id"])
                     )
             elif payment["type"] == "upgrade":
                 async with Database() as db:
-                    node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server[7],))
-                    vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server[6],))
+                    node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
+                    vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
 
-                    await vds_upgrade(server[0], node[1], vds)
+                    await vds_upgrade(server["id"], node["ip"], vds)
 
-                    dst_node_id = await r.get(f"node_to_migrate:{server[0]}")
-                    upgrade_vds_id = await r.get(f"unupgraded_server:{server[0]}")
+                    dst_node_id = await r.get(f"node_to_migrate:{server['id']}")
+                    upgrade_vds_id = await r.get(f"unupgraded_server:{server['id']}")
 
                     # Migrate if needed
                     if dst_node_id:
                         dst_node = await db.fetchone("SELECT * FROM node WHERE id = ?", (int(dst_node_id),))
                         await db.execute(
                             "UPDATE server SET in_upgrade = ?, vds_id = ?, node_id = ?",
-                            (0, int(upgrade_vds_id), dst_node[0])
+                            (0, int(upgrade_vds_id), dst_node["id"])
                         )
-                        await vds_migrate(server[0], node[1], dst_node)
+                        await vds_migrate(server["id"], node["ip"], dst_node)
                     else:
                         await db.execute("UPDATE server SET in_upgrade = ?, vds_id = ?", (0, int(upgrade_vds_id)))
 
                 # Delete markers
-                await r.delete(f"node_to_migrate:{server[0]}")
-                await r.delete(f"unupgraded_server:{server[0]}")
+                await r.delete(f"node_to_migrate:{server['id']}")
+                await r.delete(f"unupgraded_server:{server['id']}")
 
             await r.delete(f"payment:{payment_id}")
-            await r.delete(f"payment_uri:{server[8]}")
+            await r.delete(f"payment_uri:{server['user_id']}")
 
-            logger.info(f"Checkout {payment_id} {server[0]}")
+            logger.info(f"Checkout {payment_id} {server['id']}")

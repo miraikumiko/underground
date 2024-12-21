@@ -33,19 +33,19 @@
         </tr>
         {% for server, status in servers_and_statuses %}
           <tr>
-            <td id="status-{{ server[0] }}" class="vds-status" style="background-color: {% if status['status'] == 'on' %}green{% else %}grey{% endif %}"></td>
-            <td id="ipv4-{{ server[0] }}">{{ status["ipv4"] }}</td>
-            <td id="ipv6-{{ server[0] }}">{{ status["ipv6"] }}</td>
-            <td>{{ server[3]|to_days }}</td>
+            <td id="status-{{ server['id'] }}" class="vds-status" style="background-color: {% if status['status'] == 'on' %}green{% else %}grey{% endif %}"></td>
+            <td id="ipv4-{{ server['id'] }}">{{ status["ipv4"] }}</td>
+            <td id="ipv6-{{ server['id'] }}">{{ status["ipv6"] }}</td>
+            <td>{{ server["end_at"]|to_days }}</td>
             <td>
-              <form method="post" action="/api/server/action/{{ server[0] }}">
+              <form method="post" action="/api/server/action/{{ server['id'] }}">
                 <button class="btn0" style="display: contents; cursor: pointer;" type="submit"><img src="/static/img/system-shutdown-symbolic.svg" alt="power" style="width: 20px; padding: 0 8px; filter: brightness(0) invert(1);"></button>
               </form>
             </td>
-            <td><a class="btn0" style="display: contents" href="/install/{{ server[0] }}"><img src="/static/img/install.svg" alt="power" style="width: 20px; padding: 0 8px; filter: brightness(0) invert(1);"></a></td>
-            <td><a class="btn0" style="display: contents" href="/vnc/{{ server[0] }}"><img src="/static/img/video-display-symbolic.svg" alt="power" style="width: 20px; padding: 0 8px; filter: brightness(0) invert(1);"></a></td>
-            <td><a class="btn0" style="display: contents" href="/pay/{{ server[0] }}">pay</a></td>
-            <td><a class="btn0" style="display: contents" href="/upgrademenu/{{ server[0] }}">upgrade</a></td>
+            <td><a class="btn0" style="display: contents" href="/install/{{ server['id'] }}"><img src="/static/img/install.svg" alt="power" style="width: 20px; padding: 0 8px; filter: brightness(0) invert(1);"></a></td>
+            <td><a class="btn0" style="display: contents" href="/vnc/{{ server['id'] }}"><img src="/static/img/video-display-symbolic.svg" alt="power" style="width: 20px; padding: 0 8px; filter: brightness(0) invert(1);"></a></td>
+            <td><a class="btn0" style="display: contents" href="/pay/{{ server['id'] }}">pay</a></td>
+            <td><a class="btn0" style="display: contents" href="/upgrademenu/{{ server['id'] }}">upgrade</a></td>
           </tr>
         {% endfor %}
         <script>

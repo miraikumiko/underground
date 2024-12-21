@@ -17,12 +17,12 @@ async def login(request: Request):
 
     if user:
         token = uuid4()
-        await r.set(f"auth:{token}", user[0], ex=86400)
+        await r.set(f"auth:{token}", user["id"], ex=86400)
 
         async with Database() as db:
-            servers = await db.fetchall("SELECT * FROM server WHERE user_id = ?", (user[0],))
+            servers = await db.fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
 
-        active_servers = [server for server in servers if server[4]]
+        active_servers = [server for server in servers if server["is_active"]]
         url = '/' if not active_servers else "/dashboard"
 
         return RedirectResponse(url, status_code=301, headers={
@@ -66,7 +66,7 @@ async def register(request: Request):
 
     token = uuid4()
 
-    await r.set(f"auth:{token}", user[0], ex=86400)
+    await r.set(f"auth:{token}", user["id"], ex=86400)
 
     return RedirectResponse('/', status_code=301, headers={
         "Content-Type": "application/x-www-form-urlencoded",
@@ -89,7 +89,7 @@ async def reset_password(request: Request):
     old_password = form.get("old_password")
     new_password = form.get("new_password")
 
-    if user[1] != old_password:
+    if user["password"] != old_password:
         return await t_error(request, 403, "Invalid password")
 
     async with Database() as db:
@@ -98,11 +98,11 @@ async def reset_password(request: Request):
         if is_exist:
             return await t_error(request, 400, "User already exist")
 
-        await db.execute("UPDATE user SET password = ? WHERE id = ?", (new_password, user[0]))
+        await db.execute("UPDATE user SET password = ? WHERE id = ?", (new_password, user["id"]))
 
     token = uuid4()
 
-    await r.set(f"auth:{token}", user[0], ex=86400)
+    await r.set(f"auth:{token}", user["id"], ex=86400)
 
     return RedirectResponse('/', status_code=301, headers={
         "Content-Type": "application/x-www-form-urlencoded",
@@ -115,12 +115,12 @@ async def delete_account(request: Request):
     form = await request.form()
     password = form.get("password")
 
-    if user[1] != password:
+    if user["password"] != password:
         return await t_error(request, 403, "Invalid password")
 
     async with Database() as db:
-        await db.execute("DELETE FROM server WHERE user_id = ?", (user[0],))
-        await db.execute("DELETE FROM user WHERE id = ?", (user[0],))
+        await db.execute("DELETE FROM server WHERE user_id = ?", (user["id"],))
+        await db.execute("DELETE FROM user WHERE id = ?", (user["id"],))
 
     return RedirectResponse('/', status_code=301, headers={
         "content-type": "application/x-www-form-urlencoded",

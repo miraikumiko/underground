@@ -4,7 +4,7 @@
   <form class="form0" method="post" action="/api/payment/close">
     <div>
       <h2>Pay within {{ ttl|to_minutes }} minutes</h2>
-      <h5>Reload page to update time. Once you have paid, leave this page and go to the <a href="/dashboard">/dashboard</a></h5>
+      <h5>Reload page to update timer. Once you have paid, leave this page and go to the <a href="/dashboard">/dashboard</a></h5>
       <h5 style="color: yellow">Include fee before transfer!</h5>
     </div>
     <img src="data:image/png;base64,{{ qrcode }}" alt="qrcode">

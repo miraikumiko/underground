@@ -51,8 +51,8 @@ async def register(request: Request):
     if captcha != captcha_text:
         return await t_error(request, 400, "Captcha didn't match")
 
-    if len(password) not in range(8, 33):
-        return await t_error(request, 400, "The password length must be between 8 and 32 characters")
+    if len(password) not in range(8, 21):
+        return await t_error(request, 400, "The password length must be 8-20 characters")
 
     async with Database() as db:
         user = await db.fetchone("SELECT * FROM user WHERE password = ?", (password,))

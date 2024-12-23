@@ -48,33 +48,6 @@
             <td><a class="btn0" style="display: contents" href="/upgrademenu/{{ server['id'] }}">upgrade</a></td>
           </tr>
         {% endfor %}
-        <script>
-          const socket = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/server/statuses`);
-
-          socket.onmessage = async (event) => {
-            const data = JSON.parse(event.data);
-
-            for (let i in data) {
-              i = Number.parseInt(i, 5);
-              document.getElementById(`ipv4-${i + 1}`).innerText = data[i].ipv4;
-              document.getElementById(`ipv6-${i + 1}`).innerText = data[i].ipv6;
-
-              if (data[i].status === "on") {
-                document.getElementById(`status-${i + 1}`).style.backgroundColor = "green";
-              } else {
-                document.getElementById(`status-${i + 1}`).style.backgroundColor = "grey";
-              }
-            }
-          };
-
-          socket.onerror = (error) => {
-            const elements = document.getElementsByClassName("vds-status");
-
-            for (let element of elements) {
-              element.style.backgroundColor = "grey";
-            }
-          };
-        </script>
       </table>
     </div>
   </main>

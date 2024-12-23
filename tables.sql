@@ -6,6 +6,14 @@ CREATE TABLE IF NOT EXISTS user (
 CREATE UNIQUE INDEX IF NOT EXISTS ix_user_password ON user (password);
 CREATE INDEX IF NOT EXISTS ix_user_id ON user (id);
 
+CREATE TABLE IF NOT EXISTS os (
+    id INTEGER NOT NULL,
+    name VARCHAR NOT NULL,
+    file VARCHAR NOT NULL,
+    PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS ix_os_id ON os (id);
+
 CREATE TABLE IF NOT EXISTS vds (
     id INTEGER NOT NULL,
     cores INTEGER NOT NULL,
@@ -48,14 +56,6 @@ CREATE TABLE IF NOT EXISTS server (
     FOREIGN KEY(user_id) REFERENCES user (id)
 );
 CREATE INDEX IF NOT EXISTS ix_server_id ON server (id);
-
-CREATE TABLE IF NOT EXISTS os (
-    id INTEGER NOT NULL,
-    name VARCHAR NOT NULL,
-    file VARCHAR NOT NULL,
-    PRIMARY KEY (id)
-);
-CREATE INDEX IF NOT EXISTS ix_os_id ON os (id);
 
 CREATE TABLE IF NOT EXISTS promo (
     id INTEGER NOT NULL,

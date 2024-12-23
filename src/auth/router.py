@@ -38,16 +38,16 @@ async def register(request: Request):
     form = await request.form()
     password = form.get("password")
     captcha_id = form.get("captcha_id")
-    captcha_text = form.get("captcha_text")
+    captcha_lock_id = await r.get(f"captcha:{captcha_id}")
 
-    captcha = await r.get(f"captcha:{captcha_id}")
+    if not captcha_lock_id:
+        return await t_error(request, 400, "Press the Register button within a minute")
+
     await r.delete(f"captcha:{captcha_id}")
+    captcha_lock = await r.get(f"captcha_lock:{captcha_lock_id}")
 
-    if not captcha:
-        return await t_error(request, 400, "Captcha was expired")
-
-    if captcha != captcha_text:
-        return await t_error(request, 400, "Captcha didn't match")
+    if captcha_lock:
+        return await t_error(request, 400, "Wait a few seconds before clicking the Register button")
 
     if len(password) not in range(8, 21):
         return await t_error(request, 400, "The password length must be 8-20 characters")

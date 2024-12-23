@@ -4,9 +4,7 @@
   <form class="form0" method="post" action="/api/auth/register">
     <h1>Register</h1>
     <input name="password" placeholder="Password" type="password" minlength="8" maxlength="20" required>
-    <img src="data:image/png;base64,{{ captcha_base64 }}" alt="captcha">
     <input name="captcha_id" type="hidden" value="{{ captcha_id }}">
-    <input name="captcha_text" placeholder="Captcha" type="text" required>
     <button class="btn2" type="submit">Register</button>
   </form>
 {% endblock %}

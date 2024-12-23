@@ -1,3 +1,4 @@
+from random import randint
 from datetime import timedelta
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
@@ -9,7 +10,7 @@ from src.server.vds import vds_status
 from src.server.utils import request_vds
 from src.payment.payments import payment_request
 from src.payment.utils import check_active_payment, check_payment_limit, xmr_course
-from src.display.utils import templates, t_error, t_checkout, get_captcha_base64, draw_qrcode
+from src.display.utils import templates, t_error, t_checkout, draw_qrcode
 
 
 async def index_display(request: Request):
@@ -40,11 +41,13 @@ async def register_display(request: Request):
     if not REGISTRATION:
         return await t_error(request, 400, "Registration is disabled")
 
-    captcha_id, captcha_base64 = await get_captcha_base64()
+    captcha_id = randint(10000, 99999)
+    captcha_lock_id = randint(10000, 99999)
 
-    return templates.TemplateResponse("register.html", {
-        "request": request, "captcha_id": captcha_id, "captcha_base64": captcha_base64
-    })
+    await r.set(f"captcha:{captcha_id}", captcha_lock_id, ex=60)
+    await r.set(f"captcha_lock:{captcha_lock_id}", 1, ex=5)
+
+    return templates.TemplateResponse("register.html", {"request": request, "captcha_id": captcha_id})
 
 
 async def reset_password_display(request: Request):

@@ -116,10 +116,12 @@ async def faq_display(request: Request):
 async def install_display(request: Request):
     _ = await active_user(request)
     server_id = request.path_params["server_id"]
+    oss = await fetchall("SELECT * FROM os")
 
     return templates.TemplateResponse("install.html", {
         "request": request,
-        "server_id": server_id
+        "server_id": server_id,
+        "oss": oss
     })
 
 

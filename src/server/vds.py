@@ -4,7 +4,7 @@ from xml.etree import ElementTree
 from src.config import IMAGES_PATH
 
 
-async def vds_install(server: dict, server_node_ip: str, server_vds: dict, os: str) -> None:
+async def vds_install(server: dict, server_node_ip: str, server_vds: dict, os: dict) -> None:
     with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
         dom = conn.lookupByName(str(server["id"]))
         state, _ = dom.state()
@@ -19,8 +19,8 @@ async def vds_install(server: dict, server_node_ip: str, server_vds: dict, os: s
         --vcpus {server_vds['cores']} \
         --memory {server_vds['ram'] * 1024} \
         --disk {IMAGES_PATH}/{server['id']}.qcow2,size={server_vds['disk_size']} \
-        --cdrom /opt/iso/{os}.iso \
-        --os-variant unknown \
+        --os-variant {os['name']} \
+        --cdrom /srv/iso/{os['file']} \
         --graphics vnc,listen={server_node_ip},port={server['vnc_port']}'""", shell=True)
 
 

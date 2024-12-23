@@ -13,7 +13,7 @@ async def install(request: Request):
     user = await active_user(request)
     server_id = request.path_params["server_id"]
     form = await request.form()
-    os = form.get("os")
+    os_name = form.get("os")
 
     # Check server
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
@@ -21,7 +21,10 @@ async def install(request: Request):
     if not server or not server["is_active"] or server["user_id"] != user["id"]:
         return await t_error(request, 403, "Invalid server")
 
-    if os not in ("debian", "arch", "alpine", "gentoo", "freebsd", "openbsd"):
+    # Check os
+    os = await fetchone("SELECT * FROM os WHERE name = ?", (os_name,))
+
+    if not os:
         return await t_error(request, 422, "Invalid OS")
 
     # Installation logic

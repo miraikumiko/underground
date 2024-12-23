@@ -2,7 +2,7 @@ from datetime import timedelta
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
-from src.database import Database, r
+from src.database import r, execute, fetchone, fetchall
 from src.config import REGISTRATION, VDS_DAYS, VDS_MAX_PAYED_DAYS, PAYMENT_TIME
 from src.auth.utils import active_user, active_user_opt
 from src.server.vds import vds_status
@@ -14,19 +14,14 @@ from src.display.utils import templates, t_error, t_checkout, get_captcha_base64
 
 async def index_display(request: Request):
     user = await active_user_opt(request)
+    active_servers = []
 
     if user:
-        async with Database() as db:
-            servers = await db.fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
-
+        servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
         active_servers = [server for server in servers if server["is_active"]]
-    else:
-        active_servers = None
 
     course = await xmr_course()
-
-    async with Database() as db:
-        vdss = await db.fetchall("SELECT * FROM vds")
+    vdss = await fetchall("SELECT * FROM vds")
 
     return templates.TemplateResponse("index.html", {
         "request": request,
@@ -67,10 +62,7 @@ async def delete_account_display(request: Request):
 async def dashboard_display(request: Request):
     user = await active_user(request)
     course = await xmr_course()
-
-    async with Database() as db:
-        servers = await db.fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
-
+    servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
     active_servers = [server for server in servers if server["is_active"]]
     statuses = []
 
@@ -78,9 +70,7 @@ async def dashboard_display(request: Request):
         return RedirectResponse('/', status_code=301)
 
     for server in active_servers:
-        async with Database() as db:
-            node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
-
+        node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
         status = await vds_status(server["id"], node["ip"])
 
         if not status["ipv4"]:
@@ -112,9 +102,7 @@ async def faq_display(request: Request):
     course = await xmr_course()
 
     if user:
-        async with Database() as db:
-            servers = await db.fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
-
+        servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
         active_servers = [server for server in servers if server["is_active"]]
 
     return templates.TemplateResponse("faq.html", {
@@ -175,11 +163,9 @@ async def buy_display(request: Request):
 async def pay_display(request: Request):
     user = await active_user(request)
     server_id = request.path_params["server_id"]
+    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     # Check server
-    async with Database() as db:
-        server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
-
     if not server or server["user_id"] != user["id"]:
         return await t_error(request, 400, "Invalid server")
  
@@ -209,11 +195,8 @@ async def pay_display(request: Request):
 async def upgrademenu_display(request: Request):
     _ = await active_user(request)
     server_id = request.path_params["server_id"]
-
-    async with Database() as db:
-        server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
-        vdss = await db.fetchall("SELECT * FROM vds")
-
+    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    vdss = await fetchall("SELECT * FROM vds")
     vdss = [vds for vds in vdss if vds["id"] > server["vds_id"]]
 
     if not vdss:
@@ -229,11 +212,9 @@ async def upgrademenu_display(request: Request):
 async def upgrade_display(product_id: int, request: Request):
     user = await active_user(request)
     server_id = request.path_params["server_id"]
+    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     # Check server
-    async with Database() as db:
-        server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
-
     if not server or not server["is_active"] or server["user_id"] != user["id"] or server["vds_id"] >= product_id:
         return await t_error(request, 400, "Invalid server")
 
@@ -250,50 +231,45 @@ async def upgrade_display(product_id: int, request: Request):
         return await t_error(request, 400, "You can make only 3 payment requests per day")
 
     # Validate product id
-    async with Database() as db:
-        upgrade_vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
+    upgrade_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
 
     if not upgrade_vds:
         return await t_error(request, 400, "This product doesn't exist")
 
     # Check availability of resources
-    async with Database() as db:
-        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
-        server_vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
-        nodes = await db.fetchall(
-            "SELECT * FROM node WHERE cores_available >= ? AND ram_available >= ? AND disk_size_available >= ?",
-            (upgrade_vds["cores"], upgrade_vds["ram"], upgrade_vds["disk_size"])
-        )
+    node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
+    server_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
+    nodes = await fetchall(
+        "SELECT * FROM node WHERE cores_available >= ? AND ram_available >= ? AND disk_size_available >= ?",
+        (upgrade_vds["cores"], upgrade_vds["ram"], upgrade_vds["disk_size"])
+    )
 
     if nodes:
         if node in nodes:
-            async with Database() as db:
-                await db.execute(
-                    "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
-                    (
-                        node["cores_available"] - upgrade_vds["cores"] + server_vds["cores"],
-                        node["ram_available"] - upgrade_vds["ram"] + server_vds["ram"],
-                        node["disk_size_available"] - upgrade_vds["disk_size"] + server_vds["disk_size"],
-                        server["node_id"]
-                    )
+            await execute(
+                "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
+                (
+                    node["cores_available"] - upgrade_vds["cores"] + server_vds["cores"],
+                    node["ram_available"] - upgrade_vds["ram"] + server_vds["ram"],
+                    node["disk_size_available"] - upgrade_vds["disk_size"] + server_vds["disk_size"],
+                    server["node_id"]
                 )
+            )
         else:
             dst_node = nodes[0]
             await r.set(f"node_to_migrate:{server_id}", dst_node["id"])
 
-            async with Database() as db:
-                await db.execute(
-                    "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
-                    (
-                        dst_node["cores_available"] - upgrade_vds["cores"] + server_vds["cores"],
-                        dst_node["ram_available"] - upgrade_vds["ram"] + server_vds["ram"],
-                        dst_node["disk_size_available"] - upgrade_vds["disk_size"] + server_vds["disk_size"],
-                        dst_node["id"]
-                    )
+            await execute(
+                "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
+                (
+                    dst_node["cores_available"] - upgrade_vds["cores"] + server_vds["cores"],
+                    dst_node["ram_available"] - upgrade_vds["ram"] + server_vds["ram"],
+                    dst_node["disk_size_available"] - upgrade_vds["disk_size"] + server_vds["disk_size"],
+                    dst_node["id"]
                 )
+            )
 
-        async with Database() as db:
-            await db.execute("UPDATE server SET in_upgrade = 1 WHERE id = ?", (server["id"],))
+        await execute("UPDATE server SET in_upgrade = 1 WHERE id = ?", (server["id"],))
 
         # Make payment request and return it uri
         await r.set(f"upgrade_server:{server_id}", server_id, ex=60 * PAYMENT_TIME)

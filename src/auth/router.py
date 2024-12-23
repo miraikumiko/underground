@@ -3,7 +3,7 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
 from src.config import REGISTRATION
-from src.database import Database, r
+from src.database import r, execute, fetchone, fetchall
 from src.auth.utils import active_user
 from src.display.utils import t_error
 
@@ -12,15 +12,13 @@ async def login(request: Request):
     form = await request.form()
     password = form.get("password")
 
-    async with Database() as db:
-        user = await db.fetchone("SELECT * FROM user WHERE password = ?", (password,))
+    user = await fetchone("SELECT * FROM user WHERE password = ?", (password,))
 
     if user:
         token = uuid4()
         await r.set(f"auth:{token}", user["id"], ex=86400)
 
-        async with Database() as db:
-            servers = await db.fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
+        servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
 
         active_servers = [server for server in servers if server["is_active"]]
         url = '/' if not active_servers else "/dashboard"
@@ -54,15 +52,13 @@ async def register(request: Request):
     if len(password) not in range(8, 21):
         return await t_error(request, 400, "The password length must be 8-20 characters")
 
-    async with Database() as db:
-        user = await db.fetchone("SELECT * FROM user WHERE password = ?", (password,))
+    user = await fetchone("SELECT * FROM user WHERE password = ?", (password,))
 
     if user:
         return await t_error(request, 400, "User already exist")
 
-    async with Database() as db:
-        await db.execute("INSERT INTO user (password) VALUES (?)", (password,))
-        user = await db.fetchone("SELECT * FROM user WHERE password = ?", (password,))
+    await execute("INSERT INTO user (password) VALUES (?)", (password,))
+    user = await fetchone("SELECT * FROM user WHERE password = ?", (password,))
 
     token = uuid4()
 
@@ -92,13 +88,12 @@ async def reset_password(request: Request):
     if user["password"] != old_password:
         return await t_error(request, 403, "Invalid password")
 
-    async with Database() as db:
-        is_exist = await db.fetchone("SELECT * FROM user WHERE password = ?", (new_password,))
+    is_exist = await fetchone("SELECT * FROM user WHERE password = ?", (new_password,))
 
-        if is_exist:
-            return await t_error(request, 400, "User already exist")
+    if is_exist:
+        return await t_error(request, 400, "User already exist")
 
-        await db.execute("UPDATE user SET password = ? WHERE id = ?", (new_password, user["id"]))
+    await execute("UPDATE user SET password = ? WHERE id = ?", (new_password, user["id"]))
 
     token = uuid4()
 
@@ -118,9 +113,8 @@ async def delete_account(request: Request):
     if user["password"] != password:
         return await t_error(request, 403, "Invalid password")
 
-    async with Database() as db:
-        await db.execute("DELETE FROM server WHERE user_id = ?", (user["id"],))
-        await db.execute("DELETE FROM user WHERE id = ?", (user["id"],))
+    await execute("DELETE FROM server WHERE user_id = ?", (user["id"],))
+    await execute("DELETE FROM user WHERE id = ?", (user["id"],))
 
     return RedirectResponse('/', status_code=301, headers={
         "content-type": "application/x-www-form-urlencoded",

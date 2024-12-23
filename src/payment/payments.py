@@ -1,6 +1,6 @@
 from datetime import timedelta
 from src.config import PAYMENT_TIME, VDS_DAYS
-from src.database import Database, r
+from src.database import r, execute, fetchone
 from src.logger import logger
 from src.server.vds import vds_migrate, vds_upgrade
 from src.payment.utils import monero_request, usd_to_xmr
@@ -11,13 +11,12 @@ async def payment_request(ptype: str, server_id: int, vds_id: int = None) -> dic
     address = res["result"]["integrated_address"]
     payment_id = res["result"]["payment_id"]
 
-    async with Database() as db:
-        server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
-        if ptype == "upgrade" and vds_id:
-            vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (vds_id,))
-        else:
-            vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
+    if ptype == "upgrade" and vds_id:
+        vds = await fetchone("SELECT * FROM vds WHERE id = ?", (vds_id,))
+    else:
+        vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
 
     amount = await usd_to_xmr(vds["price"])
 
@@ -47,38 +46,34 @@ async def payment_checkout(txid: str) -> None:
 
     if payment:
         if int(payment["amount"]) == amount:
-            async with Database() as db:
-                server = await db.fetchone("SELECT * FROM server WHERE id = ?", (int(payment["server_id"]),))
+            server = await fetchone("SELECT * FROM server WHERE id = ?", (int(payment["server_id"]),))
 
             if payment["type"] == "buy":
-                async with Database() as db:
-                    await db.execute("UPDATE server SET is_active = ? WHERE id = ?", (1, server["id"]))
+                await execute("UPDATE server SET is_active = ? WHERE id = ?", (1, server["id"]))
             elif payment["type"] == "pay":
-                async with Database() as db:
-                    await db.execute(
-                        "UPDATE server SET end_at = ?, is_active = ? WHERE id = ?",
-                        (server.end_at + timedelta(days=VDS_DAYS), 1, server["id"])
-                    )
+                await execute(
+                    "UPDATE server SET end_at = ?, is_active = ? WHERE id = ?",
+                    (server.end_at + timedelta(days=VDS_DAYS), 1, server["id"])
+                )
             elif payment["type"] == "upgrade":
-                async with Database() as db:
-                    node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
-                    vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
+                node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
+                vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
 
-                    await vds_upgrade(server["id"], node["ip"], vds)
+                await vds_upgrade(server["id"], node["ip"], vds)
 
-                    dst_node_id = await r.get(f"node_to_migrate:{server['id']}")
-                    upgrade_vds_id = await r.get(f"unupgraded_server:{server['id']}")
+                dst_node_id = await r.get(f"node_to_migrate:{server['id']}")
+                upgrade_vds_id = await r.get(f"unupgraded_server:{server['id']}")
 
-                    # Migrate if needed
-                    if dst_node_id:
-                        dst_node = await db.fetchone("SELECT * FROM node WHERE id = ?", (int(dst_node_id),))
-                        await db.execute(
-                            "UPDATE server SET in_upgrade = ?, vds_id = ?, node_id = ?",
-                            (0, int(upgrade_vds_id), dst_node["id"])
-                        )
-                        await vds_migrate(server["id"], node["ip"], dst_node)
-                    else:
-                        await db.execute("UPDATE server SET in_upgrade = ?, vds_id = ?", (0, int(upgrade_vds_id)))
+                # Migrate if needed
+                if dst_node_id:
+                    dst_node = await fetchone("SELECT * FROM node WHERE id = ?", (int(dst_node_id),))
+                    await execute(
+                        "UPDATE server SET in_upgrade = ?, vds_id = ?, node_id = ?",
+                        (0, int(upgrade_vds_id), dst_node["id"])
+                    )
+                    await vds_migrate(server["id"], node["ip"], dst_node)
+                else:
+                    await execute("UPDATE server SET in_upgrade = ?, vds_id = ?", (0, int(upgrade_vds_id)))
 
                 # Delete markers
                 await r.delete(f"node_to_migrate:{server['id']}")

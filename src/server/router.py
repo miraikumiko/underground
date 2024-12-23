@@ -3,7 +3,7 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.websockets import WebSocket
 from starlette.routing import Route, WebSocketRoute
-from src.database import Database
+from src.database import fetchone
 from src.auth.utils import active_user, active_user_ws
 from src.server.vds import vds_install, vds_action
 from src.display.utils import t_error
@@ -16,8 +16,7 @@ async def install(request: Request):
     os = form.get("os")
 
     # Check server
-    async with Database() as db:
-        server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     if not server or not server["is_active"] or server["user_id"] != user["id"]:
         return await t_error(request, 403, "Invalid server")
@@ -26,9 +25,8 @@ async def install(request: Request):
         return await t_error(request, 422, "Invalid OS")
 
     # Installation logic
-    async with Database() as db:
-        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
-        vds = await db.fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
+    node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
+    vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
 
     await vds_install(server, node["ip"], vds, os)
 
@@ -40,15 +38,13 @@ async def action(request: Request):
     server_id = request.path_params["server_id"]
 
     # Check server
-    async with Database() as db:
-        server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     if not server or not server["is_active"] or server["user_id"] != user["id"]:
         return await t_error(request, 403, "Invalid server")
 
     # Action logic
-    async with Database() as db:
-        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
+    node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
 
     await vds_action(server["id"], node["ip"])
 
@@ -60,8 +56,7 @@ async def vnc(ws: WebSocket):
     server_id = ws.path_params["server_id"]
 
     # Check server
-    async with Database() as db:
-        server = await db.fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     if not server or not server["is_active"] or server["user_id"] != user["id"]:
         return
@@ -69,8 +64,7 @@ async def vnc(ws: WebSocket):
     # VNC logic
     await ws.accept()
 
-    async with Database() as db:
-        node = await db.fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
+    node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
 
     try:
         reader, writer = await asyncio.open_connection(node["ip"], server["vnc_port"])

@@ -2,7 +2,7 @@ from starlette.requests import Request
 from starlette.websockets import WebSocket
 from starlette.exceptions import HTTPException
 from websockets.exceptions import ConnectionClosed
-from src.database import Database, r
+from src.database import r, fetchone
 
 
 async def get_user(request):
@@ -10,8 +10,7 @@ async def get_user(request):
         user_id = await r.get(f"auth:{request.cookies['auth']}")
 
         if user_id:
-            async with Database() as db:
-                user = await db.fetchone("SELECT * from user where id = ?", (user_id,))
+            user = await fetchone("SELECT * from user where id = ?", (user_id,))
 
             return user
 

@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, UTC
 from starlette.exceptions import HTTPException
 from src.database import r, execute, fetchone, fetchall
 from src.config import VDS_DAYS, VDS_EXPIRED_DAYS
-from src.logger import logger
 from src.server.vds import vds_delete
 
 
@@ -21,7 +20,6 @@ async def request_vds(product_id: int, user: dict, is_active: bool = False) -> i
 
     # Check availability of resources
     if not nodes:
-        logger.warn(f"Haven't available resources for new vds {product_id} for {user['id']}")
         raise HTTPException(503, "We haven't available resources")
 
     node = nodes[0]
@@ -62,12 +60,7 @@ async def servers_expired_check():
         if server["end_at"] + timedelta(days=VDS_EXPIRED_DAYS) <= datetime.now():
             node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
             await execute("DELETE FROM server WHERE id = ?", (server["id"],))
-
             await vds_delete(server["id"], node["ip"])
-
-            logger.info(f"Server {server['id']} has been expired and deleted")
-        elif server["end_at"] <= datetime.now():
-            logger.info(f"Server {server['id']} has been expired")
 
         # Free node specs from unpaid upgrade
         if server["in_upgrade"]:
@@ -139,5 +132,3 @@ async def servers_expired_check():
 
                 # Delete server
                 await execute("DELETE FROM server WHERE id = ?", (server["id"],))
-
-                logger.info(f"Server {server['id']} has been deleted")

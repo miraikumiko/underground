@@ -3,6 +3,8 @@ import libvirt
 from xml.etree import ElementTree
 from src.config import IMAGES_PATH
 
+libvirt.registerErrorHandler(lambda _, __: None, None)
+
 
 async def vds_install(server: dict, server_node_ip: str, server_vds: dict, os: dict) -> None:
     with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:

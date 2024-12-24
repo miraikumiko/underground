@@ -8,8 +8,7 @@ from src.config import REGISTRATION, VDS_DAYS, VDS_MAX_PAYED_DAYS, PAYMENT_TIME
 from src.auth.utils import active_user, active_user_opt
 from src.server.vds import vds_status
 from src.server.utils import request_vds
-from src.payment.payments import payment_request
-from src.payment.utils import check_active_payment, check_payment_limit, xmr_course
+from src.payment.utils import xmr_course, check_active_payment, check_payment_limit, payment_request
 from src.display.utils import templates, t_error, t_checkout, draw_qrcode
 
 

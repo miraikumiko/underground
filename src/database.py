@@ -14,8 +14,9 @@ async def connect():
 async def execute(query: str, parameters: tuple = ()):
     connection = await connect()
 
-    async with connection.execute(query, parameters):
+    async with connection.execute(query, parameters) as cursor:
         await connection.commit()
+        return cursor.lastrowid
 
 
 async def fetchone(query: str, parameters: tuple = ()):

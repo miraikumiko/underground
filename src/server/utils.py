@@ -42,12 +42,11 @@ async def request_vds(product_id: int, user: dict, is_active: bool = False) -> i
             node["id"]
         )
     )
-    await execute(
+
+    server_id = await execute(
         "INSERT INTO server (vnc_port, start_at, end_at, is_active, in_upgrade, vds_id, node_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (vnc_port, datetime.now(UTC), datetime.now() + timedelta(days=VDS_DAYS), is_active, 0, product_id, node["id"], user["id"])
     )
-    server_id = await fetchone("SELECT last_insert_rowid()")
-    server_id = server_id[0]
 
     return server_id
 

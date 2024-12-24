@@ -1,9 +1,9 @@
 from os import path
 from starlette.config import Config
 
-config = Config(".env")
-
 BASE_PATH = path.dirname(path.dirname(path.realpath(__file__)))
+
+config = Config(f"{BASE_PATH}/.env")
 
 HOST = config("HOST")
 PORT = int(config("PORT"))

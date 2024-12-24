@@ -9,7 +9,6 @@ CREATE INDEX IF NOT EXISTS ix_user_id ON user (id);
 CREATE TABLE IF NOT EXISTS os (
     id INTEGER NOT NULL,
     name VARCHAR NOT NULL,
-    file VARCHAR NOT NULL,
     PRIMARY KEY (id)
 );
 CREATE INDEX IF NOT EXISTS ix_os_id ON os (id);

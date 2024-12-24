@@ -6,7 +6,7 @@ from src.config import IMAGES_PATH
 libvirt.registerErrorHandler(lambda _, __: None, None)
 
 
-async def vds_install(server: dict, server_node_ip: str, server_vds: dict, os: dict) -> None:
+async def vds_install(server: dict, server_node_ip: str, server_vds: dict, os: str) -> None:
     with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
         dom = conn.lookupByName(str(server["id"]))
         state, _ = dom.state()
@@ -21,8 +21,8 @@ async def vds_install(server: dict, server_node_ip: str, server_vds: dict, os: d
         --vcpus {server_vds['cores']} \
         --memory {server_vds['ram'] * 1024} \
         --disk {IMAGES_PATH}/{server['id']}.qcow2,size={server_vds['disk_size']} \
-        --os-variant {os['name']} \
-        --cdrom /srv/iso/{os['file']} \
+        --os-variant {os} \
+        --cdrom /srv/iso/{os}.iso \
         --graphics vnc,listen={server_node_ip},port={server['vnc_port']}'""", shell=True)
 
 

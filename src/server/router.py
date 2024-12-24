@@ -34,7 +34,7 @@ async def install(request: Request):
     node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
     vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
 
-    await vds_install(server, node["ip"], vds, os)
+    await vds_install(server, node["ip"], vds, os_name)
 
     return RedirectResponse("/dashboard", status_code=301)
 

@@ -9,7 +9,6 @@ HOST = config("HOST")
 PORT = int(config("PORT"))
 
 DB_PATH = config("DB_PATH")
-LOG_PATH = config("LOG_PATH")
 IMAGES_PATH = config("IMAGES_PATH")
 
 REGISTRATION = int(config("REGISTRATION"))

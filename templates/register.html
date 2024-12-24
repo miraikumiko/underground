@@ -3,7 +3,8 @@
 {% block content %}
   <form class="form0" method="post" action="/api/auth/register">
     <h1>Register</h1>
-    <input name="password" placeholder="Password" type="password" minlength="8" maxlength="20" required>
+    <input name="password1" placeholder="Password" type="password" minlength="8" maxlength="20" required>
+    <input name="password2" placeholder="Password again" type="password" minlength="8" maxlength="20" required>
     <input name="captcha_id" type="hidden" value="{{ captcha_id }}">
     <button class="btn2" type="submit">Register</button>
   </form>

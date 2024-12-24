@@ -12,23 +12,25 @@ async def login(request: Request):
     form = await request.form()
     password = form.get("password")
 
+    if not password:
+        return await t_error(request, 400, "The password field is required")
+
     user = await fetchone("SELECT * FROM user WHERE password = ?", (password,))
 
-    if user:
-        token = uuid4()
-        await r.set(f"auth:{token}", user["id"], ex=86400)
-
-        servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
-
-        active_servers = [server for server in servers if server["is_active"]]
-        url = '/' if not active_servers else "/dashboard"
-
-        return RedirectResponse(url, status_code=301, headers={
-            "Content-Type": "application/x-www-form-urlencoded",
-            "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age=86400;"
-        })
-    else:
+    if not user:
         return await t_error(request, 401, "Invalid password")
+
+    token = uuid4()
+    await r.set(f"auth:{token}", user["id"], ex=86400)
+
+    servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
+    active_servers = [server for server in servers if server["is_active"]]
+    url = '/' if not active_servers else "/dashboard"
+
+    return RedirectResponse(url, status_code=301, headers={
+        "Content-Type": "application/x-www-form-urlencoded",
+        "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age=86400;"
+    })
 
 
 async def register(request: Request):
@@ -36,8 +38,21 @@ async def register(request: Request):
         return await t_error(request, 400, "Registration is disabled")
 
     form = await request.form()
-    password = form.get("password")
+    password1 = form.get("password1")
+    password2 = form.get("password2")
     captcha_id = form.get("captcha_id")
+
+    # Check password
+    if not password1 or not password2 or not captcha_id:
+        return await t_error(request, 400, "The fields password1, password2 and captcha_id are required")
+
+    if len(password1) not in range(8, 21):
+        return await t_error(request, 400, "The password length must be 8-20 characters")
+
+    if password1 != password2:
+        return await t_error(request, 400, "Passwords don't match")
+
+    # Check captcha
     captcha_lock_id = await r.get(f"captcha:{captcha_id}")
 
     if not captcha_lock_id:
@@ -49,16 +64,15 @@ async def register(request: Request):
     if captcha_lock:
         return await t_error(request, 400, "Wait a few seconds before clicking the Register button")
 
-    if len(password) not in range(8, 21):
-        return await t_error(request, 400, "The password length must be 8-20 characters")
-
-    user = await fetchone("SELECT * FROM user WHERE password = ?", (password,))
+    # Check user
+    user = await fetchone("SELECT * FROM user WHERE password = ?", (password1,))
 
     if user:
         return await t_error(request, 400, "User already exist")
 
-    await execute("INSERT INTO user (password) VALUES (?)", (password,))
-    user = await fetchone("SELECT * FROM user WHERE password = ?", (password,))
+    # User registration
+    await execute("INSERT INTO user (password) VALUES (?)", (password1,))
+    user = await fetchone("SELECT * FROM user WHERE password = ?", (password1,))
 
     token = uuid4()
 
@@ -85,13 +99,16 @@ async def reset_password(request: Request):
     old_password = form.get("old_password")
     new_password = form.get("new_password")
 
+    if not old_password or not new_password:
+        return await t_error(request, 400, "The fields old_password1 and new_password are required")
+
     if user["password"] != old_password:
         return await t_error(request, 403, "Invalid password")
 
     is_exist = await fetchone("SELECT * FROM user WHERE password = ?", (new_password,))
 
     if is_exist:
-        return await t_error(request, 400, "User already exist")
+        return await t_error(request, 400, "User with this password already exist")
 
     await execute("UPDATE user SET password = ? WHERE id = ?", (new_password, user["id"]))
 
@@ -109,6 +126,9 @@ async def delete_account(request: Request):
     user = await active_user(request)
     form = await request.form()
     password = form.get("password")
+
+    if not password:
+        return await t_error(request, 400, "The password field is required")
 
     if user["password"] != password:
         return await t_error(request, 403, "Invalid password")

@@ -15,6 +15,9 @@ async def install(request: Request):
     form = await request.form()
     os_name = form.get("os")
 
+    if not os_name:
+        return await t_error(request, 400, "The os field is required")
+
     # Check server
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 

@@ -24,6 +24,9 @@ async def promo(request: Request):
     form = await request.form()
     code = form.get("code")
 
+    if not code:
+        return await t_error(request, 400, "The code field is required")
+
     promo_code = await fetchone("SELECT * FROM promo WHERE code = ?", (code,))
 
     if not promo_code:

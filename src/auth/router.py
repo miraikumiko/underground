@@ -122,30 +122,9 @@ async def reset_password(request: Request):
     })
 
 
-async def delete_account(request: Request):
-    user = await active_user(request)
-    form = await request.form()
-    password = form.get("password")
-
-    if not password:
-        return await t_error(request, 400, "The password field is required")
-
-    if user["password"] != password:
-        return await t_error(request, 403, "Invalid password")
-
-    await execute("DELETE FROM server WHERE user_id = ?", (user["id"],))
-    await execute("DELETE FROM user WHERE id = ?", (user["id"],))
-
-    return RedirectResponse('/', status_code=301, headers={
-        "content-type": "application/x-www-form-urlencoded",
-        "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax;'
-    })
-
-
 router = [
     Route("/login", login, methods=["POST"]),
     Route("/register", register, methods=["POST"]),
     Route("/logout", logout, methods=["POST"]),
-    Route("/reset_password", reset_password, methods=["POST"]),
-    Route("/delete_account", delete_account, methods=["POST"])
+    Route("/reset_password", reset_password, methods=["POST"])
 ]

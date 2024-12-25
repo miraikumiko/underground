@@ -1,5 +1,5 @@
 from random import randint
-from datetime import timedelta
+from datetime import datetime, timedelta
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
@@ -186,7 +186,7 @@ async def pay_display(request: Request):
         return await t_error(request, 400, "You can make only 3 payment requests per day")
 
     # Check expiring date
-    if server["end_at"] - server["start_at"] > timedelta(days=VDS_MAX_PAYED_DAYS - VDS_DAYS):
+    if datetime.strptime(server["end_at"], "%Y-%m-%d %H:%M:%S.%f") - datetime.strptime(server["start_at"], "%Y-%m-%d %H:%M:%S.%f") > timedelta(days=VDS_MAX_PAYED_DAYS - VDS_DAYS):
         return await t_error(request, 400, f"You can't pay for more than {VDS_MAX_PAYED_DAYS} days")
 
     # Make payment request and return it uri

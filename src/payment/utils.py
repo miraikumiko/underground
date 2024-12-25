@@ -1,5 +1,5 @@
 from decimal import Decimal
-from datetime import timedelta
+from datetime import datetime, timedelta
 import requests
 from requests.auth import HTTPDigestAuth
 from src.database import r, execute, fetchone
@@ -126,7 +126,7 @@ async def payment_checkout(txid: str) -> None:
             elif payment["type"] == "pay":
                 await execute(
                     "UPDATE server SET end_at = ?, is_active = ? WHERE id = ?",
-                    (server.end_at + timedelta(days=VDS_DAYS), 1, server["id"])
+                    (datetime.strptime(server["end_at"], "%Y-%m-%d %H:%M:%S.%f") + timedelta(days=VDS_DAYS), 1, server["id"])
                 )
             elif payment["type"] == "upgrade":
                 node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))

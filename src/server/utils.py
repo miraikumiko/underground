@@ -56,7 +56,7 @@ async def servers_expired_check():
 
     for server in servers:
         # Delete expired server
-        if server["end_at"] + timedelta(days=VDS_EXPIRED_DAYS) <= datetime.now():
+        if datetime.strptime(server["end_at"], "%Y-%m-%d %H:%M:%S.%f") + timedelta(days=VDS_EXPIRED_DAYS) <= datetime.now():
             node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
             await execute("DELETE FROM server WHERE id = ?", (server["id"],))
             await vds_delete(server["id"], node["ip"])
@@ -103,7 +103,7 @@ async def servers_expired_check():
                 await r.delete(f"unupgraded_server:{server['id']}")
 
         # Delete unpaid server
-        if not server.is_active:
+        if not server["is_active"]:
             is_not_expired = await r.get(f"inactive_server:{server['id']}")
 
             if not is_not_expired:

@@ -42,7 +42,7 @@ pip install -r requirements.txt
 
 ### Cronie
 
-`*/15 * * * * /var/www/underground.pm/venv/bin/python /var/www/underground.pm/expire.py`
+`*/15 * * * * /var/www/underground.pm/venv/bin/python /var/www/underground.pm/run.py --expire`
 
 ### OpenRC
 

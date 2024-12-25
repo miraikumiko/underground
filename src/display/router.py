@@ -32,7 +32,13 @@ async def index_display(request: Request):
 
 
 async def login_display(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    captcha_id = randint(10000, 99999)
+    captcha_lock_id = randint(10000, 99999)
+
+    await r.set(f"captcha:{captcha_id}", captcha_lock_id, ex=60)
+    await r.set(f"captcha_lock:{captcha_lock_id}", 1, ex=2)
+
+    return templates.TemplateResponse("login.html", {"request": request, "captcha_id": captcha_id})
 
 
 async def register_display(request: Request):
@@ -43,21 +49,9 @@ async def register_display(request: Request):
     captcha_lock_id = randint(10000, 99999)
 
     await r.set(f"captcha:{captcha_id}", captcha_lock_id, ex=60)
-    await r.set(f"captcha_lock:{captcha_lock_id}", 1, ex=5)
+    await r.set(f"captcha_lock:{captcha_lock_id}", 1, ex=4)
 
     return templates.TemplateResponse("register.html", {"request": request, "captcha_id": captcha_id})
-
-
-async def reset_password_display(request: Request):
-    _ = await active_user(request)
-
-    return templates.TemplateResponse("change-password.html", {"request": request})
-
-
-async def delete_account_display(request: Request):
-    _ = await active_user(request)
-
-    return templates.TemplateResponse("delete-account.html", {"request": request})
 
 
 async def dashboard_display(request: Request):
@@ -95,23 +89,6 @@ async def promo_display(request: Request):
     _ = await active_user(request)
 
     return templates.TemplateResponse("promo.html", {"request": request})
-
-
-async def faq_display(request: Request):
-    user = await active_user_opt(request)
-    active_servers = []
-    course = await xmr_course()
-
-    if user:
-        servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
-        active_servers = [server for server in servers if server["is_active"]]
-
-    return templates.TemplateResponse("faq.html", {
-        "request": request,
-        "user": user,
-        "course": course,
-        "servers": active_servers
-    })
 
 
 async def install_display(request: Request):
@@ -286,15 +263,12 @@ async def upgrade_display(product_id: int, request: Request):
         return await t_error(request, 503, "We haven't available resources")
 
 
-router = [
+display_router = [
     Route("/", index_display, methods=["GET"]),
     Route("/login", login_display, methods=["GET"]),
     Route("/register", register_display, methods=["GET"]),
-    Route("/reset-password", reset_password_display, methods=["GET"]),
-    Route("/delete-account", delete_account_display, methods=["GET"]),
     Route("/dashboard", dashboard_display, methods=["GET"]),
     Route("/promo", promo_display, methods=["GET"]),
-    Route("/faq", faq_display, methods=["GET"]),
     Route("/install/{server_id:int}", install_display, methods=["GET"]),
     Route("/vnc/{server_id:int}", vnc_display, methods=["GET"]),
     Route("/buy/{product_id:int}", buy_display, methods=["GET"]),

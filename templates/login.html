@@ -4,6 +4,7 @@
   <form class="form0" method="post" action="/api/auth/login">
     <h1>Login</h1>
     <input name="password" placeholder="Password" type="password" required>
+    <input name="captcha_id" type="hidden" value="{{ captcha_id }}">
     <button type="submit" class="btn2">Login</button>
   </form>
 {% endblock %}

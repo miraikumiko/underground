@@ -11,18 +11,54 @@ from src.display.utils import t_error
 async def login(request: Request):
     form = await request.form()
     password = form.get("password")
+    captcha_id = form.get("captcha_id")
 
-    if not password:
-        return await t_error(request, 400, "The password field is required")
+    if not password or not captcha_id:
+        return await t_error(request, 400, "The fields password and captcha_id are required")
 
+    # Check captcha
+    captcha_lock_id = await r.get(f"captcha:{captcha_id}")
+
+    if not captcha_lock_id:
+        return await t_error(request, 400, "Press the Login button within a minute")
+
+    await r.delete(f"captcha:{captcha_id}")
+    captcha_lock = await r.get(f"captcha_lock:{captcha_lock_id}")
+
+    if captcha_lock:
+        return await t_error(request, 400, "Wait a few seconds before clicking the Login button")
+
+    # Check password
     user = await fetchone("SELECT * FROM user WHERE password = ?", (password,))
 
     if not user:
         return await t_error(request, 401, "Invalid password")
 
-    token = uuid4()
-    await r.set(f"auth:{token}", user["id"], ex=86400)
+    # Delete other auth tokens
+    cursor = 0
 
+    while True:
+        cursor, keys = await r.scan(cursor, match=f"{user['id']}:auth:*", count=100)
+
+        for key in keys:
+            await r.delete(key)
+
+        if cursor == 0:
+            break
+
+    # Create auth token
+    cursor = 0
+
+    while True:
+        token = uuid4()
+        cursor, keys = await r.scan(cursor, match=f"*:auth:{token}", count=100)
+
+        if not keys:
+            break
+
+    await r.set(f"{user['id']}:auth:{token}", user["id"], ex=86400)
+
+    # Login
     servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
     active_servers = [server for server in servers if server["is_active"]]
     url = '/' if not active_servers else "/dashboard"
@@ -70,13 +106,20 @@ async def register(request: Request):
     if user:
         return await t_error(request, 400, "User already exist")
 
-    # User registration
-    await execute("INSERT INTO user (password) VALUES (?)", (password1,))
-    user = await fetchone("SELECT * FROM user WHERE password = ?", (password1,))
+    # Registration
+    user_id = await execute("INSERT INTO user (password) VALUES (?)", (password1,))
 
-    token = uuid4()
+    # Create token
+    cursor = 0
 
-    await r.set(f"auth:{token}", user["id"], ex=86400)
+    while True:
+        token = uuid4()
+        cursor, keys = await r.scan(cursor, match=f"*:auth:{token}", count=100)
+
+        if not keys:
+            break
+
+    await r.set(f"{user_id}:auth:{token}", user_id, ex=86400)
 
     return RedirectResponse('/', status_code=301, headers={
         "Content-Type": "application/x-www-form-urlencoded",
@@ -93,38 +136,8 @@ async def logout(request: Request):
     })
 
 
-async def reset_password(request: Request):
-    user = await active_user(request)
-    form = await request.form()
-    old_password = form.get("old_password")
-    new_password = form.get("new_password")
-
-    if not old_password or not new_password:
-        return await t_error(request, 400, "The fields old_password1 and new_password are required")
-
-    if user["password"] != old_password:
-        return await t_error(request, 403, "Invalid password")
-
-    is_exist = await fetchone("SELECT * FROM user WHERE password = ?", (new_password,))
-
-    if is_exist:
-        return await t_error(request, 400, "User with this password already exist")
-
-    await execute("UPDATE user SET password = ? WHERE id = ?", (new_password, user["id"]))
-
-    token = uuid4()
-
-    await r.set(f"auth:{token}", user["id"], ex=86400)
-
-    return RedirectResponse('/', status_code=301, headers={
-        "Content-Type": "application/x-www-form-urlencoded",
-        "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age=86400;"
-    })
-
-
-router = [
+auth_router = [
     Route("/login", login, methods=["POST"]),
     Route("/register", register, methods=["POST"]),
-    Route("/logout", logout, methods=["POST"]),
-    Route("/reset_password", reset_password, methods=["POST"])
+    Route("/logout", logout, methods=["POST"])
 ]

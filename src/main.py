@@ -6,10 +6,10 @@ from starlette.middleware.exceptions import HTTPException, WebSocketException
 from starlette.middleware.cors import CORSMiddleware
 from src.exceptions import handle_error, http_exception, websocket_exception
 from src.config import BASE_PATH
-from src.auth.router import router as auth_router
-from src.payment.router import router as payment_router
-from src.server.router import router as server_router
-from src.display.router import router as display_router
+from src.auth.router import auth_router
+from src.payment.router import payment_router
+from src.server.router import server_router
+from src.display.router import display_router
 
 routes = [
     Mount("/static", StaticFiles(directory=f"{BASE_PATH}/static"), name="static"),

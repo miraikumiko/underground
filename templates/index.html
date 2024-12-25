@@ -8,25 +8,16 @@
           <a class="btn0" href="/login">login</a>
           <a class="btn0" href="/register">register</a>
         {% else %}
-          <div class="dropdown">
-            <button class="btn0">me</button>
-            <div class="dropdown-content">
-              <a class="btn0" href="/reset-password">Change password</a>
-              <form method="post" action="/api/auth/logout">
-                <button class="btn0" type="submit">Logout</button>
-              </form>
-            </div>
-          </div>
           {% if servers %}
             <a class="btn0" href="/dashboard">dashboard</a>
           {% endif %}
           <a class="btn0" href="/promo">promo</a>
+          <form method="post" action="/api/auth/logout">
+            <button class="btn0" type="submit">logout</button>
+          </form>
         {% endif %}
-        <a class="btn0" href="/faq">faq</a>
       </div>
-      <div id="other">
-        <p id="course">1 XMR = ${{ course }}</p>
-      </div>
+      <p id="course">1 XMR = ${{ course }}</p>
     </div>
   </header>
   <main>
@@ -49,14 +40,63 @@
     </div>
   </main>
   <footer>
-    <h2>About</h2>
-    <p>Welcome to anonymous KVM hosting for cryptocurrency <b class="glow">XMR</b>, that doesn't spy its users!</p>
-    <p>Also available on <a href="http://underupptqt5efxaxutkfgjikkwu2lsoosyyooxs45tqkeg7dfdytwqd.onion" target="_blank" style="color: #c145ff">.onion</a> and <a href="http://undergroundpm.i2p" target="_blank" style="color: #c145ff">.i2p</a>, all <a href="https://git.sr.ht/~yandere/underground.pm" target="_blank">sources</a> is open and available under <b class="glow">GPLv3</b> licence.</p>
-    <p>We publish news at <a href="https://mastodon.social/@undergroundpm" target="_blank" style="color: #8c8dff">Mastodon</a>. If you need help you can write <a href="mailto:underground@underground.pm">admin</a>.</p>
-    <h2>Rules</h2>
-    <p>If any problems arise during the purchase process, the administrator will help.</p>
-    <p>In case of data loss, the money for the remaining rent will be returned.</p>
-    <p>Each downtime will be compensated by adding 3 days to the rent.</p>
-    <p>Money for purchased goods isn't refundable.</p>
+    <article>
+      <h2>About</h2>
+      <p>Welcome to anonymous KVM hosting for cryptocurrency XMR, that doesn't spy its users!</p>
+      <p>Also available on <a href="http://underupptqt5efxaxutkfgjikkwu2lsoosyyooxs45tqkeg7dfdytwqd.onion" target="_blank" style="color: #c145ff">.onion</a> and <a href="http://undergroundpm.i2p" target="_blank" style="color: #c145ff">.i2p</a>, all <a href="https://git.sr.ht/~yandere/underground.pm" target="_blank">sources</a> is open and available under GPLv3 licence.</p>
+      <p>We publish news at <a href="https://mastodon.social/@undergroundpm" target="_blank" style="color: #8c8dff">Mastodon</a>. If you need help you can write <a href="mailto:murrr@macaw.me">admin</a>.</p>
+    </article>
+    <article style="text-align: right">
+      <h2>Rules</h2>
+      <p>Money for purchased goods isn't refundable.</p>
+      <p>Each downtime will be compensated by adding 3 days to the rent.</p>
+      <p>In case of data loss, the money for the remaining rent will be returned.</p>
+    </article>
+    <div>
+      <h2>FAQ</h2>
+      <details>
+        <summary>What ISO images are available?</summary>
+        <ul>
+          <li>Debian (12.8.0)</li>
+          <li>Ubuntu (24.10)</li>
+          <li>CentOS (10)</li>
+          <li>Arch Linux (rolling)</li>
+          <li>Alpine (3.20.3)</li>
+          <li>FreeBSD (14.2)</li>
+          <li>OpenBSD (7.6)</li>
+        </ul>
+        <hr>
+      </details>
+      <details>
+        <summary>Disk encryption?</summary>
+        <p>Yes. You can encrypt the disk during installation via VNC.</p>
+        <hr>
+      </details>
+      <details>
+        <summary>How to use VDS?</summary>
+        <p>First you need to install the OS via VNC and then you can connect to it via SSH.</p>
+        <hr>
+      </details>
+      <details>
+        <summary>What is Monero (XMR)?</summary>
+        <p>Anonymous and easy to use cryptocurrency accepted by this hosting. More info <a href="https://www.getmonero.org" target="_blank">here</a>.</p>
+        <hr>
+      </details>
+      <details>
+        <summary>Where to buy Monero (XMR)?</summary>
+        <p>Usually you can find the exchange way on this site <a href="https://www.bestchange.com" target="_blank">BestChange</a>.</p>
+        <hr>
+      </details>
+      <details>
+        <summary>What is Tor and I2P?</summary>
+        <p>Anonymous decentralized networks that will help you increase the level of anonymity when using this hosting. In Linux these programs are called <a href="https://www.torproject.org">tor</a> and <a href="https://i2pd.website">i2pd</a> and can be installed through the package manager.</p>
+        <hr>
+      </details>
+      <details>
+        <summary>Account deletion?</summary>
+        <p>Hosting doesn't store any personal data so there is nothing to delete. Records of inactive servers and users are periodically deleted so you don't need to worry about it.</p>
+        <hr>
+      </details>
+    </div>
   </footer>
 {% endblock %}

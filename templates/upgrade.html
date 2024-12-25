@@ -6,9 +6,9 @@
     <div id="vds-container">
       {% for vds in vdss %}
         <div class="vds">
-          <span>vCPU: {{ vds.cores }} [{{ vds.cores_desc }}]</span>
-          <span>RAM: {{ vds.ram }}GB [{{ vds.ram_desc }}]</span>
-          <span>Disk: {{ vds.disk_size }}GB [{{ vds.disk_desc }}]</span>
+          <span>vCPU: {{ vds.cores }}</span>
+          <span>RAM: {{ vds.ram }}GB</span>
+          <span>Disk: {{ vds.disk_size }}GB</span>
           <span>IPv4: {% if vds.ipv4 %} Yes {% else %} No {% endif %}</span>
           <span>IPv6: {% if vds.ipv6 %} Yes {% else %} No {% endif %}</span>
           <div class="bottom">

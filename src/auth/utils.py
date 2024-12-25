@@ -1,18 +1,21 @@
 from starlette.requests import Request
-from starlette.websockets import WebSocket
+from starlette.websockets import WebSocket, WebSocketDisconnect
 from starlette.exceptions import HTTPException
-from websockets.exceptions import ConnectionClosed
 from src.database import r, fetchone
 
 
 async def get_user(request):
     if "auth" in request.cookies:
-        user_id = await r.get(f"auth:{request.cookies['auth']}")
+        cursor = 0
 
-        if user_id:
-            user = await fetchone("SELECT * from user where id = ?", (user_id,))
+        while True:
+            cursor, keys = await r.scan(cursor, match=f"*:auth:{request.cookies['auth']}", count=100)
 
-            return user
+            if keys:
+                user_id = keys[0].split(':')[0]
+                user = await fetchone("SELECT * from user where id = ?", (user_id,))
+
+                return user
 
 
 async def active_user(request: Request):
@@ -37,4 +40,4 @@ async def active_user_ws(request: WebSocket):
         if res:
             return res
         else:
-            raise ConnectionClosed
+            raise WebSocketDisconnect(code=1008)

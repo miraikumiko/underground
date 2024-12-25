@@ -4,21 +4,12 @@
   <header>
     <div id="status">
       <div id="personal">
-        <div class="dropdown">
-          <button class="btn0">me</button>
-          <div class="dropdown-content">
-            <a class="btn0" href="/reset-password">Change password</a>
-            <form method="post" action="/logout">
-              <button class="btn0" type="submit">Logout</button>
-            </form>
-          </div>
-        </div>
         <a class="btn0" href="/">store</a>
-        <a class="btn0" href="/faq">faq</a>
+        <form method="post" action="/api/auth/logout">
+          <button class="btn0" type="submit">logout</button>
+        </form>
       </div>
-      <div id="other">
-        <p id="course">1 XMR = ${{ course }}</p>
-      </div>
+      <p id="course">1 XMR = ${{ course }}</p>
     </div>
   </header>
   <main>

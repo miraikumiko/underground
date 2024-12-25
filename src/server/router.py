@@ -1,7 +1,7 @@
 import asyncio
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
-from starlette.websockets import WebSocket
+from starlette.websockets import WebSocket, WebSocketDisconnect
 from starlette.routing import Route, WebSocketRoute
 from src.database import fetchone
 from src.auth.utils import active_user, active_user_ws
@@ -65,7 +65,7 @@ async def vnc(ws: WebSocket):
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     if not server or not server["is_active"] or server["user_id"] != user["id"]:
-        return
+        raise WebSocketDisconnect(code=1008)
 
     # VNC logic
     await ws.accept()
@@ -99,7 +99,7 @@ async def vnc(ws: WebSocket):
     await asyncio.gather(read_from_vnc(), read_from_websocket())
 
 
-router = [
+server_router = [
     Route("/install/{server_id:int}", install, methods=["POST"]),
     Route("/action/{server_id:int}", action, methods=["POST"]),
     WebSocketRoute("/vnc/{server_id:int}", vnc)

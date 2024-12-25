@@ -40,7 +40,7 @@ async def promo(request: Request):
     return RedirectResponse("/dashboard", status_code=301)
 
 
-router = [
+payment_router = [
     Route("/close", close, methods=["POST"]),
     Route("/promo", promo, methods=["POST"])
 ]

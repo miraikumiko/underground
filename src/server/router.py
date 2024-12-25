@@ -5,7 +5,7 @@ from starlette.websockets import WebSocket
 from starlette.routing import Route, WebSocketRoute
 from src.database import fetchone
 from src.auth.utils import active_user, active_user_ws
-from src.server.vds import vds_install, vds_action
+from src.server.utils import vds_install, vds_action
 from src.display.utils import t_error
 
 

@@ -2,8 +2,8 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
 from src.database import r, execute, fetchone
-from src.server.utils import request_vds
 from src.auth.utils import active_user
+from src.payment.utils import request_vds
 from src.display.utils import t_error
 
 

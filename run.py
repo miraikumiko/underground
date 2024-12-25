@@ -3,8 +3,7 @@ import asyncio
 import uvicorn
 from src.main import app
 from src.config import HOST, PORT
-from src.payment.utils import payment_checkout
-from src.server.utils import servers_expired_check
+from src.payment.utils import payment_checkout, expired_check
 
 
 async def main():
@@ -14,7 +13,7 @@ async def main():
             exit(0)
     elif len(sys.argv) == 2:
         if sys.argv[1] == "--expire":
-            await servers_expired_check()
+            await expired_check()
             exit(0)
 
     uvicorn.run("run:app", host=HOST, port=PORT, reload=True)

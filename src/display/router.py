@@ -3,12 +3,11 @@ from datetime import datetime, timedelta
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
-from src.database import r, execute, fetchone, fetchall
 from src.config import REGISTRATION, VDS_DAYS, VDS_MAX_PAYED_DAYS, PAYMENT_TIME
+from src.database import r, execute, fetchone, fetchall
 from src.auth.utils import active_user, active_user_opt
-from src.server.vds import vds_status
-from src.server.utils import request_vds
-from src.payment.utils import xmr_course, check_active_payment, check_payment_limit, payment_request
+from src.payment.utils import xmr_course, check_active_payment, check_payment_limit, payment_request, request_vds
+from src.server.utils import vds_status
 from src.display.utils import templates, t_error, t_checkout, draw_qrcode
 
 

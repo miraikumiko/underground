@@ -1,133 +1,122 @@
-from datetime import datetime, timedelta, UTC
-from starlette.exceptions import HTTPException
-from src.database import r, execute, fetchone, fetchall
-from src.config import VDS_DAYS, VDS_EXPIRED_DAYS
-from src.server.vds import vds_delete
+import subprocess
+import libvirt
+from xml.etree import ElementTree
+from src.config import IMAGES_PATH
+
+libvirt.registerErrorHandler(lambda _, __: None, None)
 
 
-async def request_vds(product_id: int, user: dict, is_active: bool = False) -> int:
-    # Validate product id
-    vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
+async def vds_install(server: dict, server_node_ip: str, server_vds: dict, os: str) -> None:
+    with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
+        dom = conn.lookupByName(str(server["id"]))
+        state, _ = dom.state()
 
-    if not vds:
-        raise HTTPException(400, "This product doesn't exist")
+        if state == libvirt.VIR_DOMAIN_RUNNING:
+            dom.destroy()
 
-    servers = await fetchall("SELECT * FROM server")
-    nodes = await fetchall(
-        "SELECT * FROM node WHERE cores_available >= ? AND ram_available >= ? AND disk_size_available >= ?",
-        (vds["cores"], vds["ram"], vds["disk_size"])
-    )
+        dom.undefine()
 
-    # Check availability of resources
-    if not nodes:
-        raise HTTPException(503, "We haven't available resources")
-
-    node = nodes[0]
-
-    # Reservation port for VNC
-    vnc_port = 5900
-
-    if servers:
-        up = [server["vnc_port"] for server in servers if server["node_id"] == node["id"]]
-        while vnc_port in up:
-            vnc_port += 1
-
-    # Registration of new server
-    await execute(
-        "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
-        (
-            node["cores_available"] - vds["cores"],
-            node["ram_available"] - vds["ram"],
-            node["disk_size_available"] - vds["disk_size"],
-            node["id"]
-        )
-    )
-
-    server_id = await execute(
-        "INSERT INTO server (vnc_port, start_at, end_at, is_active, in_upgrade, vds_id, node_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (vnc_port, datetime.now(UTC), datetime.now() + timedelta(days=VDS_DAYS), is_active, 0, product_id, node["id"], user["id"])
-    )
-
-    return server_id
+    subprocess.Popen(f"""ssh root@{server_node_ip} 'virt-install \
+        --name {server['id']} \
+        --vcpus {server_vds['cores']} \
+        --memory {server_vds['ram'] * 1024} \
+        --disk {IMAGES_PATH}/{server['id']}.qcow2,size={server_vds['disk_size']} \
+        --os-variant {os} \
+        --cdrom /srv/iso/{os}.iso \
+        --graphics vnc,listen={server_node_ip},port={server['vnc_port']}'""", shell=True)
 
 
-async def servers_expired_check():
-    servers = await fetchall("SELECT * FROM server")
+async def vds_delete(server_id: int, server_node_ip: str) -> None:
+    with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
+        dom = conn.lookupByName(str(server_id))
+        dom.destroy()
+        dom.undefine()
 
-    for server in servers:
-        # Delete expired server
-        if datetime.strptime(server["end_at"], "%Y-%m-%d %H:%M:%S.%f") + timedelta(days=VDS_EXPIRED_DAYS) <= datetime.now():
-            node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
-            await execute("DELETE FROM server WHERE id = ?", (server["id"],))
-            await vds_delete(server["id"], node["ip"])
+    subprocess.run(f"ssh root@{server_node_ip} 'rm -f {IMAGES_PATH}/{server_id}.qcow2'")
 
-        # Free node specs from unpaid upgrade
-        if server["in_upgrade"]:
-            is_upgraded = await r.get(f"upgrade_server:{server['id']}")
 
-            if not is_upgraded:
-                # Update node specs
-                node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
-                server_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
-                dst_node_id = await r.get(f"node_to_migrate:{server['id']}")
-                upgrade_vds_id = await r.get(f"unupgraded_server:{server['id']}")
-                upgrade_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (upgrade_vds_id,))
+async def vds_action(server_id: int, server_node_ip: str) -> None:
+   with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
+       dom = conn.lookupByName(str(server_id))
+       state, _ = dom.state()
 
-                if dst_node_id:
-                    dst_node = await fetchone("SELECT * FROM node WHERE id = ?", (dst_node_id,))
-                    await execute(
-                        "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
-                        (
-                            dst_node["cores_available"] + upgrade_vds["cores"] - server_vds["cores"],
-                            dst_node["ram_available"] + upgrade_vds["ram"] - server_vds["ram"],
-                            dst_node["disk_size_available"] + upgrade_vds["disk_size"] - server_vds["disk_size"],
-                            dst_node["id"]
-                        )
-                    )
-                else:
-                    await execute(
-                        "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
-                        (
-                            node["cores_available"] + upgrade_vds["cores"] - server_vds["cores"],
-                            node["ram_available"] + upgrade_vds["ram"] - server_vds["ram"],
-                            node["disk_size_available"] + upgrade_vds["disk_size"] - server_vds["disk_size"],
-                            server["node_id"]
-                        )
-                    )
+       if state == libvirt.VIR_DOMAIN_SHUTOFF:
+           dom.create()
+       else:
+           dom.destroy()
 
-                # Update server
-                await execute("UPDATE server SET in_upgrade = ? WHERE id = ?", (0, server["id"]))
 
-                # Delete markers
-                await r.delete(f"node_to_migrate:{server['id']}")
-                await r.delete(f"unupgraded_server:{server['id']}")
+async def vds_status(server_id: int, server_node_ip: str) -> dict:
+    with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
+        status = {"ipv4": None, "ipv6": None, "status": None}
 
-        # Delete unpaid server
-        if not server["is_active"]:
-            is_not_expired = await r.get(f"inactive_server:{server['id']}")
+        try:
+            dom = conn.lookupByName(str(server_id))
+            interfaces = dom.interfaceAddresses(libvirt.VIR_DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 
-            if not is_not_expired:
-                # Update node specs
-                node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
-                vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
+            for _, iface_info in interfaces.items():
+                addrs = iface_info.get("addrs", [])
 
-                cores = node["cores_available"] + vds["cores"]
-                ram = node["ram_available"] + vds["ram"]
-                disk_size = node["disk_size_available"] + vds["disk_size"]
+                if addrs:
+                    for i in range(2):
+                        if len(addrs) > i:
+                            prefix = addrs[i].get("prefix")
 
-                if vds["cores"] > node["cores"]:
-                    cores = node["cores"]
+                            if prefix <= 32:
+                                status["ipv4"] = addrs[i].get("addr")
+                            else:
+                                status["ipv6"] = addrs[i].get("addr")
 
-                if vds["ram"] > node["ram"]:
-                    ram = node["ram"]
+            state, _ = dom.state()
 
-                if vds["disk_size"] > node["disk_size"]:
-                    disk_size = node["disk_size"]
+            if state == libvirt.VIR_DOMAIN_RUNNING:
+                status["status"] = "on"
+            else:
+                status["status"] = "off"
+        except libvirt.libvirtError:
+            pass
 
-                await execute(
-                    "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
-                    (cores, ram, disk_size, server["node_id"])
-                )
+        return status
 
-                # Delete server
-                await execute("DELETE FROM server WHERE id = ?", (server["id"],))
+
+async def vds_migrate(server_id: int, server_node_ip: str, dst_node_ip: str) -> None:
+    with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
+        dom = conn.lookupByName(str(server_id))
+        dom.migrateToURI(f"qemu+ssh://{dst_node_ip}/system", 0, None, 0)
+
+        subprocess.run(f"scp root@{server_node_ip}:{IMAGES_PATH}/{server_id}.qcow2 root@{dst_node_ip}:{IMAGES_PATH}/{server_id}.qcow2")
+        subprocess.run(f"ssh root@{server_node_ip} 'rm -f {IMAGES_PATH}/{server_id}.qcow2'")
+
+
+async def vds_upgrade(server_id: int, server_node_ip: str, server_vds: dict) -> None:
+    with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
+        dom = conn.lookupByName(str(server_id))
+        state, _ = dom.state()
+
+        if state == libvirt.VIR_DOMAIN_RUNNING:
+            dom.destroy()
+
+        # Update count of cores and ram
+        xml_desc = dom.XMLDesc()
+        root = ElementTree.fromstring(xml_desc)
+
+        vcpu_element = root.find("vcpu")
+
+        if vcpu_element is not None:
+            vcpu_element.text = f"{server_vds['cores']}"
+
+        memory_element = root.find("memory")
+
+        if memory_element is not None:
+            memory_element.text = f"{1024 * 1024 * server_vds['ram']}"
+
+        current_memory_element = root.find("currentMemory")
+
+        if current_memory_element is not None:
+            current_memory_element.text = f"{1024 * 1024 * server_vds['ram']}"
+
+        new_xml_desc = ElementTree.tostring(root, encoding="unicode")
+        conn.createXML(new_xml_desc)
+
+        # Resize the disk
+        subprocess.run(f"ssh root@{server_node_ip} 'qemu-img resize {IMAGES_PATH}/{server_id}.qcow2 {server_vds['disk_size']}G'")

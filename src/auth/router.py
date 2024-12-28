@@ -20,7 +20,7 @@ async def login(request: Request):
     captcha_lock_id = await r.get(f"captcha:{captcha_id}")
 
     if not captcha_lock_id:
-        return await t_error(request, 400, "Press the Login button within a minute")
+        return await t_error(request, 410, "Press the Login button within a minute")
 
     await r.delete(f"captcha:{captcha_id}")
     captcha_lock = await r.get(f"captcha_lock:{captcha_lock_id}")
@@ -92,7 +92,7 @@ async def register(request: Request):
     captcha_lock_id = await r.get(f"captcha:{captcha_id}")
 
     if not captcha_lock_id:
-        return await t_error(request, 400, "Press the Register button within a minute")
+        return await t_error(request, 410, "Press the Register button within a minute")
 
     await r.delete(f"captcha:{captcha_id}")
     captcha_lock = await r.get(f"captcha_lock:{captcha_lock_id}")

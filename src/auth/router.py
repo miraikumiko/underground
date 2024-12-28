@@ -2,7 +2,7 @@ from uuid import uuid4
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
-from src.config import REGISTRATION
+from src.config import REGISTRATION, TOKEN_EXPIRY_DAYS
 from src.database import r, execute, fetchone, fetchall
 from src.auth.utils import active_user
 from src.display.utils import t_error
@@ -56,7 +56,7 @@ async def login(request: Request):
         if not keys:
             break
 
-    await r.set(f"{user['id']}:auth:{token}", user["id"], ex=86400)
+    await r.set(f"{user['id']}:auth:{token}", user["id"], ex=86400 * TOKEN_EXPIRY_DAYS)
 
     # Login
     servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
@@ -65,7 +65,7 @@ async def login(request: Request):
 
     return RedirectResponse(url, status_code=301, headers={
         "Content-Type": "application/x-www-form-urlencoded",
-        "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age=86400;"
+        "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age={86400 * TOKEN_EXPIRY_DAYS};"
     })
 
 
@@ -119,11 +119,11 @@ async def register(request: Request):
         if not keys:
             break
 
-    await r.set(f"{user_id}:auth:{token}", user_id, ex=86400)
+    await r.set(f"{user_id}:auth:{token}", user_id, ex=86400 * TOKEN_EXPIRY_DAYS)
 
     return RedirectResponse('/', status_code=301, headers={
         "Content-Type": "application/x-www-form-urlencoded",
-        "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age=86400;"
+        "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age={86400 * TOKEN_EXPIRY_DAYS};"
     })
 
 

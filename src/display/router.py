@@ -209,7 +209,7 @@ async def upgrademenu_display(request: Request):
 
 async def upgrade_display(request: Request):
     user = await active_user(request)
-    server_id = request.query_params.get("server_id")
+    server_id = request.path_params.get("server_id")
     product_id = request.query_params.get("product_id")
 
     if not server_id or not product_id:

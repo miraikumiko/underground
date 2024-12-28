@@ -215,10 +215,16 @@ async def upgrade_display(request: Request):
     if not server_id or not product_id:
         return await t_error(request, 400, "The fields server_id and product_id are required")
 
-    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    # Validate product id
+    upgrade_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
+
+    if not upgrade_vds:
+        return await t_error(request, 400, "This product doesn't exist")
 
     # Check server
-    if not server or not server["is_active"] or server["user_id"] != user["id"] or server["vds_id"] >= product_id:
+    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+
+    if not server or not server["is_active"] or server["user_id"] != user["id"] or server["vds_id"] >= upgrade_vds["id"]:
         return await t_error(request, 400, "Invalid server")
 
     # Check if user have active payment
@@ -232,12 +238,6 @@ async def upgrade_display(request: Request):
 
     if cpl:
         return await t_error(request, 400, "You can make only 3 payment requests per day")
-
-    # Validate product id
-    upgrade_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
-
-    if not upgrade_vds:
-        return await t_error(request, 400, "This product doesn't exist")
 
     # Check availability of resources
     node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))

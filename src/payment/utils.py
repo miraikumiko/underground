@@ -120,7 +120,7 @@ async def payment_checkout(txid: str) -> None:
 
     if payment:
         if int(payment["amount"]) == amount:
-            server = await fetchone("SELECT * FROM server WHERE id = ?", (int(payment["server_id"]),))
+            server = await fetchone("SELECT * FROM server WHERE id = ?", (payment["server_id"],))
 
             if payment["type"] == "buy":
                 await execute("UPDATE server SET is_active = ? WHERE id = ?", (1, server["id"]))
@@ -140,14 +140,14 @@ async def payment_checkout(txid: str) -> None:
 
                 # Migrate if needed
                 if dst_node_id:
-                    dst_node = await fetchone("SELECT * FROM node WHERE id = ?", (int(dst_node_id),))
+                    dst_node = await fetchone("SELECT * FROM node WHERE id = ?", (dst_node_id,))
                     await execute(
                         "UPDATE server SET in_upgrade = ?, vds_id = ?, node_id = ?",
-                        (0, int(upgrade_vds_id), dst_node["id"])
+                        (0, upgrade_vds_id, dst_node["id"])
                     )
                     await vds_migrate(server["id"], node["ip"], dst_node)
                 else:
-                    await execute("UPDATE server SET in_upgrade = ?, vds_id = ?", (0, int(upgrade_vds_id)))
+                    await execute("UPDATE server SET in_upgrade = ?, vds_id = ?", (0, upgrade_vds_id))
 
                 # Delete markers
                 await r.delete(f"node_to_migrate:{server['id']}")
@@ -239,9 +239,9 @@ async def expired_check() -> None:
                     await execute(
                         "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
                         (
-                            dst_node["cores_available"] + upgrade_vds["cores"] - server_vds["cores"],
-                            dst_node["ram_available"] + upgrade_vds["ram"] - server_vds["ram"],
-                            dst_node["disk_size_available"] + upgrade_vds["disk_size"] - server_vds["disk_size"],
+                            dst_node["cores_available"] + upgrade_vds["cores"],
+                            dst_node["ram_available"] + upgrade_vds["ram"],
+                            dst_node["disk_size_available"] + upgrade_vds["disk_size"],
                             dst_node["id"]
                         )
                     )

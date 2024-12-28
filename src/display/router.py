@@ -93,7 +93,11 @@ async def promo_display(request: Request):
 
 async def install_display(request: Request):
     _ = await active_user(request)
-    server_id = request.path_params["server_id"]
+    server_id = request.path_params.get("server_id")
+
+    if not server_id:
+        return await t_error(request, 400, "The field server_id is required")
+
     oss = await fetchall("SELECT * FROM os")
 
     return templates.TemplateResponse("install.html", {
@@ -105,7 +109,10 @@ async def install_display(request: Request):
 
 async def vnc_display(request: Request):
     _ = await active_user(request)
-    server_id = request.path_params["server_id"]
+    server_id = request.path_params.get("server_id")
+
+    if not server_id:
+        return await t_error(request, 400, "The field server_id is required")
 
     return templates.TemplateResponse("vnc.html", {
         "request": request,
@@ -115,7 +122,10 @@ async def vnc_display(request: Request):
 
 async def buy_display(request: Request):
     user = await active_user(request)
-    product_id = request.path_params["product_id"]
+    product_id = request.path_params.get("product_id")
+
+    if not product_id:
+        return await t_error(request, 400, "The field product_id is required")
 
     # Check if user have active payment
     cap = await check_active_payment(user["id"])
@@ -142,7 +152,11 @@ async def buy_display(request: Request):
 
 async def pay_display(request: Request):
     user = await active_user(request)
-    server_id = request.path_params["server_id"]
+    server_id = request.path_params.get("server_id")
+
+    if not server_id:
+        return await t_error(request, 400, "The field server_id is required")
+
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     # Check server
@@ -174,7 +188,11 @@ async def pay_display(request: Request):
 
 async def upgrademenu_display(request: Request):
     _ = await active_user(request)
-    server_id = request.path_params["server_id"]
+    server_id = request.path_params.get("server_id")
+
+    if not server_id:
+        return await t_error(request, 400, "The field server_id is required")
+
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
     vdss = await fetchall("SELECT * FROM vds")
     vdss = [vds for vds in vdss if vds["id"] > server["vds_id"]]
@@ -189,9 +207,14 @@ async def upgrademenu_display(request: Request):
     })
 
 
-async def upgrade_display(product_id: int, request: Request):
+async def upgrade_display(request: Request):
     user = await active_user(request)
-    server_id = request.path_params["server_id"]
+    server_id = request.query_params.get("server_id")
+    product_id = request.query_params.get("product_id")
+
+    if not server_id or not product_id:
+        return await t_error(request, 400, "The fields server_id and product_id are required")
+
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     # Check server
@@ -255,7 +278,7 @@ async def upgrade_display(product_id: int, request: Request):
         await r.set(f"upgrade_server:{server_id}", server_id, ex=60 * PAYMENT_TIME)
         await r.set(f"unupgraded_server:{server_id}", upgrade_vds["id"])
 
-        payment_data = await payment_request("upgrade", server_id, product_id)
+        payment_data = await payment_request("upgrade", server["id"], upgrade_vds["id"])
         qrcode = await draw_qrcode(payment_data["payment_uri"])
 
         return await t_checkout(request, qrcode, payment_data["payment_uri"], payment_data["ttl"])

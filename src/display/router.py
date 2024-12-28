@@ -281,7 +281,7 @@ async def upgrade_display(request: Request):
                 )
             )
 
-        await execute("UPDATE server SET in_upgrade = 1 WHERE id = ?", (server["id"],))
+        await execute("UPDATE server SET in_upgrade = ? WHERE id = ?", (1, server["id"]))
 
         # Make payment request and return it uri
         await r.set(f"upgrade_server:{server_id}", server_id, ex=60 * PAYMENT_TIME)

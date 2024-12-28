@@ -230,6 +230,15 @@ async def expired_check() -> None:
                     await execute(
                         "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
                         (
+                            node["cores_available"] - server_vds["cores"],
+                            node["ram_available"] - server_vds["ram"],
+                            node["disk_size_available"] - server_vds["disk_size"],
+                            node["id"]
+                        )
+                    )
+                    await execute(
+                        "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
+                        (
                             dst_node["cores_available"] + upgrade_vds["cores"] - server_vds["cores"],
                             dst_node["ram_available"] + upgrade_vds["ram"] - server_vds["ram"],
                             dst_node["disk_size_available"] + upgrade_vds["disk_size"] - server_vds["disk_size"],

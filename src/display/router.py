@@ -22,8 +22,7 @@ async def index_display(request: Request):
     course = await xmr_course()
     vdss = await fetchall("SELECT * FROM vds")
 
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "index.html", {
         "user": user,
         "course": course,
         "vdss": vdss,
@@ -38,7 +37,7 @@ async def login_display(request: Request):
     await r.set(f"captcha:{captcha_id}", captcha_lock_id, ex=60)
     await r.set(f"captcha_lock:{captcha_lock_id}", 1, ex=2)
 
-    return templates.TemplateResponse("login.html", {"request": request, "captcha_id": captcha_id})
+    return templates.TemplateResponse(request, "login.html", {"captcha_id": captcha_id})
 
 
 async def register_display(request: Request):
@@ -51,7 +50,7 @@ async def register_display(request: Request):
     await r.set(f"captcha:{captcha_id}", captcha_lock_id, ex=60)
     await r.set(f"captcha_lock:{captcha_lock_id}", 1, ex=4)
 
-    return templates.TemplateResponse("register.html", {"request": request, "captcha_id": captcha_id})
+    return templates.TemplateResponse(request, "register.html", {"captcha_id": captcha_id})
 
 
 async def dashboard_display(request: Request):
@@ -78,8 +77,7 @@ async def dashboard_display(request: Request):
 
     servers_and_statuses = zip(active_servers, statuses)
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "dashboard.html", {
         "course": course,
         "servers_and_statuses": servers_and_statuses
     })
@@ -88,7 +86,7 @@ async def dashboard_display(request: Request):
 async def promo_display(request: Request):
     _ = await active_user(request)
 
-    return templates.TemplateResponse("promo.html", {"request": request})
+    return templates.TemplateResponse(request, "promo.html")
 
 
 async def install_display(request: Request):
@@ -100,8 +98,7 @@ async def install_display(request: Request):
 
     oss = await fetchall("SELECT * FROM os")
 
-    return templates.TemplateResponse("install.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "install.html", {
         "server_id": server_id,
         "oss": oss
     })
@@ -114,10 +111,7 @@ async def vnc_display(request: Request):
     if not server_id:
         return await t_error(request, 400, "The field server_id is required")
 
-    return templates.TemplateResponse("vnc.html", {
-        "request": request,
-        "server_id": server_id
-    })
+    return templates.TemplateResponse(request, "vnc.html", {"server_id": server_id})
 
 
 async def buy_display(request: Request):
@@ -200,8 +194,7 @@ async def upgrademenu_display(request: Request):
     if not vdss:
         return await t_error(request, 400, "Your VDS is already fully upgraded")
 
-    return templates.TemplateResponse("upgrade.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "upgrade.html", {
         "vdss": vdss,
         "server_id": server_id
     })

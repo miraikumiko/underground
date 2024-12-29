@@ -13,16 +13,14 @@ templates.env.filters["to_minutes"] = lambda ttl: ttl // 60
 
 
 async def t_error(request: Request, status_code: int, detail: str) -> templates.TemplateResponse:
-    return templates.TemplateResponse("error.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "error.html", {
         "status_code": status_code,
         "detail": detail
     }, status_code=status_code)
 
 
 async def t_checkout(request: Request, qrcode: str, uri: str, ttl: int) -> templates.TemplateResponse:
-    return templates.TemplateResponse("checkout.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "checkout.html", {
         "qrcode": qrcode,
         "uri": uri,
         "ttl": ttl

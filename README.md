@@ -37,7 +37,7 @@ And install requirements:
 python -m venv venv
 . venv/bin/activate
 pip install -U pip
-pip install -r requirements.txt
+pip install -r requirements/base.txt
 ```
 
 ### Cronie

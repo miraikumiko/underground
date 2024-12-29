@@ -88,3 +88,13 @@ rc-service monero-wallet-rpc start
 ### Systemd
 
 `systemctl enable --now sshd libvirtd redis nginx underground.pm monero-wallet-rpc`
+
+## Testing
+
+Install requirements
+
+`pip install -r requirements/dev.txt`
+
+Run tests
+
+`pytest --cov src`

@@ -1,7 +1,6 @@
 from decimal import Decimal
 from datetime import datetime, timedelta, UTC
-import requests
-from requests.auth import HTTPDigestAuth
+import httpx
 from starlette.exceptions import HTTPException
 from src.config import (
     PAYMENT_TIME, PAYMENT_LIMIT,
@@ -17,25 +16,27 @@ async def monero_request(method: str, params: dict = None) -> dict | None:
     if not params:
         params = {}
 
-    res = requests.post(
-        f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}/json_rpc",
-        json={"jsonrpc": "2.0", "id": "0", "method": method, "params": params},
-        headers={"Content-Type": "application/json"},
-        auth=HTTPDigestAuth(MONERO_RPC_USER, MONERO_RPC_PASSWORD)
-    )
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}/json_rpc",
+            json={"jsonrpc": "2.0", "id": "0", "method": method, "params": params},
+            headers={"Content-Type": "application/json"},
+            auth=httpx.DigestAuth(MONERO_RPC_USER, MONERO_RPC_PASSWORD)
+        )
 
-    if res.status_code == 200:
-        return res.json()
+    if response.status_code == 200:
+        return response.json()
 
 
 async def xmr_course() -> float:
     usd = await r.get("xmr_course")
 
     if not usd:
-        res = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
+        async with httpx.AsyncClient() as client:
+            response = await client.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
 
-        if res.status_code == 200:
-            usd = res.json()["monero"]["usd"]
+        if response.status_code == 200:
+            usd = response.json()["monero"]["usd"]
 
             await r.set("xmr_old_course", usd, ex=24 * 60 * 60 * 7)
             await r.set("xmr_course", usd, ex=12 * 60 * 60)
@@ -142,12 +143,15 @@ async def payment_checkout(txid: str) -> None:
                 if dst_node_id:
                     dst_node = await fetchone("SELECT * FROM node WHERE id = ?", (dst_node_id,))
                     await execute(
-                        "UPDATE server SET in_upgrade = ?, vds_id = ?, node_id = ?",
-                        (0, upgrade_vds_id, dst_node["id"])
+                        "UPDATE server SET end_at = ?, in_upgrade = ?, vds_id = ?, node_id = ? WHERE id = ?",
+                        (datetime.strptime(server["end_at"], "%Y-%m-%d %H:%M:%S.%f") + timedelta(days=VDS_DAYS), 0, upgrade_vds_id, dst_node["id"], server["id"])
                     )
                     await vds_migrate(server["id"], node["ip"], dst_node)
                 else:
-                    await execute("UPDATE server SET in_upgrade = ?, vds_id = ?", (0, upgrade_vds_id))
+                    await execute(
+                        "UPDATE server SET end_at = ?, in_upgrade = ?, vds_id = ? WHERE id = ?",
+                        (datetime.strptime(server["end_at"], "%Y-%m-%d %H:%M:%S.%f") + timedelta(days=VDS_DAYS), upgrade_vds_id, server["id"])
+                    )
 
                 # Delete markers
                 await r.delete(f"node_to_migrate:{server['id']}")

@@ -15,7 +15,7 @@ async def install(request: Request):
     os_name = form.get("os")
     server_id = request.path_params.get("server_id")
 
-    if not os or not server_id:
+    if not os_name or not server_id:
         return await t_error(request, 400, "The fields os and server_id are required")
 
     # Check server

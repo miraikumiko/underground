@@ -71,7 +71,7 @@ async def login(request: Request):
 
 async def register(request: Request):
     if not REGISTRATION:
-        return await t_error(request, 400, "Registration is disabled")
+        return await t_error(request, 403, "Registration is disabled")
 
     form = await request.form()
     password1 = form.get("password1")
@@ -104,7 +104,7 @@ async def register(request: Request):
     user = await fetchone("SELECT * FROM user WHERE password = ?", (password1,))
 
     if user:
-        return await t_error(request, 400, "User already exist")
+        return await t_error(request, 409, "User already exist")
 
     # Registration
     user_id = await execute("INSERT INTO user (password) VALUES (?)", (password1,))

@@ -16,21 +16,12 @@ async def vds_install(server: dict, server_node_ip: str, server_vds: dict, os: s
 
         dom.undefine()
 
-    if server_vds["ipv4"] and server_vds["ipv6"]:
-        network = "ipv4_ipv6"
-    elif server_vds["ipv4"]:
-        network = "ipv4"
-    elif server_vds["ipv6"]:
-        network = "ipv6"
-    else:
-        network = "default"
-
     subprocess.Popen(f"""ssh root@{server_node_ip} 'virt-install \
         --name {server['id']} \
         --vcpus {server_vds['cores']} \
         --memory {server_vds['ram'] * 1024} \
         --disk {IMAGES_PATH}/{server['id']}.qcow2,size={server_vds['disk_size']} \
-        --network {network} \
+        --network default \
         --os-variant {os} \
         --cdrom /srv/iso/{os}.iso \
         --graphics vnc,listen={server_node_ip},port={server['vnc_port']}'""", shell=True)

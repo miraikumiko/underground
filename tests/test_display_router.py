@@ -33,35 +33,53 @@ async def test_promo_display(http_client) -> None:
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_install_display(http_client) -> None:
-    response = await http_client.get("/install/1")
+    response = await http_client.get("/install/abc")
+    assert response.status_code == 404
+
+    response = await http_client.get("/install/123")
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_vnc_display(http_client) -> None:
-    response = await http_client.get("/vnc/1")
+    response = await http_client.get("/vnc/abc")
+    assert response.status_code == 404
+
+    response = await http_client.get("/vnc/123")
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_buy_display(http_client) -> None:
-    response = await http_client.get("/buy/1")
+    response = await http_client.get("/buy/abc")
+    assert response.status_code == 404
+
+    response = await http_client.get("/buy/123")
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_pay_display(http_client) -> None:
-    response = await http_client.get("/pay/1")
+    response = await http_client.get("/pay/abc")
+    assert response.status_code == 404
+
+    response = await http_client.get("/pay/123")
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_upgrademenu_display(http_client) -> None:
-    response = await http_client.get("/upgrademenu/1")
+    response = await http_client.get("/upgrademenu/abc")
+    assert response.status_code == 404
+
+    response = await http_client.get("/upgrademenu/123")
     assert response.status_code == 401
 
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_upgrade_display(http_client) -> None:
-    response = await http_client.get("/upgrade/1")
+    response = await http_client.get("/upgrade/abc")
+    assert response.status_code == 404
+
+    response = await http_client.get("/upgrade/123")
     assert response.status_code == 401

@@ -60,10 +60,9 @@ async def login(request: Request):
 
     # Login
     servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
-    active_servers = [server for server in servers if server["is_active"]]
-    url = '/' if not active_servers else "/dashboard"
+    url = '/' if not servers else "/dashboard"
 
-    return RedirectResponse(url, status_code=301, headers={
+    return RedirectResponse(url, 301, {
         "Content-Type": "application/x-www-form-urlencoded",
         "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age={86400 * TOKEN_EXPIRY_DAYS};"
     })
@@ -121,7 +120,7 @@ async def register(request: Request):
 
     await r.set(f"{user_id}:auth:{token}", user_id, ex=86400 * TOKEN_EXPIRY_DAYS)
 
-    return RedirectResponse('/', status_code=301, headers={
+    return RedirectResponse('/', 301, {
         "Content-Type": "application/x-www-form-urlencoded",
         "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age={86400 * TOKEN_EXPIRY_DAYS};"
     })
@@ -130,7 +129,7 @@ async def register(request: Request):
 async def logout(request: Request):
     _ = await active_user(request)
 
-    return RedirectResponse('/', status_code=301, headers={
+    return RedirectResponse('/', 301, {
         "Content-Type": "application/x-www-form-urlencoded",
         "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax;'
     })

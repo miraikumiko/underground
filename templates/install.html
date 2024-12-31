@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <form class="form0" method="post" action="/api/server/install/{{ server_id }}">
+  <form class="form0" method="post" action="/server/install/{{ server_id }}">
     <h2>Please select OS</h2>
     <select name="os">
       {% for os in oss %}

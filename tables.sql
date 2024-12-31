@@ -1,10 +1,21 @@
 CREATE TABLE IF NOT EXISTS user (
     id INTEGER NOT NULL,
     password VARCHAR NOT NULL,
+    balance DECIMAL(15, 12) NOT NULL DEFAULT 0,
     PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ix_user_password ON user (password);
 CREATE INDEX IF NOT EXISTS ix_user_id ON user (id);
+
+CREATE TABLE IF NOT EXISTS payment (
+    id INTEGER NOT NULL,
+    payment_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY(user_id) REFERENCES user (id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_payment_payment_id ON user (password);
+CREATE INDEX IF NOT EXISTS ix_payment_id ON payment (id);
 
 CREATE TABLE IF NOT EXISTS os (
     id INTEGER NOT NULL,
@@ -44,8 +55,6 @@ CREATE TABLE IF NOT EXISTS server (
     vnc_port INTEGER NOT NULL,
     start_at TIMESTAMP NOT NULL,
     end_at TIMESTAMP NOT NULL,
-    is_active BOOLEAN NOT NULL,
-    in_upgrade BOOLEAN NOT NULL,
     vds_id INTEGER NOT NULL,
     node_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,

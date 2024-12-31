@@ -17,7 +17,7 @@ async def test_register(http_client) -> None:
 
     await asyncio.sleep(2)
 
-    response = await http_client.post("/api/auth/register", data={
+    response = await http_client.post("/auth/register", data={
         "password1": SHORT_PASSWORD, "password2": SHORT_PASSWORD, "captcha_id": captcha_id
     })
 
@@ -25,7 +25,7 @@ async def test_register(http_client) -> None:
 
     await asyncio.sleep(2)
 
-    response = await http_client.post("/api/auth/register", data={
+    response = await http_client.post("/auth/register", data={
         "password1": LONG_PASSWORD, "password2": LONG_PASSWORD, "captcha_id": captcha_id
     })
 
@@ -45,7 +45,7 @@ async def test_login(http_client) -> None:
 
     await asyncio.sleep(2)
 
-    response = await http_client.post("/api/auth/login", data={
+    response = await http_client.post("/auth/login", data={
         "password": LONG_PASSWORD, "captcha_id": captcha_id
     })
 
@@ -65,12 +65,12 @@ async def test_logout(http_client) -> None:
 
     await asyncio.sleep(2)
 
-    response = await http_client.post("/api/auth/login", data={
+    response = await http_client.post("/auth/login", data={
         "password": LONG_PASSWORD, "captcha_id": captcha_id
     })
 
     assert response.status_code == 301
 
-    response = await http_client.post("/api/auth/logout")
+    response = await http_client.post("/auth/logout")
 
     assert response.status_code == 301

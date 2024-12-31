@@ -169,6 +169,12 @@ details {
   opacity: 0.8;
 }
 
+.btn3 {
+  width: 20px;
+  padding: 0 8px;
+  filter: brightness(0) invert(1);
+}
+
 @keyframes fadein {
   from {
     opacity: 0;

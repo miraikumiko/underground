@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <form class="form0" method="post" action="/api/auth/login">
+  <form class="form0" method="post" action="/auth/login">
     <h1>Login</h1>
     <input name="password" placeholder="Password" type="password" required>
     <input name="captcha_id" type="hidden" value="{{ captcha_id }}">

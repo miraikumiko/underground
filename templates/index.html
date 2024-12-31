@@ -8,16 +8,18 @@
           <a class="btn0" href="/login">login</a>
           <a class="btn0" href="/register">register</a>
         {% else %}
-          {% if servers %}
+          {% if server %}
             <a class="btn0" href="/dashboard">dashboard</a>
           {% endif %}
           <a class="btn0" href="/promo">promo</a>
-          <form method="post" action="/api/auth/logout">
+          <form method="post" action="/auth/logout">
             <button class="btn0" type="submit">logout</button>
           </form>
         {% endif %}
       </div>
-      <p id="course">1 XMR = ${{ course }}</p>
+      {% if user %}
+        <p id="balance">balance: ${{ user["balance"] | round(2) }}</p>
+      {% endif %}
     </div>
   </header>
   <main>
@@ -32,7 +34,7 @@
             <span>IPv6: {% if vds["ipv6"] %} Yes {% else %} No {% endif %}</span>
             <div class="bottom">
               <span>Total: $<span class="price">{{ vds["price"] }}</span>/mo</span>
-              <a class="btn1" href="/buy/{{ vds['id'] }}">Checkout</a>
+              <a class="btn1" href="/payment/buy/{{ vds['id'] }}">Checkout</a>
             </div>
           </div>
         {% endfor %}

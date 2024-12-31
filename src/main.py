@@ -13,9 +13,9 @@ from src.display.router import display_router
 
 routes = [
     Mount("/static", StaticFiles(directory=f"{BASE_PATH}/static"), name="static"),
-    Mount("/api/auth", routes=auth_router),
-    Mount("/api/payment", routes=payment_router),
-    Mount("/api/server", routes=server_router),
+    Mount("/auth", routes=auth_router),
+    Mount("/payment", routes=payment_router),
+    Mount("/server", routes=server_router),
     Mount("/", routes=display_router)
 ]
 

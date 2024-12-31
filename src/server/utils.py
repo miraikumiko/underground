@@ -83,7 +83,7 @@ async def vds_status(server_id: int, server_node_ip: str) -> dict:
 async def vds_migrate(server_id: int, server_node_ip: str, dst_node_ip: str) -> None:
     with libvirt.open(f"qemu+ssh://{server_node_ip}/system") as conn:
         dom = conn.lookupByName(str(server_id))
-        dom.migrateToURI(f"qemu+ssh://{dst_node_ip}/system", 0, None, 0)
+        dom.migrateToURI(f"qemu+ssh://{dst_node_ip}/system")
 
         subprocess.run(f"scp root@{server_node_ip}:{IMAGES_PATH}/{server_id}.qcow2 root@{dst_node_ip}:{IMAGES_PATH}/{server_id}.qcow2")
         subprocess.run(f"ssh root@{server_node_ip} 'rm -f {IMAGES_PATH}/{server_id}.qcow2'")

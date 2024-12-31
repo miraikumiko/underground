@@ -14,7 +14,7 @@
     import RFB from '/static/noVNC/core/rfb.js';
 
     const screen = document.querySelector("#vnc-screen");
-    const url = `${window.location.protocol === "http:" ? "ws" : "wss"}://${window.location.host}/api/server/vnc/{{ server_id }}`;
+    const url = `${window.location.protocol === "http:" ? "ws" : "wss"}://${window.location.host}/server/vnc/{{ server_id }}`;
     let rfb;
     let desktopName;
 

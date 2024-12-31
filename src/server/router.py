@@ -21,7 +21,7 @@ async def install(request: Request):
     # Check server
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
-    if not server or not server["is_active"] or server["user_id"] != user["id"]:
+    if not server or server["user_id"] != user["id"]:
         return await t_error(request, 403, "Invalid server")
 
     # Check os
@@ -36,7 +36,7 @@ async def install(request: Request):
 
     await vds_install(server, node["ip"], vds, os_name)
 
-    return RedirectResponse("/dashboard", status_code=301)
+    return RedirectResponse("/dashboard", 301)
 
 
 async def action(request: Request):
@@ -49,7 +49,7 @@ async def action(request: Request):
     # Check server
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
-    if not server or not server["is_active"] or server["user_id"] != user["id"]:
+    if not server or server["user_id"] != user["id"]:
         return await t_error(request, 403, "Invalid server")
 
     # Action logic
@@ -57,7 +57,7 @@ async def action(request: Request):
 
     await vds_action(server["id"], node["ip"])
 
-    return RedirectResponse("/dashboard", status_code=301)
+    return RedirectResponse("/dashboard", 301)
 
 
 async def vnc(ws: WebSocket):
@@ -70,7 +70,7 @@ async def vnc(ws: WebSocket):
     # Check server
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
-    if not server or not server["is_active"] or server["user_id"] != user["id"]:
+    if not server or server["user_id"] != user["id"]:
         raise WebSocketDisconnect(code=1008)
 
     # VNC logic

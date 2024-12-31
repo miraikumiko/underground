@@ -9,7 +9,12 @@ from src.config import BASE_PATH
 
 templates = Jinja2Templates(directory=f"{BASE_PATH}/templates")
 templates.env.filters["to_days"] = lambda date: (datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f") - datetime.now()).days
-templates.env.filters["to_minutes"] = lambda ttl: ttl // 60
+
+no_cache_headers = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0"
+}
 
 
 async def t_error(request: Request, status_code: int, detail: str) -> templates.TemplateResponse:

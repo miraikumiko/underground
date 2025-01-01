@@ -90,17 +90,19 @@ async def vnc(ws: WebSocket):
                 if not data:
                     break
                 await ws.send_bytes(data)
-            except Exception:
+            except RuntimeError:
                 break
 
     async def read_from_websocket():
         while True:
-            try:
-                data = await ws.receive()
-                writer.write(data["bytes"])
-                await writer.drain()
-            except Exception:
+            data = await ws.receive()
+            b = data.get("bytes")
+
+            if not b:
                 break
+
+            writer.write(b)
+            await writer.drain()
 
     await asyncio.gather(read_from_vnc(), read_from_websocket())
 

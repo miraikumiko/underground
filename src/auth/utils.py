@@ -21,10 +21,10 @@ async def get_user(request):
 async def active_user(request: Request):
     res = await get_user(request)
 
-    if res:
-        return res
-    else:
+    if not res:
         raise HTTPException(401, "Unauthorized")
+
+    return res
 
 
 async def active_user_opt(request: Request):
@@ -37,7 +37,7 @@ async def active_user_ws(request: WebSocket):
     if "auth" in request.cookies:
         res = await get_user(request)
 
-        if res:
-            return res
-        else:
+        if not res:
             raise WebSocketDisconnect(code=1008)
+
+        return res

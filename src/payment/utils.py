@@ -6,9 +6,6 @@ from src.database import r, execute, fetchall
 
 
 async def monero_request(method: str, params: dict = None) -> dict | None:
-    if not params:
-        params = {}
-
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}/json_rpc",

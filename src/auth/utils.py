@@ -13,7 +13,7 @@ async def get_user(request):
 
             if keys:
                 user_id = keys[0].split(':')[0]
-                user = await fetchone("SELECT * from user where id = ?", (user_id,))
+                user = await fetchone("SELECT * FROM user WHERE id = ?", (user_id,))
 
                 return user
 

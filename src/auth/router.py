@@ -11,22 +11,9 @@ from src.display.utils import t_error
 async def login(request: Request):
     form = await request.form()
     password = form.get("password")
-    captcha_id = form.get("captcha_id")
 
-    if not password or not captcha_id:
-        return await t_error(request, 400, "The fields password and captcha_id are required")
-
-    # Check captcha
-    captcha_lock_id = await r.get(f"captcha:{captcha_id}")
-
-    if not captcha_lock_id:
-        return await t_error(request, 410, "Press the Login button within a minute")
-
-    await r.delete(f"captcha:{captcha_id}")
-    captcha_lock = await r.get(f"captcha_lock:{captcha_lock_id}")
-
-    if captcha_lock:
-        return await t_error(request, 400, "Wait a few seconds before clicking the Login button")
+    if not password:
+        return await t_error(request, 400, "The field password is required")
 
     # Check password
     user = await fetchone("SELECT * FROM user WHERE password = ?", (password,))
@@ -75,29 +62,16 @@ async def register(request: Request):
     form = await request.form()
     password1 = form.get("password1")
     password2 = form.get("password2")
-    captcha_id = form.get("captcha_id")
 
     # Check password
-    if not password1 or not password2 or not captcha_id:
-        return await t_error(request, 400, "The fields password1, password2 and captcha_id are required")
+    if not password1 or not password2:
+        return await t_error(request, 400, "The fields password1 and password2 are required")
 
     if len(password1) not in range(8, 21):
         return await t_error(request, 400, "The password length must be 8-20 characters")
 
     if password1 != password2:
         return await t_error(request, 400, "Passwords don't match")
-
-    # Check captcha
-    captcha_lock_id = await r.get(f"captcha:{captcha_id}")
-
-    if not captcha_lock_id:
-        return await t_error(request, 410, "Press the Register button within a minute")
-
-    await r.delete(f"captcha:{captcha_id}")
-    captcha_lock = await r.get(f"captcha_lock:{captcha_lock_id}")
-
-    if captcha_lock:
-        return await t_error(request, 400, "Wait a few seconds before clicking the Register button")
 
     # Check user
     user = await fetchone("SELECT * FROM user WHERE password = ?", (password1,))

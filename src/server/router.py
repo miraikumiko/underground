@@ -15,8 +15,8 @@ async def install(request: Request):
     os_name = form.get("os")
     server_id = request.path_params.get("server_id")
 
-    if not os_name or not server_id:
-        return await t_error(request, 400, "The fields os and server_id are required")
+    if not os_name:
+        return await t_error(request, 400, "The field os is required")
 
     # Check server
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
@@ -42,13 +42,9 @@ async def install(request: Request):
 async def action(request: Request):
     user = await active_user(request)
     server_id = request.path_params.get("server_id")
-
-    if not server_id:
-        return await t_error(request, 400, "The field server_id is required")
-
-    # Check server
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
+    # Check server
     if not server or server["user_id"] != user["id"]:
         return await t_error(request, 403, "Invalid server")
 
@@ -63,13 +59,9 @@ async def action(request: Request):
 async def vnc(ws: WebSocket):
     user = await active_user_ws(ws)
     server_id = ws.path_params.get("server_id")
-
-    if not server_id:
-        raise WebSocketDisconnect(code=1008)
-
-    # Check server
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
+    # Check server
     if not server or server["user_id"] != user["id"]:
         raise WebSocketDisconnect(code=1008)
 

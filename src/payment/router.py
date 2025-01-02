@@ -13,10 +13,6 @@ from src.display.utils import no_cache_headers, t_error
 async def buy(request: Request):
     user = await active_user(request)
     product_id = request.path_params.get("product_id")
-
-    if not product_id:
-        return await t_error(request, 400, "The field product_id is required")
-
     vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
 
     if not vds:
@@ -48,10 +44,6 @@ async def buy(request: Request):
 async def pay(request: Request):
     user = await active_user(request)
     server_id = request.path_params.get("server_id")
-
-    if not server_id:
-        return await t_error(request, 400, "The field server_id is required")
-
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     # Check server
@@ -86,10 +78,7 @@ async def pay(request: Request):
 async def upgrade(request: Request):
     user = await active_user(request)
     server_id = request.path_params.get("server_id")
-    product_id = request.query_params.get("product_id")
-
-    if not server_id or not product_id:
-        return await t_error(request, 400, "The fields server_id and product_id are required")
+    product_id = request.path_params.get("product_id")
 
     # Validate product id
     upgrade_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
@@ -203,6 +192,6 @@ async def promo(request: Request):
 payment_router = [
     Route("/buy/{product_id:int}", buy, methods=["GET"]),
     Route("/pay/{server_id:int}", pay, methods=["GET"]),
-    Route("/upgrade/{server_id:int}", upgrade, methods=["GET"]),
+    Route("/upgrade/{server_id:int}/{product_id:int}", upgrade, methods=["GET"]),
     Route("/promo", promo, methods=["POST"])
 ]

@@ -17,8 +17,7 @@ async def monero_request(method: str, params: dict = None) -> dict | None:
             auth=httpx.DigestAuth(MONERO_RPC_USER, MONERO_RPC_PASSWORD)
         )
 
-    if response.status_code == 200:
-        return response.json()
+    return response.json()
 
 
 async def xmr_course() -> float:

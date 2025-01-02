@@ -12,16 +12,27 @@ from src.display.utils import templates, no_cache_headers, draw_qrcode
 
 async def index_display(request: Request):
     user = await active_user_opt(request)
+    in_stock = {}
     server = None
 
     if user:
         server = await fetchone("SELECT * FROM server WHERE user_id = ?", (user["id"],))
 
     vdss = await fetchall("SELECT * FROM vds")
+    nodes = await fetchall("SELECT * FROM node")
+
+    for vds in vdss:
+        for node in nodes:
+            if vds["cores"] <= node["cores_available"] and vds["ram"] <= node["ram_available"] and vds["disk_size"] <= node["disk_size_available"]:
+                in_stock[vds["id"]] = True
+                break
+
+            in_stock[vds["id"]] = False
 
     return templates.TemplateResponse(request, "index.html", {
         "user": user,
         "vdss": vdss,
+        "in_stock": in_stock,
         "server": server
     })
 

@@ -34,7 +34,11 @@
             <span>IPv6: {% if vds["ipv6"] %} Yes {% else %} No {% endif %}</span>
             <div class="bottom">
               <span>Total: $<span class="price">{{ vds["price"] }}</span>/mo</span>
-              <a class="btn1" href="/payment/buy/{{ vds['id'] }}">Checkout</a>
+              {% if in_stock[vds["id"]] %}
+                <a class="btn1" href="/payment/buy/{{ vds['id'] }}">Buy Now</a>
+              {% else %}
+                <span class="btn1" style="color: #999">Sold Out</span>
+              {% endif %}
             </div>
           </div>
         {% endfor %}

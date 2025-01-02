@@ -2,8 +2,8 @@ from starlette.applications import Starlette
 from starlette.routing import Mount
 from starlette.staticfiles import StaticFiles
 from starlette.middleware import Middleware
-from starlette.middleware.exceptions import HTTPException, WebSocketException
 from starlette.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException, WebSocketException
 from src.exceptions import handle_error, http_exception, websocket_exception
 from src.config import BASE_PATH
 from src.auth.router import auth_router

@@ -17,19 +17,11 @@ no_cache_headers = {
 }
 
 
-async def t_error(request: Request, status_code: int, detail: str) -> templates.TemplateResponse:
+async def template_error(request: Request, status_code: int, detail: str):
     return templates.TemplateResponse(request, "error.html", {
         "status_code": status_code,
         "detail": detail
     }, status_code=status_code)
-
-
-async def t_checkout(request: Request, qrcode: str, uri: str, ttl: int) -> templates.TemplateResponse:
-    return templates.TemplateResponse(request, "checkout.html", {
-        "qrcode": qrcode,
-        "uri": uri,
-        "ttl": ttl
-    })
 
 
 async def draw_qrcode(text: str) -> str:

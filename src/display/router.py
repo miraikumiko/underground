@@ -1,12 +1,13 @@
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
+from starlette.exceptions import HTTPException
 from src.config import REGISTRATION
 from src.database import fetchone, fetchall
 from src.auth.utils import active_user, active_user_opt
 from src.payment.utils import xmr_course, usd_to_xmr, payment_request
 from src.server.utils import vds_status
-from src.display.utils import templates, no_cache_headers, t_error, draw_qrcode
+from src.display.utils import templates, no_cache_headers, draw_qrcode
 
 
 async def index_display(request: Request):
@@ -31,7 +32,7 @@ async def login_display(request: Request):
 
 async def register_display(request: Request):
     if not REGISTRATION:
-        return await t_error(request, 400, "Registration is disabled")
+        raise HTTPException(400, "Registration is disabled")
 
     return templates.TemplateResponse(request, "register.html")
 
@@ -111,7 +112,7 @@ async def upgrade_display(request: Request):
     vdss = [vds for vds in vdss if vds["id"] > server["vds_id"]]
 
     if not vdss:
-        return await t_error(request, 400, "Your VDS is already fully upgraded")
+        raise HTTPException(400, "Your VDS is already fully upgraded")
 
     return templates.TemplateResponse(request, "upgrade.html", {
         "server_vds_price": server_vds["price"],

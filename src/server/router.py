@@ -3,10 +3,10 @@ from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from starlette.routing import Route, WebSocketRoute
+from starlette.exceptions import HTTPException
 from src.database import fetchone
 from src.auth.utils import active_user, active_user_ws
 from src.server.utils import vds_install, vds_action
-from src.display.utils import t_error
 
 
 async def install(request: Request):
@@ -16,19 +16,19 @@ async def install(request: Request):
     server_id = request.path_params.get("server_id")
 
     if not os_name:
-        return await t_error(request, 400, "The field os is required")
+        raise HTTPException(400, "The field os is required")
 
     # Check server
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     if not server or server["user_id"] != user["id"]:
-        return await t_error(request, 403, "Invalid server")
+        raise HTTPException(403, "Invalid server")
 
     # Check os
     os = await fetchone("SELECT * FROM os WHERE name = ?", (os_name,))
 
     if not os:
-        return await t_error(request, 422, "Invalid OS")
+        raise HTTPException(422, "Invalid OS")
 
     # Installation logic
     node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
@@ -46,7 +46,7 @@ async def action(request: Request):
 
     # Check server
     if not server or server["user_id"] != user["id"]:
-        return await t_error(request, 403, "Invalid server")
+        raise HTTPException(403, "Invalid server")
 
     # Action logic
     node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))

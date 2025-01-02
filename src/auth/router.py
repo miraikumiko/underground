@@ -2,10 +2,10 @@ from uuid import uuid4
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
+from starlette.exceptions import HTTPException
 from src.config import REGISTRATION, TOKEN_EXPIRY_DAYS
 from src.database import r, execute, fetchone, fetchall
 from src.auth.utils import active_user
-from src.display.utils import t_error
 
 
 async def login(request: Request):
@@ -13,13 +13,13 @@ async def login(request: Request):
     password = form.get("password")
 
     if not password:
-        return await t_error(request, 400, "The field password is required")
+        raise HTTPException(400, "The field password is required")
 
     # Check password
     user = await fetchone("SELECT * FROM user WHERE password = ?", (password,))
 
     if not user:
-        return await t_error(request, 401, "Invalid password")
+        raise HTTPException(401, "Invalid password")
 
     # Delete other auth tokens
     cursor = 0
@@ -57,7 +57,7 @@ async def login(request: Request):
 
 async def register(request: Request):
     if not REGISTRATION:
-        return await t_error(request, 403, "Registration is disabled")
+        raise HTTPException(403, "Registration is disabled")
 
     form = await request.form()
     password1 = form.get("password1")
@@ -65,19 +65,19 @@ async def register(request: Request):
 
     # Check password
     if not password1 or not password2:
-        return await t_error(request, 400, "The fields password1 and password2 are required")
+        raise HTTPException(400, "The fields password1 and password2 are required")
 
     if len(password1) not in range(8, 21):
-        return await t_error(request, 400, "The password length must be 8-20 characters")
+        raise HTTPException(400, "The password length must be 8-20 characters")
 
     if password1 != password2:
-        return await t_error(request, 400, "Passwords don't match")
+        raise HTTPException(400, "Passwords don't match")
 
     # Check user
     user = await fetchone("SELECT * FROM user WHERE password = ?", (password1,))
 
     if user:
-        return await t_error(request, 409, "User already exist")
+        raise HTTPException(409, "User already exist")
 
     # Registration
     user_id = await execute("INSERT INTO user (password) VALUES (?)", (password1,))

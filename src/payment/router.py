@@ -2,12 +2,13 @@ from datetime import datetime, timedelta
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
+from starlette.exceptions import HTTPException
 from src.config import VDS_DAYS, VDS_MAX_PAYED_DAYS
 from src.database import execute, fetchone, fetchall
 from src.auth.utils import active_user
 from src.payment.utils import request_vds
 from src.server.utils import vds_migrate, vds_upgrade
-from src.display.utils import no_cache_headers, t_error
+from src.display.utils import no_cache_headers
 
 
 async def buy(request: Request):
@@ -16,7 +17,7 @@ async def buy(request: Request):
     vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
 
     if not vds:
-        return await t_error(request, 400, "This product doesn't exist")
+        raise HTTPException(400, "This product doesn't exist")
 
     # Check availability of resources
     nodes = await fetchall(
@@ -25,7 +26,7 @@ async def buy(request: Request):
     )
 
     if not nodes:
-        return await t_error(request, 503, "We haven't available resources")
+        raise HTTPException(503, "We haven't available resources")
 
     # Buy VDS
     if user["balance"] < vds["price"]:
@@ -48,20 +49,20 @@ async def pay(request: Request):
 
     # Check server
     if not server or server["user_id"] != user["id"]:
-        return await t_error(request, 400, "Invalid server")
+        raise HTTPException(400, "Invalid server")
 
     # Check rent limit
     server_end_at = datetime.strptime(server["end_at"], "%Y-%m-%d %H:%M:%S.%f")
     server_start_at = datetime.strptime(server["start_at"], "%Y-%m-%d %H:%M:%S.%f")
 
     if server_end_at - server_start_at + timedelta(days=VDS_DAYS) > timedelta(days=VDS_MAX_PAYED_DAYS):
-        return await t_error(request, 400, f"You can't pay for more than {VDS_MAX_PAYED_DAYS} days")
+        raise HTTPException(400, f"You can't pay for more than {VDS_MAX_PAYED_DAYS} days")
 
     # Pay VDS
     vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
 
     if user["balance"] < vds["price"]:
-        return await t_error(request, 400, "You haven't enough money")
+        raise HTTPException(400, "You haven't enough money")
 
     await execute(
         "UPDATE user SET balance = ? WHERE id = ?",
@@ -84,13 +85,13 @@ async def upgrade(request: Request):
     upgrade_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
 
     if not upgrade_vds:
-        return await t_error(request, 400, "This product doesn't exist")
+        raise HTTPException(400, "This product doesn't exist")
 
     # Check server
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     if not server or server["user_id"] != user["id"] or server["vds_id"] >= upgrade_vds["id"]:
-        return await t_error(request, 400, "Invalid server")
+        raise HTTPException(400, "Invalid server")
 
     # Check availability of resources
     node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
@@ -101,11 +102,11 @@ async def upgrade(request: Request):
     )
 
     if not nodes:
-        return await t_error(request, 503, "We haven't available resources")
+        raise HTTPException(503, "We haven't available resources")
 
     # Upgrade VDS
     if user["balance"] < upgrade_vds["price"]:
-        return await t_error(request, 400, "You haven't enough money")
+        raise HTTPException(400, "You haven't enough money")
 
     await execute(
         "UPDATE user SET balance = ? WHERE id = ?",
@@ -166,12 +167,12 @@ async def promo(request: Request):
     code = form.get("code")
 
     if not code:
-        return await t_error(request, 400, "The code field is required")
+        raise HTTPException(400, "The code field is required")
 
     promo_code = await fetchone("SELECT * FROM promo WHERE code = ?", (code,))
 
     if not promo_code:
-        return await t_error(request, 400, "Invalid promo code")
+        raise HTTPException(400, "Invalid promo code")
 
     vds = await fetchone("SELECT * FROM vds WHERE id = ?", (promo_code["vds_id"],))
     nodes = await fetchall(
@@ -180,7 +181,7 @@ async def promo(request: Request):
     )
 
     if not nodes:
-        return await t_error(request, 503, "We haven't available resources")
+        raise HTTPException(503, "We haven't available resources")
 
     await request_vds(user["id"], vds, nodes[0])
 

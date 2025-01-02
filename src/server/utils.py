@@ -1,5 +1,5 @@
+import re
 import subprocess
-from xml.etree import ElementTree
 import libvirt
 from src.config import IMAGES_PATH
 
@@ -119,25 +119,11 @@ async def vds_upgrade(server_id: int, server_node_ip: str, server_vds: dict) -> 
 
             # Update count of cores and ram
             xml_desc = dom.XMLDesc()
-            root = ElementTree.fromstring(xml_desc)
+            xml_desc = re.sub(r"<vcpu>(.*?)</vcpu>", f"<vcpu>{server_vds['cores']}</vcpu>", xml_desc)
+            xml_desc = re.sub(r"<memory>(.*?)</memory>", f"<memory>{1024 * 1024 * server_vds['ram']}</memory>", xml_desc)
+            xml_desc = re.sub(r"<currentMemory>(.*?)</currentMemory>", f"<currentMemory>{1024 * 1024 * server_vds['ram']}</currentMemory>", xml_desc)
 
-            vcpu_element = root.find("vcpu")
-
-            if vcpu_element is not None:
-                vcpu_element.text = f"{server_vds['cores']}"
-
-            memory_element = root.find("memory")
-
-            if memory_element is not None:
-                memory_element.text = f"{1024 * 1024 * server_vds['ram']}"
-
-            current_memory_element = root.find("currentMemory")
-
-            if current_memory_element is not None:
-                current_memory_element.text = f"{1024 * 1024 * server_vds['ram']}"
-
-            new_xml_desc = ElementTree.tostring(root, encoding="unicode")
-            conn.createXML(new_xml_desc)
+            conn.createXML(xml_desc)
         except libvirt.libvirtError:
             pass
 

@@ -179,6 +179,16 @@ details {
   filter: brightness(0) invert(1);
 }
 
+.btn4 {
+  color: #999;
+  background: rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  font-weight: normal;
+  text-decoration: none;
+  padding: 10px;
+  border: 1px solid #333;
+}
+
 @keyframes fadein {
   from {
     opacity: 0;

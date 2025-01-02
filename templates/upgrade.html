@@ -12,7 +12,7 @@
           <span>IPv4: {% if vds["ipv4"] %} Yes {% else %} No {% endif %}</span>
           <span>IPv6: {% if vds["ipv6"] %} Yes {% else %} No {% endif %}</span>
           <div class="bottom">
-            <span>Total: $<span class="price">{{ vds["price"] - server_vds_price }}</span>/mo</span>
+            <span>Price: $<span class="price">{{ vds["price"] - server_vds_price }}</span>/mo</span>
             <a class="btn1" href="/payment/upgrade/{{ server_id }}/{{ vds['id'] }}">Upgrade</a>
           </div>
         </div>

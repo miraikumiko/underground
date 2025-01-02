@@ -2,7 +2,7 @@ import sys
 import asyncio
 from decimal import Decimal
 from src.database import execute, fetchone
-from src.payment.utils import monero_request, xmr_course
+from src.payment.utils import monero_request
 
 
 async def payment_checkout(txid: str):
@@ -17,8 +17,7 @@ async def payment_checkout(txid: str):
 
         user_balance = Decimal(user["balance"])
         xmr_amount = Decimal(amount) / Decimal(1_000_000_000_000)
-        course = await xmr_course()
-        balance = float(round(user_balance + xmr_amount * Decimal(course), 8))
+        balance = float(round(user_balance + xmr_amount * Decimal(course), 2))
 
         await execute("UPDATE user SET balance = ? WHERE id = ?", (balance, user["id"]))
         await execute("DELETE FROM payment WHERE id = ?", (payment["id"],))

@@ -1,6 +1,7 @@
 __pycache__
 venv
+build
+dist
+*.egg-info
+.coverage
 *.db
-/.coverage
-/.env
-/.idea

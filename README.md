@@ -105,6 +105,11 @@ http {
 }
 ```
 
+### Monero
+
+`cp contrib/monero/monero_wallet_rpc_run /bin`
+`cp contrib/monero/monero_test_wallet_rpc_run /bin`
+
 ## Start
 
 ### OpenRC
@@ -114,20 +119,22 @@ rc-update add sshd default
 rc-update add libvirtd default
 rc-update add redis default
 rc-update add nginx default
-rc-update add underground.pm default
+rc-update add monerod default
 rc-update add monero-wallet-rpc default
+rc-update add underground.pm default
 
 rc-service sshd start
 rc-service libvirtd start
 rc-service redis start
 rc-service nginx start
-rc-service underground.pm start
+rc-service monerod start
 rc-service monero-wallet-rpc start
+rc-service underground.pm start
 ```
 
 ### Systemd
 
-`systemctl enable --now sshd libvirtd redis nginx underground.pm monero-wallet-rpc`
+`systemctl enable --now sshd libvirtd redis nginx monerod monero-wallet-rpc underground.pm`
 
 ## Testing
 
@@ -156,4 +163,4 @@ or
 
 Run tests
 
-`pytest --cov src`
+`pytest`

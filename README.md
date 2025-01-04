@@ -27,34 +27,47 @@ git submodule update
 
 ### App
 
-For first edit environment varibles:
-
-`cp .env.example .env`
-
-also define some environment varibles for wallet in `/etc/environment`
+Define environment varibles in `/etc/environment`
 
 ```
-MONERO_WALLET_PATH="/var/lib/wallets/underground.pm"
-MONERO_WALLET_PASSWORD="password"
-MONERO_DAEMON_ADDRESS="127.0.0.1:18081"
-MONERO_RPC_PORT="20000"
-MONERO_RPC_LOGIN="username:password"
-MONERO_RPC_LOG_PATH="/dev/null"
-MONERO_TX_PATH="/var/www/underground.pm/venv/bin/python /var/www/underground.pm/checkout.py"
+HOST=127.0.0.1
+PORT=8000
+
+DB_PATH=/var/lib/underground.pm/underground.db
+IMAGES_PATH=/var/lib/libvirt/images
+
+REGISTRATION=true
+TOKEN_EXPIRY_DAYS=7
+
+VDS_DAYS=31
+VDS_MAX_PAYED_DAYS=90
+VDS_EXPIRED_DAYS=1
+
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+MONERO_RPC_IP=127.0.0.1
+MONERO_RPC_PORT=20000
+MONERO_RPC_USERNAME=username
+MONERO_RPC_PASSWORD=password
+MONERO_RPC_LOG_PATH=/dev/null
+
+MONERO_WALLET_PATH=/var/lib/wallets/underground
+MONERO_WALLET_PASSWORD=password
+MONERO_DAEMON_ADDRESS=127.0.0.1:18081
+MONERO_TX_PATH=underground_checkout
 ```
 
-And install requirements:
+Install requirements
 
 ```
-python -m venv venv
-. venv/bin/activate
-pip install -U pip
-pip install -r requirements/base.txt
+pyproject-build
+pip install dist/underground.pm-*-py3-none-any.whl --break-system-packages
 ```
 
 ### Cronie
 
-`*/15 * * * * /var/www/underground.pm/venv/bin/python /var/www/underground.pm/expire.py`
+`*/15 * * * * underground_expire`
 
 ### OpenRC
 
@@ -77,6 +90,19 @@ cp contrib/systemd/monero-wallet-rpc.service /etc/systemd/system/monero-test-wal
 ```
 cp contrib/nginx/sites-available/underground.pm.conf /etc/nginx/sites-available/underground.pm.conf
 ln -s /etc/nginx/sites-available/underground.pm.conf /etc/nginx/sites-enabled/underground.pm.conf
+```
+
+Edit `/etc/nginx/nginx.conf`
+
+```
+http {
+    ...
+
+    limit_req_zone $binary_remote_addr zone=login:10m rate=1r/s;
+    limit_req_zone $binary_remote_addr zone=register:10m rate=1r/m;
+
+    ...
+}
 ```
 
 ## Start
@@ -105,20 +131,18 @@ rc-service monero-wallet-rpc start
 
 ## Testing
 
-Install requirements
-
-`pip install -r requirements/dev.txt`
-
 Define environment varibles for test wallet in `/etc/environment`
 
 ```
-MONERO_TEST_WALLET_PATH="/var/lib/wallets/underground.pm"
-MONERO_TEST_WALLET_PASSWORD="password"
-MONERO_TEST_DAEMON_ADDRESS="127.0.0.1:18081"
-MONERO_TEST_RPC_PORT="20000"
-MONERO_TEST_RPC_LOGIN="username:password"
-MONERO_TEST_RPC_LOG_PATH="/dev/null"
-MONERO_TEST_TX_PATH="/var/www/underground.pm/venv/bin/python /var/www/underground.pm/checkout.py"
+MONERO_TEST_RPC_PORT=20000
+MONERO_TEST_RPC_USERNAME=username
+MONERO_TEST_RPC_PASSWORD=password
+MONERO_TEST_RPC_LOG_PATH=/dev/null
+
+MONERO_TEST_WALLET_PATH=/var/lib/wallets/underground.pm
+MONERO_TEST_WALLET_PASSWORD=password
+MONERO_TEST_DAEMON_ADDRESS=127.0.0.1:18081
+MONERO_TEST_TX_PATH=underground_checkout
 ```
 
 Run test wallet

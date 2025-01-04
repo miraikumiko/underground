@@ -1,0 +1,4 @@
+[console_scripts]
+underground_checkout = underground.checkout:checkout
+underground_expire = underground.expire:expire
+underground_run = underground.main:main

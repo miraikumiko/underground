@@ -12,8 +12,7 @@ After=monerod.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/var/www/underground.pm
-ExecStart=/var/www/underground.pm/venv/bin/python /var/www/underground.pm/run.py
+ExecStart=underground_run
 
 [Install]
 WantedBy=multi-user.target

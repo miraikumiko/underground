@@ -1,4 +1,70 @@
+[build-system]
+requires = ["setuptools >= 75.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "underground.pm"
+description = "Privacy hosting"
+version = "1.0.0"
+authors = [
+    { name = "Yandere", email = "murrr@macaw.me" }
+]
+maintainers = [
+    { name = "Yandere", email = "murrr@macaw.me" }
+]
+keywords = [
+    "Hosting",
+    "Privacy",
+    "Anonymity",
+    "Monero",
+    "XMR"
+]
+requires-python = ">=3.13"
+dependencies = [
+    "aiosqlite==0.20.0",
+    "anyio==4.7.0",
+    "certifi==2024.12.14",
+    "charset-normalizer==3.4.0",
+    "click==8.1.8",
+    "httpx==0.28.1",
+    "h11==0.14.0",
+    "idna==3.10",
+    "Jinja2==3.1.5",
+    "libvirt-python==10.10.0",
+    "MarkupSafe==3.0.2",
+    "pillow==11.0.0",
+    "python-multipart==0.0.20",
+    "qrcode==8.0",
+    "redis==5.2.1",
+    "sniffio==1.3.1",
+    "starlette==0.42.0",
+    "typing_extensions==4.12.2",
+    "urllib3==2.2.3",
+    "uvicorn==0.34.0",
+    "websockets==14.1"
+]
+readme = "README.md"
+license = {file = "LICENSE"}
+
+[project.urls]
+Homepage = "https://underground.pm"
+Source = "https://git.sr.ht/~yandere/underground.pm"
+
+[project.optional-dependencies]
+test = [
+    "pytest-asyncio==0.25.0",
+    "pytest-cov==6.0.0"
+]
+
+[project.scripts]
+underground_run = "underground.main:main"
+underground_checkout = "underground.checkout:checkout"
+underground_expire = "underground.expire:expire"
+
 [tool.pytest.ini_options]
-pythonpath = [".", "src"]
+pythonpath = [".", "underground"]
 asyncio_mode="auto"
 asyncio_default_fixture_loop_scope="session"
+addopts = [
+    "--cov=underground"
+]

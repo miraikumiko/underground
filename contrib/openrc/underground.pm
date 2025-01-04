@@ -4,7 +4,7 @@ description="underground.pm"
 
 name=$RC_SVCNAME
 
-command="/var/www/$name/venv/bin/python /var/www/$name/run.py"
+command="underground_run"
 pidfile="/run/$name.pid"
 
 depend() {
@@ -14,7 +14,6 @@ depend() {
 
 start() {
 	ebegin "Starting $name"
-	cd /var/www/$name
 	start-stop-daemon -bm -S -u root:root -p $pidfile -x $command
 	eend $?
 }

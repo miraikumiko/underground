@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="center">
+    <h1>{{ status_code }}</h1>
+    <p>{{ detail }}</p>
+  </div>
+  <style>
+    body {
+        color: white;
+        background-color: black;
+        background-image: url('{{ url_for("static", path="img/noise.gif") }}');
+        background-size: 200px 160px;
+        text-align: center;
+    }
+    h1 {
+      font-family: Bagel Fat One, Courier New;
+      font-size: 100px;
+    }
+    p {
+      font-family: 'Courier New', monospace;
+      font-size: 20px;
+    }
+    .center {
+        position: fixed;
+        bottom: 15%;
+        top: 40%;
+        right: 20%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+  </style>
+{% endblock %}

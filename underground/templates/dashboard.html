@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <header>
+    <div id="status">
+      <div id="personal">
+        <a class="btn0" href="/">store</a>
+        <form method="post" action="/auth/logout">
+          <button class="btn0" type="submit">logout</button>
+        </form>
+      </div>
+      {% if user %}
+        <p id="balance">balance: ${{ user["balance"] | round(2) }}</p>
+      {% endif %}
+    </div>
+  </header>
+  <main>
+    <div id="servers">
+      <table>
+        <tr>
+          <th></th>
+          <th>IPv4</th>
+          <th>IPv6</th>
+          <th>Days</th>
+        </tr>
+        {% for server, status in servers_and_statuses %}
+          <tr>
+            <td id="status-{{ server['id'] }}" class="vds-status" style="background-color: {% if status['status'] == 'on' %}green{% else %}grey{% endif %}"></td>
+            <td id="ipv4-{{ server['id'] }}">{{ status["ipv4"] }}</td>
+            <td id="ipv6-{{ server['id'] }}">{{ status["ipv6"] }}</td>
+            <td>{{ server["end_at"] | to_days }}</td>
+            <td>
+              <form method="post" action="/server/action/{{ server['id'] }}">
+                <button style="display: contents; cursor: pointer;" type="submit">
+                  <img class="btn3" src="{{ url_for('static', path='img/system-shutdown-symbolic.svg') }}" alt="power">
+                </button>
+              </form>
+            </td>
+            <td>
+              <a style="display: contents" href="/install/{{ server['id'] }}">
+                <img class="btn3" src="{{ url_for('static', path='img/install.svg') }}" alt="install">
+              </a>
+            </td>
+            <td>
+              <a style="display: contents" href="/vnc/{{ server['id'] }}">
+                <img class="btn3" src="{{ url_for('static', path='img/video-display-symbolic.svg') }}" alt="vnc">
+              </a>
+            </td>
+            <td>
+              <a class="btn0" style="display: contents" href="/payment/pay/{{ server['id'] }}">pay</a>
+            </td>
+            <td>
+              <a class="btn0" style="display: contents" href="/upgrademenu/{{ server['id'] }}">upgrade</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </main>
+{% endblock %}

@@ -7,7 +7,7 @@ After=network-online.target
 Type=simple
 User=root
 EnvironmentFile=/etc/environment
-ExecStart=/var/www/underground.pm/contrib/monero/run-test.sh
+ExecStart=monero_test_wallet_rpc_run
 
 [Install]
 WantedBy=multi-user.target

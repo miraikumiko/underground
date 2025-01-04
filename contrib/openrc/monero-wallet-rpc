@@ -1,7 +1,7 @@
 #!/sbin/openrc-run
 
 description="Monero Wallet RPC"
-command="/var/www/underground.pm/contrib/monero/run.sh"
+command="monero_wallet_rpc_run"
 
 depend() {
     need net

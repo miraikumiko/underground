@@ -58,16 +58,22 @@ MONERO_DAEMON_ADDRESS=127.0.0.1:18081
 MONERO_TX_PATH=underground_checkout
 ```
 
-Install requirements
+Install requirements and build the app
 
 ```
-pyproject-build
-pip install dist/underground.pm-*-py3-none-any.whl --break-system-packages
+python -m venv venv
+. venv/bin/activate
+pip install .
+pyproject-build --wheel
 ```
+
+Install the app
+
+`pip install dist/underground.pm-*-py3-none-any.whl --break-system-packages`
 
 ### Cronie
 
-`*/15 * * * * underground_expire`
+`0 0 * * * underground_expire`
 
 ### OpenRC
 

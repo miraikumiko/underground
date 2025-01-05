@@ -58,6 +58,13 @@ MONERO_DAEMON_ADDRESS=127.0.0.1:18081
 MONERO_TX_PATH=underground_checkout
 ```
 
+Install noVNC dependencies
+
+```
+cd underground/static/noVNC
+npm i
+```
+
 Install requirements and build the app
 
 ```

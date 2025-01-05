@@ -1,7 +1,7 @@
 from decimal import Decimal
 from datetime import datetime, timedelta, UTC
 import httpx
-from underground.config import VDS_DAYS, MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USER, MONERO_RPC_PASSWORD
+from underground.config import VDS_DAYS, MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USERNAME, MONERO_RPC_PASSWORD
 from underground.database import r, execute, fetchall
 
 
@@ -11,7 +11,7 @@ async def monero_request(method: str, params: dict = None) -> dict | None:
             f"http://{MONERO_RPC_IP}:{MONERO_RPC_PORT}/json_rpc",
             json={"jsonrpc": "2.0", "id": "0", "method": method, "params": params},
             headers={"Content-Type": "application/json"},
-            auth=httpx.DigestAuth(MONERO_RPC_USER, MONERO_RPC_PASSWORD)
+            auth=httpx.DigestAuth(MONERO_RPC_USERNAME, MONERO_RPC_PASSWORD)
         )
 
     return response.json()

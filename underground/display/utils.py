@@ -1,12 +1,16 @@
+import io
 import base64
-from io import BytesIO
+import pathlib
 from datetime import datetime
 from qrcode import QRCode
 from qrcode.constants import ERROR_CORRECT_L
 from starlette.requests import Request
 from starlette.templating import Jinja2Templates
 
-templates = Jinja2Templates(directory="underground/templates")
+current_file_path = pathlib.Path(__file__).resolve()
+templates_dir = current_file_path.parent.parent.joinpath("templates")
+
+templates = Jinja2Templates(directory=templates_dir)
 templates.env.filters["to_days"] = lambda date: (datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f") - datetime.now()).days
 
 no_cache_headers = {
@@ -28,7 +32,7 @@ async def draw_qrcode(text: str) -> str:
     qr.add_data(text)
     qr.make()
     img = qr.make_image()
-    img_bytes = BytesIO()
+    img_bytes = io.BytesIO()
     img.save(img_bytes, format="PNG")
     img_bytes.seek(0)
     qrcode = base64.b64encode(img_bytes.getvalue()).decode("utf-8")

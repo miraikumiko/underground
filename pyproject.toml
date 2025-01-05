@@ -63,6 +63,18 @@ underground_run = "underground.main:main"
 underground_checkout = "underground.checkout:checkout"
 underground_expire = "underground.expire:expire"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "underground"
+]
+exclude = [
+    "contrib"
+]
+
+[tool.setuptools.package-data]
+underground = ["templates", "static"]
+
 [tool.pytest.ini_options]
 pythonpath = [".", "underground"]
 asyncio_mode="auto"

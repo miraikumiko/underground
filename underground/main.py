@@ -1,3 +1,4 @@
+import pathlib
 import uvicorn
 from starlette.applications import Starlette
 from starlette.routing import Mount
@@ -12,8 +13,11 @@ from underground.payment.router import payment_router
 from underground.server.router import server_router
 from underground.display.router import display_router
 
+current_file_path = pathlib.Path(__file__).resolve()
+static_dir = current_file_path.parent.joinpath("static")
+
 routes = [
-    Mount("/static", StaticFiles(directory="underground/static"), name="static"),
+    Mount("/static", StaticFiles(directory=static_dir), name="static"),
     Mount("/auth", routes=auth_router),
     Mount("/payment", routes=payment_router),
     Mount("/server", routes=server_router),
@@ -23,8 +27,8 @@ routes = [
 middleware = [
     Middleware(
         CORSMiddleware,
-        allow_origins=["*"],
         allow_credentials=True,
+        allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"]
     )

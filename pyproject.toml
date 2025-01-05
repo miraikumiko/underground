@@ -66,14 +66,15 @@ underground_expire = "underground.expire:expire"
 [tool.setuptools.packages.find]
 where = ["."]
 include = [
-    "underground"
+    "underground",
+    "underground.*"
 ]
 exclude = [
     "contrib"
 ]
 
 [tool.setuptools.package-data]
-underground = ["templates", "static"]
+underground = ["templates/**/*", "static/**/*"]
 
 [tool.pytest.ini_options]
 pythonpath = [".", "underground"]

@@ -88,7 +88,7 @@ cp contrib/openrc/monero-wallet-rpc /etc/init.d/monero-test-wallet-rpc
 ```
 cp contrib/systemd/underground.pm.service /etc/systemd/system/underground.pm.service
 cp contrib/systemd/monero-wallet-rpc.service /etc/systemd/system/monero-wallet-rpc.service
-cp contrib/systemd/monero-wallet-rpc.service /etc/systemd/system/monero-test-wallet-rpc.service
+cp contrib/systemd/monero-test-wallet-rpc.service /etc/systemd/system/monero-test-wallet-rpc.service
 ```
 
 ### Nginx

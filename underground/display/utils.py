@@ -8,7 +8,7 @@ from starlette.templating import Jinja2Templates
 from underground.config import BASE_DIR
 
 templates = Jinja2Templates(directory=BASE_DIR.joinpath("templates"))
-templates.env.filters["to_days"] = lambda date: (datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f") - datetime.now()).days
+templates.env.filters["to_days"] = lambda date: (datetime.fromisoformat(date) - datetime.now()).days
 
 no_cache_headers = {
     "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",

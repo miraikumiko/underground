@@ -1,5 +1,5 @@
 from decimal import Decimal
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta
 import httpx
 from underground.config import VDS_DAYS, MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USERNAME, MONERO_RPC_PASSWORD
 from underground.database import execute, fetchall
@@ -45,8 +45,8 @@ async def request_vds(user_id: int, vds: dict, node: dict) -> None:
             vnc_port += 1
 
     # Registration of new server
-    start_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S.%f")
-    end_at = datetime.now() + timedelta(days=VDS_DAYS)
+    start_at = datetime.now()
+    end_at = (datetime.now() + timedelta(days=VDS_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
 
     await execute(
         "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",

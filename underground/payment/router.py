@@ -54,8 +54,8 @@ async def pay(request: Request):
         raise HTTPException(400, "Invalid server")
 
     # Check rent limit
-    server_end_at = datetime.strptime(server["end_at"], "%Y-%m-%d %H:%M:%S.%f")
-    server_start_at = datetime.strptime(server["start_at"], "%Y-%m-%d %H:%M:%S.%f")
+    server_end_at = datetime.fromisoformat(server["end_at"])
+    server_start_at = datetime.fromisoformat(server["start_at"])
 
     if server_end_at - server_start_at + timedelta(days=VDS_DAYS) > timedelta(days=VDS_MAX_PAYED_DAYS):
         raise HTTPException(400, f"You can't pay for more than {VDS_MAX_PAYED_DAYS} days")
@@ -71,7 +71,9 @@ async def pay(request: Request):
         (user["balance"] - vds["price"], user["id"])
     )
 
-    end_at = datetime.strptime(server["end_at"], "%Y-%m-%d %H:%M:%S.%f") + timedelta(days=VDS_DAYS)
+    end_at = (
+        datetime.fromisoformat(server["end_at"]) + timedelta(days=VDS_DAYS)
+    ).strftime("%Y-%m-%d %H:%M:%S")
 
     await execute("UPDATE server SET end_at = ? WHERE id = ?", (end_at, server["id"]))
 

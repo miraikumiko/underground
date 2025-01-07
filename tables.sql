@@ -1,10 +1,12 @@
 CREATE TABLE IF NOT EXISTS user (
     id INTEGER NOT NULL,
     password VARCHAR NOT NULL,
+    token VARCHAR,
     balance DECIMAL(15, 12) NOT NULL DEFAULT 0,
     PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ix_user_password ON user (password);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_user_token ON user (token);
 CREATE INDEX IF NOT EXISTS ix_user_id ON user (id);
 
 CREATE TABLE IF NOT EXISTS payment (
@@ -14,7 +16,7 @@ CREATE TABLE IF NOT EXISTS payment (
     PRIMARY KEY (id),
     FOREIGN KEY(user_id) REFERENCES user (id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS ix_payment_payment_id ON user (password);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_payment_payment_id ON payment (payment_id);
 CREATE INDEX IF NOT EXISTS ix_payment_id ON payment (id);
 
 CREATE TABLE IF NOT EXISTS os (

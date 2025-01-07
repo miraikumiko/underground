@@ -1,18 +1,19 @@
 from datetime import datetime, timedelta
+from starlette.authentication import requires
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from underground.config import VDS_DAYS, VDS_MAX_PAYED_DAYS
 from underground.database import execute, fetchone, fetchall
-from underground.auth.utils import active_user
 from underground.payment.utils import request_vds
 from underground.server.utils import vds_migrate, vds_upgrade
 from underground.display.utils import no_cache_headers
 
 
+@requires("authenticated")
 async def buy(request: Request):
-    user = await active_user(request)
+    user = request.user
     product_id = request.path_params.get("product_id")
     vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
 
@@ -42,8 +43,9 @@ async def buy(request: Request):
     return RedirectResponse("/dashboard", 301, no_cache_headers)
 
 
+@requires("authenticated")
 async def pay(request: Request):
-    user = await active_user(request)
+    user = request.user
     server_id = request.path_params.get("server_id")
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
@@ -76,8 +78,9 @@ async def pay(request: Request):
     return RedirectResponse("/dashboard", 301, no_cache_headers)
 
 
+@requires("authenticated")
 async def upgrade(request: Request):
-    user = await active_user(request)
+    user = request.user
     server_id = request.path_params.get("server_id")
     product_id = request.path_params.get("product_id")
 
@@ -161,8 +164,9 @@ async def upgrade(request: Request):
     return RedirectResponse("/dashboard", 301, no_cache_headers)
 
 
+@requires("authenticated")
 async def promo(request: Request):
-    user = await active_user(request)
+    user = request.user
     form = await request.form()
     code = form.get("code")
 

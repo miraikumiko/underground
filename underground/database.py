@@ -1,8 +1,5 @@
 import aiosqlite
-import redis
-from underground.config import DB_PATH, REDIS_HOST, REDIS_PORT
-
-r = redis.asyncio.from_url(f"redis://{REDIS_HOST}:{REDIS_PORT}", decode_responses=True)
+from underground.config import DB_PATH
 
 
 async def execute_query(query: str, parameters: tuple = (), fetch: str = None):

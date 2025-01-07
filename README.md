@@ -6,12 +6,12 @@ Privacy hosting
 
 * python
 * pip
-* redis
-* nginx
-* ssh
+* curl
+* jq
 * cronie
 * libvirt
 * monero
+* nginx
 * openrc/systemd
 
 ## Installing
@@ -37,14 +37,10 @@ DB_PATH=/var/lib/underground.pm/underground.db
 IMAGES_PATH=/var/lib/libvirt/images
 
 REGISTRATION=true
-TOKEN_EXPIRY_DAYS=7
 
 VDS_DAYS=31
 VDS_MAX_PAYED_DAYS=90
 VDS_EXPIRED_DAYS=1
-
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
 
 MONERO_RPC_IP=127.0.0.1
 MONERO_RPC_PORT=20000
@@ -80,7 +76,10 @@ Install the app
 
 ### Cronie
 
-`0 0 * * * underground_expire`
+```
+0 0 * * * underground_expire
+0 */12 * * * curl -s "https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd" | jq .monero.usd > /tmp/xmr_course
+```
 
 ### OpenRC
 

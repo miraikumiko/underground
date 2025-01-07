@@ -1,11 +1,12 @@
 from uuid import uuid4
+from starlette.authentication import requires
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
 from starlette.exceptions import HTTPException
-from underground.config import REGISTRATION, TOKEN_EXPIRY_DAYS
-from underground.database import r, execute, fetchone, fetchall
-from underground.auth.utils import active_user
+from underground.config import REGISTRATION
+from underground.database import execute, fetchone, fetchall
+from underground.display.utils import no_cache_headers
 
 
 async def login(request: Request):
@@ -21,38 +22,22 @@ async def login(request: Request):
     if not user:
         raise HTTPException(401, "Invalid password")
 
-    # Delete other auth tokens
-    cursor = 0
-
-    while True:
-        cursor, keys = await r.scan(cursor, match=f"{user['id']}:auth:*", count=100)
-
-        for key in keys:
-            await r.delete(key)
-
-        if cursor == 0:
-            break
-
     # Create auth token
-    cursor = 0
-
     while True:
-        token = uuid4()
-        cursor, keys = await r.scan(cursor, match=f"*:auth:{token}", count=100)
+        token = str(uuid4())
+        token_exists = await fetchone("SELECT * FROM user WHERE token = ?", (token,))
 
-        if not keys:
+        if not token_exists:
+            await execute("UPDATE user SET token = ? WHERE id = ?", (token, user["id"]))
             break
-
-    await r.set(f"{user['id']}:auth:{token}", user["id"], ex=86400 * TOKEN_EXPIRY_DAYS)
 
     # Login
-    servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
-    url = '/' if not servers else "/dashboard"
+    server = await fetchone("SELECT * FROM server WHERE user_id = ?", (user["id"],))
 
-    return RedirectResponse(url, 301, {
+    return RedirectResponse("/dashboard" if server else '/', 301, {
         "Content-Type": "application/x-www-form-urlencoded",
-        "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age={86400 * TOKEN_EXPIRY_DAYS};"
-    })
+        "Set-Cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age=2592000"
+    } | no_cache_headers)
 
 
 async def register(request: Request):
@@ -79,33 +64,27 @@ async def register(request: Request):
     if user:
         raise HTTPException(409, "User already exist")
 
-    # Registration
-    user_id = await execute("INSERT INTO user (password) VALUES (?)", (password1,))
-
-    # Create token
-    cursor = 0
-
+    # Create auth token
     while True:
-        token = uuid4()
-        cursor, keys = await r.scan(cursor, match=f"*:auth:{token}", count=100)
+        token = str(uuid4())
+        token_exists = await fetchone("SELECT * FROM user WHERE token = ?", (token,))
 
-        if not keys:
+        if not token_exists:
+            # Registration
+            await execute("INSERT INTO user (password, token) VALUES (?, ?)", (password1, token))
             break
-
-    await r.set(f"{user_id}:auth:{token}", user_id, ex=86400 * TOKEN_EXPIRY_DAYS)
 
     return RedirectResponse('/', 301, {
         "Content-Type": "application/x-www-form-urlencoded",
-        "set-cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age={86400 * TOKEN_EXPIRY_DAYS};"
+        "Set-Cookie": f"auth={token}; HttpOnly; Path=/; SameSite=lax; Max-Age=2592000"
     })
 
 
+@requires("authenticated")
 async def logout(request: Request):
-    _ = await active_user(request)
-
     return RedirectResponse('/', 301, {
         "Content-Type": "application/x-www-form-urlencoded",
-        "set-cookie": 'auth=""; HttpOnly; Max-Age=0; Path=/; SameSite=lax;'
+        "Set-Cookie": 'auth=; HttpOnly; Path=/; SameSite=lax; Max-Age=0'
     })
 
 

@@ -1,22 +1,24 @@
+from starlette.authentication import requires, UnauthenticatedUser
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from underground.config import REGISTRATION
 from underground.database import fetchone, fetchall
-from underground.auth.utils import active_user, active_user_opt
 from underground.payment.utils import xmr_course, usd_to_xmr, payment_request
 from underground.server.utils import vds_status
 from underground.display.utils import templates, no_cache_headers, draw_qrcode
 
 
 async def index_display(request: Request):
-    user = await active_user_opt(request)
+    user = request.user
     in_stock = {}
     server = None
 
-    if user:
+    if not isinstance(user, UnauthenticatedUser):
         server = await fetchone("SELECT * FROM server WHERE user_id = ?", (user["id"],))
+    else:
+        user = None
 
     vdss = await fetchall("SELECT * FROM vds")
     nodes = await fetchall("SELECT * FROM node")
@@ -48,8 +50,9 @@ async def register_display(request: Request):
     return templates.TemplateResponse(request, "register.html")
 
 
+@requires("authenticated")
 async def dashboard_display(request: Request):
-    user = await active_user(request)
+    user = request.user
     servers = await fetchall("SELECT * FROM server WHERE user_id = ?", (user["id"],))
     statuses = []
 
@@ -76,14 +79,14 @@ async def dashboard_display(request: Request):
     })
 
 
+@requires("authenticated")
 async def promo_display(request: Request):
-    _ = await active_user(request)
-
     return templates.TemplateResponse(request, "promo.html")
 
 
+@requires("authenticated")
 async def checkout_display(request: Request):
-    user = await active_user(request)
+    user = request.user
     vds_id = request.path_params.get("product_id")
     vds = await fetchone("SELECT * FROM vds WHERE id = ?", (vds_id,))
     amount = await usd_to_xmr(vds["price"])
@@ -99,23 +102,23 @@ async def checkout_display(request: Request):
     })
 
 
+@requires("authenticated")
 async def install_display(request: Request):
-    _ = await active_user(request)
     server_id = request.path_params.get("server_id")
     oss = await fetchall("SELECT * FROM os")
 
     return templates.TemplateResponse(request, "install.html", {"server_id": server_id, "oss": oss})
 
 
+@requires("authenticated")
 async def vnc_display(request: Request):
-    _ = await active_user(request)
     server_id = request.path_params.get("server_id")
 
     return templates.TemplateResponse(request, "vnc.html", {"server_id": server_id})
 
 
+@requires("authenticated")
 async def upgrade_display(request: Request):
-    _ = await active_user(request)
     server_id = request.path_params.get("server_id")
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
     server_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))

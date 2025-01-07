@@ -2,7 +2,7 @@ from decimal import Decimal
 from datetime import datetime, timedelta, UTC
 import httpx
 from underground.config import VDS_DAYS, MONERO_RPC_IP, MONERO_RPC_PORT, MONERO_RPC_USERNAME, MONERO_RPC_PASSWORD
-from underground.database import r, execute, fetchall
+from underground.database import execute, fetchall
 
 
 async def monero_request(method: str, params: dict = None) -> dict | None:
@@ -18,22 +18,8 @@ async def monero_request(method: str, params: dict = None) -> dict | None:
 
 
 async def xmr_course() -> float:
-    usd = await r.get("xmr_course")
-
-    if not usd:
-        async with httpx.AsyncClient() as client:
-            response = await client.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
-
-        if response.status_code == 200:
-            usd = response.json()["monero"]["usd"]
-
-            await r.set("xmr_old_course", usd, ex=24 * 60 * 60)
-            await r.set("xmr_course", usd, ex=12 * 60 * 60)
-        else:
-            usd = await r.get("xmr_old_course")
-            await r.set("xmr_course", usd, ex=12 * 60 * 60)
-
-    return usd
+    with open("/tmp/xmr_course") as file:
+        return float(file.read())
 
 
 async def usd_to_xmr(usd: float) -> int:

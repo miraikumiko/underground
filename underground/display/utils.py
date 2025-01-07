@@ -1,16 +1,13 @@
 import io
 import base64
-import pathlib
 from datetime import datetime
 from qrcode import QRCode
 from qrcode.constants import ERROR_CORRECT_L
 from starlette.requests import Request
 from starlette.templating import Jinja2Templates
+from underground.config import BASE_DIR
 
-current_file_path = pathlib.Path(__file__).resolve()
-templates_dir = current_file_path.parent.parent.joinpath("templates")
-
-templates = Jinja2Templates(directory=templates_dir)
+templates = Jinja2Templates(directory=BASE_DIR.joinpath("templates"))
 templates.env.filters["to_days"] = lambda date: (datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f") - datetime.now()).days
 
 no_cache_headers = {

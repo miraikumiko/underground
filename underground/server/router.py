@@ -1,16 +1,17 @@
 import asyncio
+from starlette.authentication import requires
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from starlette.routing import Route, WebSocketRoute
 from starlette.exceptions import HTTPException
 from underground.database import fetchone
-from underground.auth.utils import active_user, active_user_ws
 from underground.server.utils import vds_install, vds_action
 
 
+@requires("authenticated")
 async def install(request: Request):
-    user = await active_user(request)
+    user = request.user
     form = await request.form()
     os_name = form.get("os")
     server_id = request.path_params.get("server_id")
@@ -39,8 +40,9 @@ async def install(request: Request):
     return RedirectResponse("/dashboard", 301)
 
 
+@requires("authenticated")
 async def action(request: Request):
-    user = await active_user(request)
+    user = request.user
     server_id = request.path_params.get("server_id")
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
@@ -56,9 +58,10 @@ async def action(request: Request):
     return RedirectResponse("/dashboard", 301)
 
 
-async def vnc(ws: WebSocket):
-    user = await active_user_ws(ws)
-    server_id = ws.path_params.get("server_id")
+@requires("authenticated")
+async def vnc(websocket: WebSocket):
+    user = websocket.user
+    server_id = websocket.path_params.get("server_id")
     server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
 
     # Check server
@@ -66,14 +69,14 @@ async def vnc(ws: WebSocket):
         raise WebSocketDisconnect(code=1008)
 
     # VNC logic
-    await ws.accept()
+    await websocket.accept()
 
     node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
 
     try:
         reader, writer = await asyncio.open_connection(node["ip"], server["vnc_port"])
     except ConnectionRefusedError:
-        return await ws.close(1013, "VNC Server isn't running now")
+        return await websocket.close(1013, "VNC Server isn't running now")
 
     async def read_from_vnc():
         while True:
@@ -81,13 +84,13 @@ async def vnc(ws: WebSocket):
                 data = await reader.read(4096)
                 if not data:
                     break
-                await ws.send_bytes(data)
+                await websocket.send_bytes(data)
             except RuntimeError:
                 break
 
     async def read_from_websocket():
         while True:
-            data = await ws.receive()
+            data = await websocket.receive()
             b = data.get("bytes")
 
             if not b:

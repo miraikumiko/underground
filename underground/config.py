@@ -9,7 +9,7 @@ config = Config("/etc/environment")
 HOST = config("HOST")
 PORT = config("PORT", cast=int)
 
-DB_PATH = config("DB_PATH")
+DB_URL = config("DB_URL")
 IMAGES_PATH = config("IMAGES_PATH")
 
 REGISTRATION = config("REGISTRATION", cast=bool)

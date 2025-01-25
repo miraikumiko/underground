@@ -13,7 +13,7 @@ async def payment_checkout(txid: str):
     payment = await fetchone("SELECT * FROM payment WHERE payment_id = ?", (payment_id,))
 
     if payment:
-        user = await fetchone("SELECT * FROM user WHERE id = ?", (payment["user_id"],))
+        user = await fetchone("SELECT * FROM users WHERE id = ?", (payment["user_id"],))
 
         user_balance = Decimal(user["balance"])
         xmr_amount = Decimal(amount) / Decimal(1_000_000_000_000)

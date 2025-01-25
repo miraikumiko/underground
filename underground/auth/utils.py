@@ -10,7 +10,7 @@ class CookieAuthBackend(AuthenticationBackend):
         token = conn.cookies.get("auth")
 
         if token:
-            user = await fetchone("SELECT * FROM user WHERE token = ?", (token,))
+            user = await fetchone("SELECT * FROM users WHERE token = ?", (token,))
 
             if user:
                 return AuthCredentials(["authenticated"]), user

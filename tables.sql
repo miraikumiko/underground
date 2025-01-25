@@ -1,20 +1,20 @@
-CREATE TABLE IF NOT EXISTS user (
+CREATE TABLE IF NOT EXISTS users (
     id INTEGER NOT NULL,
     password VARCHAR NOT NULL,
     token VARCHAR,
     balance DECIMAL(15, 12) NOT NULL DEFAULT 0,
     PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS ix_user_password ON user (password);
-CREATE UNIQUE INDEX IF NOT EXISTS ix_user_token ON user (token);
-CREATE INDEX IF NOT EXISTS ix_user_id ON user (id);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_user_password ON users (password);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_user_token ON users (token);
+CREATE INDEX IF NOT EXISTS ix_user_id ON users (id);
 
 CREATE TABLE IF NOT EXISTS payment (
     id INTEGER NOT NULL,
     payment_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     PRIMARY KEY (id),
-    FOREIGN KEY(user_id) REFERENCES user (id)
+    FOREIGN KEY(user_id) REFERENCES users (id)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ix_payment_payment_id ON payment (payment_id);
 CREATE INDEX IF NOT EXISTS ix_payment_id ON payment (id);
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS server (
     PRIMARY KEY (id),
     FOREIGN KEY(vds_id) REFERENCES vds (id),
     FOREIGN KEY(node_id) REFERENCES node (id),
-    FOREIGN KEY(user_id) REFERENCES user (id)
+    FOREIGN KEY(user_id) REFERENCES users (id)
 );
 CREATE INDEX IF NOT EXISTS ix_server_id ON server (id);
 

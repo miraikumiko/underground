@@ -11,6 +11,7 @@ Privacy hosting
 * cronie
 * libvirt
 * monero
+* postgresql
 * nginx
 * openrc/systemd
 
@@ -33,7 +34,7 @@ Define environment varibles in `/etc/environment`
 HOST=127.0.0.1
 PORT=8000
 
-DB_PATH=/var/lib/underground.pm/underground.db
+DB_URL=postgresql://user:password@localhost/dbname
 IMAGES_PATH=/var/lib/libvirt/images
 
 REGISTRATION=true
@@ -73,6 +74,21 @@ pyproject-build --wheel
 Install the app
 
 `pip install dist/underground.pm-*-py3-none-any.whl --break-system-packages`
+
+### Postgresql
+
+Execute it in Postgres shell
+
+```
+CREATE USER underground WITH PASSWORD 'underground';
+CREATE DATABASE underground;
+ALTER DATABASE underground OWNER TO underground;
+GRANT ALL PRIVILEGES ON DATABASE underground TO underground;
+```
+
+and run
+
+`psql -U underground -d underground -f tables.sql`
 
 ### Cronie
 
@@ -163,6 +179,10 @@ MONERO_TEST_WALLET_PASSWORD=password
 MONERO_TEST_DAEMON_ADDRESS=127.0.0.1:18081
 MONERO_TEST_TX_PATH=underground_checkout
 ```
+
+Install requirements and build the app
+
+`pip install .[dev]`
 
 Run test wallet
 

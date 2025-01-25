@@ -17,7 +17,7 @@ async def login(request: Request):
         raise HTTPException(400, "The field password is required")
 
     # Check password
-    user = await fetchone("SELECT * FROM user WHERE password = ?", (password,))
+    user = await fetchone("SELECT * FROM users WHERE password = ?", (password,))
 
     if not user:
         raise HTTPException(401, "Invalid password")
@@ -25,7 +25,7 @@ async def login(request: Request):
     # Create auth token
     while True:
         token = str(uuid4())
-        token_exists = await fetchone("SELECT * FROM user WHERE token = ?", (token,))
+        token_exists = await fetchone("SELECT * FROM users WHERE token = ?", (token,))
 
         if not token_exists:
             await execute("UPDATE user SET token = ? WHERE id = ?", (token, user["id"]))
@@ -59,7 +59,7 @@ async def register(request: Request):
         raise HTTPException(400, "Passwords don't match")
 
     # Check user
-    user = await fetchone("SELECT * FROM user WHERE password = ?", (password1,))
+    user = await fetchone("SELECT * FROM users WHERE password = ?", (password1,))
 
     if user:
         raise HTTPException(409, "User already exist")
@@ -67,7 +67,7 @@ async def register(request: Request):
     # Create auth token
     while True:
         token = str(uuid4())
-        token_exists = await fetchone("SELECT * FROM user WHERE token = ?", (token,))
+        token_exists = await fetchone("SELECT * FROM users WHERE token = ?", (token,))
 
         if not token_exists:
             # Registration

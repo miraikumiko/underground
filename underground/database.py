@@ -1,20 +1,18 @@
-import aiosqlite
-from underground.config import DB_PATH
+import asyncpg
+from underground.config import DB_URL
 
 
 async def execute_query(query: str, parameters: tuple = (), fetch: str = None):
-    async with aiosqlite.connect(DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
+	db_pool = await asyncpg.create_pool(dsn=DB_URL, min_size=1, max_size=10)
 
-        async with await db.execute(query, parameters) as cursor:
-            if fetch == "one":
-                return await cursor.fetchone()
+    async with db_pool.acquire() as connection:
+        if fetch == "one":
+            return await connection.fetchrow(query, *parameters)
 
-            if fetch == "all":
-                return await cursor.fetchall()
+        if fetch == "all":
+            return await connection.fetch(query, *parameters)
 
-            await db.commit()
-            return cursor.lastrowid
+        return await connection.execute(query, *parameters)
 
 
 async def execute(query: str, parameters: tuple = ()):

@@ -7,10 +7,10 @@ name = "underground.pm"
 description = "Privacy hosting"
 version = "1.0.0"
 authors = [
-    { name = "Yandere", email = "murrr@macaw.me" }
+    { name = "Mirai Kumiko", email = "murrr@macaw.me" }
 ]
 maintainers = [
-    { name = "Yandere", email = "murrr@macaw.me" }
+    { name = "Mirai Kumiko", email = "murrr@macaw.me" }
 ]
 keywords = [
     "Hosting",

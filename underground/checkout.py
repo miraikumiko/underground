@@ -14,7 +14,6 @@ async def payment_checkout(txid: str):
 
     if payment:
         user = await fetchone("SELECT * FROM users WHERE id = ?", (payment["user_id"],))
-
         user_balance = Decimal(user["balance"])
         xmr_amount = Decimal(amount) / Decimal(1_000_000_000_000)
         course = await xmr_course()

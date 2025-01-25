@@ -1,11 +1,12 @@
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER NOT NULL,
+    username VARCHAR NOT NULL,
     password VARCHAR NOT NULL,
     token VARCHAR,
     balance DECIMAL(15, 12) NOT NULL DEFAULT 0,
     PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS ix_user_password ON users (password);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_user_username ON users (username);
 CREATE UNIQUE INDEX IF NOT EXISTS ix_user_token ON users (token);
 CREATE INDEX IF NOT EXISTS ix_user_id ON users (id);
 

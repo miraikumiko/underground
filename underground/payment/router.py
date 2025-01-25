@@ -34,7 +34,7 @@ async def buy(request: Request):
         return RedirectResponse(f"/checkout/{product_id}", 301, no_cache_headers)
 
     await execute(
-        "UPDATE user SET balance = ? WHERE id = ?",
+        "UPDATE users SET balance = ? WHERE id = ?",
         (user["balance"] - vds["price"], user["id"])
     )
 
@@ -67,7 +67,7 @@ async def pay(request: Request):
         raise HTTPException(400, "You haven't enough money")
 
     await execute(
-        "UPDATE user SET balance = ? WHERE id = ?",
+        "UPDATE users SET balance = ? WHERE id = ?",
         (user["balance"] - vds["price"], user["id"])
     )
 
@@ -114,7 +114,7 @@ async def upgrade(request: Request):
         raise HTTPException(400, "You haven't enough money")
 
     await execute(
-        "UPDATE user SET balance = ? WHERE id = ?",
+        "UPDATE users SET balance = ? WHERE id = ?",
         (user["balance"] - upgrade_vds["price"] + server_vds["price"], user["id"])
     )
 

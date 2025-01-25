@@ -19,7 +19,7 @@ async def payment_checkout(txid: str):
         course = await xmr_course()
         balance = float(round(user_balance + xmr_amount * Decimal(course), 2))
 
-        await execute("UPDATE user SET balance = ? WHERE id = ?", (balance, user["id"]))
+        await execute("UPDATE users SET balance = ? WHERE id = ?", (balance, user["id"]))
         await execute("DELETE FROM payment WHERE id = ?", (payment["id"],))
 
 

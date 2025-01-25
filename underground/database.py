@@ -3,7 +3,7 @@ from underground.config import DB_URL
 
 
 async def execute_query(query: str, parameters: tuple = (), fetch: str = None):
-	db_pool = await asyncpg.create_pool(dsn=DB_URL, min_size=1, max_size=10)
+    db_pool = await asyncpg.create_pool(dsn=DB_URL, min_size=1, max_size=10)
 
     async with db_pool.acquire() as connection:
         if fetch == "one":

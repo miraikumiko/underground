@@ -5,9 +5,9 @@ from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from underground.config import REGISTRATION
 from underground.database import fetchone, fetchall
-from underground.payment.utils import xmr_course, usd_to_xmr, payment_request
-from underground.server.utils import vds_status
-from underground.display.utils import templates, no_cache_headers, draw_qrcode
+from underground.utils.payment import xmr_course, usd_to_xmr, payment_request
+from underground.utils.server import vds_status
+from underground.utils.display import templates, no_cache_headers, draw_qrcode
 
 
 async def index_display(request: Request):

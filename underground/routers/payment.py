@@ -6,9 +6,9 @@ from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from underground.config import VDS_DAYS, VDS_MAX_PAYED_DAYS
 from underground.database import execute, fetchone, fetchall
-from underground.payment.utils import request_vds
-from underground.server.utils import vds_migrate, vds_upgrade
-from underground.display.utils import no_cache_headers
+from underground.utils.payment import request_vds
+from underground.utils.server import vds_migrate, vds_upgrade
+from underground.utils.display import no_cache_headers
 
 
 @requires("authenticated")

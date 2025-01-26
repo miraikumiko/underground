@@ -6,8 +6,8 @@ from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from underground.config import REGISTRATION
 from underground.database import execute, fetchone, fetchall
-from underground.auth.utils import pwd
-from underground.display.utils import no_cache_headers
+from underground.utils.auth import pwd
+from underground.utils.display import no_cache_headers
 
 
 async def login(request: Request):
@@ -19,7 +19,7 @@ async def login(request: Request):
         raise HTTPException(400, "The fields username and password are required")
 
     # Check password
-    user = await fetchone("SELECT * FROM users WHERE username = ?", (username,))
+    user = await fetchone("SELECT * FROM users WHERE username = $1", username)
 
     if not user:
         raise HTTPException(401, "User doesn't exist")
@@ -30,14 +30,14 @@ async def login(request: Request):
     # Create auth token
     while True:
         token = str(uuid4())
-        token_exists = await fetchone("SELECT * FROM users WHERE token = ?", (token,))
+        token_exists = await fetchone("SELECT * FROM users WHERE token = $1", token)
 
         if not token_exists:
-            await execute("UPDATE users SET token = ? WHERE id = ?", (token, user["id"]))
+            await execute("UPDATE users SET token = $1 WHERE id = $2", token, user["id"])
             break
 
     # Login
-    server = await fetchone("SELECT * FROM server WHERE user_id = ?", (user["id"],))
+    server = await fetchone("SELECT * FROM server WHERE user_id = $1", user["id"])
 
     return RedirectResponse("/dashboard" if server else '/', 301, {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -61,7 +61,7 @@ async def register(request: Request):
         raise HTTPException(400, "The password length must be 8-20 characters")
 
     # Check user
-    user = await fetchone("SELECT * FROM users WHERE username = ?", (username,))
+    user = await fetchone("SELECT * FROM users WHERE username = $1;", username)
 
     if user:
         raise HTTPException(409, "User already exist")
@@ -69,13 +69,13 @@ async def register(request: Request):
     # Create auth token
     while True:
         token = str(uuid4())
-        token_exists = await fetchone("SELECT * FROM users WHERE token = ?", (token,))
+        token_exists = await fetchone("SELECT * FROM users WHERE token = $1;", token)
 
         if not token_exists:
             # Registration
             await execute(
-                "INSERT INTO users (password, token) VALUES (?, ?)",
-                (pwd.hash(password), token)
+                "INSERT INTO users (username, password, token) VALUES ($1, $2, $3);",
+                username, pwd.hash(password), token
             )
             break
 

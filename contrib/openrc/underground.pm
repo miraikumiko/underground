@@ -9,7 +9,7 @@ pidfile="/run/$name.pid"
 
 depend() {
 	need net
-	need redis
+	need postgresql
 }
 
 start() {

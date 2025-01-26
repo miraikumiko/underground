@@ -8,11 +8,12 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException, WebSocketException
 from underground.exceptions import handle_error, http_exception, websocket_exception
 from underground.config import BASE_DIR, HOST, PORT
-from underground.auth.utils import CookieAuthBackend
-from underground.auth.router import auth_router
-from underground.payment.router import payment_router
-from underground.server.router import server_router
-from underground.display.router import display_router
+from underground.database import lifespan
+from underground.utils.auth import CookieAuthBackend
+from underground.routers.auth import auth_router
+from underground.routers.payment import payment_router
+from underground.routers.server import server_router
+from underground.routers.display import display_router
 
 routes = [
     Mount("/static", StaticFiles(directory=BASE_DIR.joinpath("static")), name="static"),
@@ -42,7 +43,7 @@ exception_handlers = {
     WebSocketException: websocket_exception
 }
 
-app = Starlette(routes=routes, middleware=middleware, exception_handlers=exception_handlers)
+app = Starlette(routes=routes, middleware=middleware, exception_handlers=exception_handlers, lifespan=lifespan)
 
 
 def main():

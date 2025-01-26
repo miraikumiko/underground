@@ -2,11 +2,11 @@
 Description=underground.pm
 Wants=network-online.target
 Wants=libvirtd.service
-Wants=redis.service
+Wants=postgresql.service
 Wants=monerod.service
 After=network-online.target
 After=libvirtd.service
-After=redis.service
+After=postgresql.service
 After=monerod.service
 
 [Service]

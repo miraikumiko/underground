@@ -1,7 +1,7 @@
 from starlette.requests import Request
 from starlette.websockets import WebSocket
 from starlette.middleware.exceptions import HTTPException, WebSocketException
-from underground.display.utils import template_error
+from underground.utils.display import template_error
 
 
 async def handle_error(request: Request, _: Exception):

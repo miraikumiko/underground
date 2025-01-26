@@ -6,18 +6,16 @@ Privacy hosting
 
 * python
 * pip
-* curl
-* jq
-* cronie
+* npm
 * libvirt
-* monero
 * postgresql
 * nginx
+* monero
 * openrc/systemd
 
 ## Installing
 
-Clone repository into `/var/www/underground.pm` and download submodules:
+Clone repository and download submodules:
 
 ```
 git submodule init
@@ -34,10 +32,9 @@ Define environment varibles in `/etc/environment`
 HOST=127.0.0.1
 PORT=8000
 
-DB_URL=postgresql://user:password@localhost/dbname
-IMAGES_PATH=/var/lib/libvirt/images
+DATABASE_URL=postgresql://user:password@localhost/dbname
 
-REGISTRATION=true
+IMAGES_PATH=/var/lib/libvirt/images
 
 VDS_DAYS=31
 VDS_MAX_PAYED_DAYS=90
@@ -90,29 +87,6 @@ and run
 
 `psql -U underground -d underground -f tables.sql`
 
-### Cronie
-
-```
-0 0 * * * underground_expire
-0 */12 * * * curl -s "https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd" | jq .monero.usd > /tmp/xmr_course
-```
-
-### OpenRC
-
-```
-cp contrib/openrc/underground.pm /etc/init.d/underground.pm
-cp contrib/openrc/monero-wallet-rpc /etc/init.d/monero-wallet-rpc
-cp contrib/openrc/monero-wallet-rpc /etc/init.d/monero-test-wallet-rpc
-```
-
-### Systemd
-
-```
-cp contrib/systemd/underground.pm.service /etc/systemd/system/underground.pm.service
-cp contrib/systemd/monero-wallet-rpc.service /etc/systemd/system/monero-wallet-rpc.service
-cp contrib/systemd/monero-test-wallet-rpc.service /etc/systemd/system/monero-test-wallet-rpc.service
-```
-
 ### Nginx
 
 ```
@@ -138,6 +112,23 @@ http {
 `cp contrib/monero/monero_wallet_rpc_run /bin`
 `cp contrib/monero/monero_test_wallet_rpc_run /bin`
 
+### OpenRC
+
+```
+cp contrib/openrc/underground.pm /etc/init.d/underground.pm
+cp contrib/openrc/monero-wallet-rpc /etc/init.d/monero-wallet-rpc
+cp contrib/openrc/monero-wallet-rpc /etc/init.d/monero-test-wallet-rpc
+```
+
+### Systemd
+
+```
+cp contrib/systemd/underground.pm.service /etc/systemd/system/underground.pm.service
+cp contrib/systemd/monero-wallet-rpc.service /etc/systemd/system/monero-wallet-rpc.service
+cp contrib/systemd/monero-test-wallet-rpc.service /etc/systemd/system/monero-test-wallet-rpc.service
+```
+
+
 ## Start
 
 ### OpenRC
@@ -145,7 +136,7 @@ http {
 ```
 rc-update add sshd default
 rc-update add libvirtd default
-rc-update add redis default
+rc-update add postgresql default
 rc-update add nginx default
 rc-update add monerod default
 rc-update add monero-wallet-rpc default
@@ -153,7 +144,7 @@ rc-update add underground.pm default
 
 rc-service sshd start
 rc-service libvirtd start
-rc-service redis start
+rc-service postgresql start
 rc-service nginx start
 rc-service monerod start
 rc-service monero-wallet-rpc start
@@ -162,7 +153,8 @@ rc-service underground.pm start
 
 ### Systemd
 
-`systemctl enable --now sshd libvirtd redis nginx monerod monero-wallet-rpc underground.pm`
+`systemctl enable --now sshd libvirtd postgresql nginx monerod monero-wallet-rpc underground.pm`
+
 
 ## Testing
 

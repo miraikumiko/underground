@@ -1,27 +1,17 @@
-import asyncpg
-from underground.config import DB_URL
+import contextlib
+import databases
+import sqlalchemy
+from underground.config import TESTING, DATABASE_URL, TEST_DATABASE_URL
 
+metadata = sqlalchemy.MetaData()
 
-async def execute_query(query: str, parameters: tuple = (), fetch: str = None):
-    db_pool = await asyncpg.create_pool(dsn=DB_URL, min_size=1, max_size=10)
+if TESTING:
+    database = databases.Database(TEST_DATABASE_URL, force_rollback=True)
+else:
+    database = databases.Database(DATABASE_URL)
 
-    async with db_pool.acquire() as connection:
-        if fetch == "one":
-            return await connection.fetchrow(query, *parameters)
-
-        if fetch == "all":
-            return await connection.fetch(query, *parameters)
-
-        return await connection.execute(query, *parameters)
-
-
-async def execute(query: str, parameters: tuple = ()):
-    return await execute_query(query, parameters)
-
-
-async def fetchone(query: str, parameters: tuple = ()):
-    return await execute_query(query, parameters, fetch="one")
-
-
-async def fetchall(query: str, parameters: tuple = ()):
-    return await execute_query(query, parameters, fetch="all")
+@contextlib.asynccontextmanager
+async def lifespan(_):
+    await database.connect()
+    yield
+    await database.disconnect()

@@ -2,7 +2,7 @@ import sys
 import asyncio
 from decimal import Decimal
 from underground.database import execute, fetchone
-from underground.payment.utils import monero_request, xmr_course
+from underground.utils.payment import monero_request, xmr_course
 
 
 async def payment_checkout(txid: str):

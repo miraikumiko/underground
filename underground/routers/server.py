@@ -6,7 +6,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from starlette.routing import Route, WebSocketRoute
 from starlette.exceptions import HTTPException
 from underground.database import fetchone
-from underground.server.utils import vds_install, vds_action
+from underground.utils.server import vds_install, vds_action
 
 
 @requires("authenticated")

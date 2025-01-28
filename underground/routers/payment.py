@@ -5,7 +5,8 @@ from starlette.responses import RedirectResponse
 from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from underground.config import VDS_DAYS, VDS_MAX_PAYED_DAYS
-from underground.database import execute, fetchone, fetchall
+from underground.database import database
+from underground.models import User, Promocode, VDS, Node, Server
 from underground.utils.payment import request_vds
 from underground.utils.server import vds_migrate, vds_upgrade
 from underground.utils.display import no_cache_headers
@@ -15,30 +16,26 @@ from underground.utils.display import no_cache_headers
 async def buy(request: Request):
     user = request.user
     product_id = request.path_params.get("product_id")
-    vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
+    vds = await database.fetch_one(VDS.select().where(VDS.c.id == product_id))
 
     if not vds:
         raise HTTPException(400, "This product doesn't exist")
 
     # Check availability of resources
-    nodes = await fetchall(
-        "SELECT * FROM node WHERE cores_available >= ? AND ram_available >= ? AND disk_size_available >= ?",
-        (vds["cores"], vds["ram"], vds["disk_size"])
+    nodes = await database.fetch_all(
+        Node.select().where(Node.c.cores_available >= vds.cores and Node.c.ram_available >= vds.ram and Node.c.disk_size_available >= vds.disk_size)
     )
 
     if not nodes:
         raise HTTPException(503, "We haven't available resources")
 
     # Buy VDS
-    if user["balance"] < vds["price"]:
+    if user.balance < vds.price:
         return RedirectResponse(f"/checkout/{product_id}", 301, no_cache_headers)
 
-    await execute(
-        "UPDATE users SET balance = ? WHERE id = ?",
-        (user["balance"] - vds["price"], user["id"])
-    )
+    await database.execute(User.update().where(User.c.id == user.id).values(balance=user.balance - vds.price))
 
-    await request_vds(user["id"], vds, nodes[0])
+    await request_vds(user.id, vds, nodes[0])
 
     return RedirectResponse("/dashboard", 301, no_cache_headers)
 
@@ -47,35 +44,30 @@ async def buy(request: Request):
 async def pay(request: Request):
     user = request.user
     server_id = request.path_params.get("server_id")
-    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    server = await database.fetch_one(Server.select().where(Server.c.id == server_id))
 
     # Check server
-    if not server or server["user_id"] != user["id"]:
+    if not server or server.user_id != user.id:
         raise HTTPException(400, "Invalid server")
 
     # Check rent limit
-    server_end_at = datetime.fromisoformat(server["end_at"])
-    server_start_at = datetime.fromisoformat(server["start_at"])
+    server_end_at = datetime.fromisoformat(server.end_at)
+    server_start_at = datetime.fromisoformat(server.start_at)
 
     if server_end_at - server_start_at + timedelta(days=VDS_DAYS) > timedelta(days=VDS_MAX_PAYED_DAYS):
         raise HTTPException(400, f"You can't pay for more than {VDS_MAX_PAYED_DAYS} days")
 
     # Pay VDS
-    vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
+    vds = await database.fetch_one(VDS.select().where(VDS.c.id == server.vds_id))
 
-    if user["balance"] < vds["price"]:
+    if user.balance < vds.price:
         raise HTTPException(400, "You haven't enough money")
 
-    await execute(
-        "UPDATE users SET balance = ? WHERE id = ?",
-        (user["balance"] - vds["price"], user["id"])
-    )
+    await database.execute(User.update().where(User.c.id == user.id).values(balance=user.balance - vds.price))
 
-    end_at = (
-        datetime.fromisoformat(server["end_at"]) + timedelta(days=VDS_DAYS)
-    ).strftime("%Y-%m-%d %H:%M:%S")
+    end_at = (datetime.fromisoformat(server.end_at) + timedelta(days=VDS_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
 
-    await execute("UPDATE server SET end_at = ? WHERE id = ?", (end_at, server["id"]))
+    await database.execute(Server.update().where(Server.c.id == server.id).values(end_at=end_at))
 
     return RedirectResponse("/dashboard", 301, no_cache_headers)
 
@@ -87,81 +79,65 @@ async def upgrade(request: Request):
     product_id = request.path_params.get("product_id")
 
     # Validate product id
-    upgrade_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (product_id,))
+    upgrade_vds = await database.fetch_one(VDS.select().where(VDS.c.id == product_id))
 
     if not upgrade_vds:
         raise HTTPException(400, "This product doesn't exist")
 
     # Check server
-    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    server = await database.fetch_one(Server.select().where(Server.c.id == server_id))
 
-    if not server or server["user_id"] != user["id"] or server["vds_id"] >= upgrade_vds["id"]:
+    if not server or server.user_id != user.id or server.vds_id >= upgrade_vds.id:
         raise HTTPException(400, "Invalid server")
 
     # Check availability of resources
-    node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
-    server_vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
-    nodes = await fetchall(
-        "SELECT * FROM node WHERE cores_available >= ? AND ram_available >= ? AND disk_size_available >= ?",
-        (upgrade_vds["cores"], upgrade_vds["ram"], upgrade_vds["disk_size"])
+    node = await database.fetch_one(Node.select().where(Node.c.id == server.node_id))
+    server_vds = await database.fetch_one(VDS.select().where(VDS.c.id == server.vds_id))
+    nodes = await database.fetch_all(
+        Node.select().where(Node.c.cores_available >= upgrade_vds.cores and Node.c.ram_available >= upgrade_vds.ram and Node.c.disk_size_available >= upgrade_vds.disk_size)
     )
 
     if not nodes:
         raise HTTPException(503, "We haven't available resources")
 
     # Upgrade VDS
-    if user["balance"] < upgrade_vds["price"]:
+    if user.balance < upgrade_vds.price:
         raise HTTPException(400, "You haven't enough money")
 
-    await execute(
-        "UPDATE users SET balance = ? WHERE id = ?",
-        (user["balance"] - upgrade_vds["price"] + server_vds["price"], user["id"])
-    )
+    await database.execute(User.update().where(User.c.id == user.id).values(balance=user.balance - upgrade_vds.price + server_vds.price))
 
     if node in nodes:
-        await execute(
-            "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
-            (
-                node["cores_available"] - upgrade_vds["cores"] + server_vds["cores"],
-                node["ram_available"] - upgrade_vds["ram"] + server_vds["ram"],
-                node["disk_size_available"] - upgrade_vds["disk_size"] + server_vds["disk_size"],
-                server["node_id"]
+        await database.execute(
+            Node.update().where(Node.c.id == server.node_id).values(
+                cores_available=node.cores_available - upgrade_vds.cores + server_vds.cores,
+                ram_available=node.ram_available - upgrade_vds.ram + server_vds.ram,
+                disk_size_available=node.disk_size_available - upgrade_vds.disk_size + server_vds.disk_size
             )
         )
-        await execute(
-            "UPDATE server SET vds_id = ? WHERE id = ?",
-            (upgrade_vds["id"], server["id"])
-        )
+        await database.execute(Server.update().where(Server.c.id == server.id).values(vds_id=upgrade_vds.id))
 
-        await vds_upgrade(server["id"], node["ip"], server_vds)
+        await vds_upgrade(server.id, node.ip, server_vds)
     else:
         dst_node = nodes[0]
 
-        await execute(
-            "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
-            (
-                node["cores_available"] + server_vds["cores"],
-                node["ram_available"] + server_vds["ram"],
-                node["disk_size_available"] + server_vds["disk_size"],
-                node["id"]
+        await database.execute(
+            Node.update().where(Node.c.id == node.id).values(
+                cores_available=node.cores_available + server_vds.cores,
+                ram_available=node.ram_available + server_vds.ram,
+                disk_size_available=node.disk_size_available + server_vds.disk_size
             )
         )
-        await execute(
-            "UPDATE node SET cores_available = ?, ram_available = ?, disk_size_available = ? WHERE id = ?",
-            (
-                dst_node["cores_available"] - upgrade_vds["cores"],
-                dst_node["ram_available"] - upgrade_vds["ram"],
-                dst_node["disk_size_available"] - upgrade_vds["disk_size"],
-                dst_node["id"]
+        await database.execute(
+            Node.update().where(Node.c.id == dst_node.id).values(
+                cores_available=dst_node.cores_available - upgrade_vds.cores,
+                ram_available=dst_node.ram_available - upgrade_vds.ram,
+                disk_size_available=dst_node.disk_size_available - upgrade_vds.disk_size
             )
         )
-        await execute(
-            "UPDATE server SET vds_id = ?, node_id = ? WHERE id = ?",
-            (upgrade_vds["id"], dst_node["id"], server["id"])
-        )
+        await database.execute(Server.update().where(Server.c.id == server.id).values(vds_id=upgrade_vds.id, node_id=dst_node.id))
 
-        await vds_upgrade(server["id"], node["ip"], server_vds)
-        await vds_migrate(server["id"], node["ip"], dst_node)
+        await vds_upgrade(server.id, node.ip, server_vds)
+        await vds_migrate(server.id, node.ip, dst_node)
 
     return RedirectResponse("/dashboard", 301, no_cache_headers)
 
@@ -175,23 +151,22 @@ async def promo(request: Request):
     if not code:
         raise HTTPException(400, "The code field is required")
 
-    promo_code = await fetchone("SELECT * FROM promo WHERE code = ?", (code,))
+    promo_code = await database.fetch_one(Promocode.select().where(Promocode.c.code == code))
 
     if not promo_code:
         raise HTTPException(400, "Invalid promo code")
 
-    vds = await fetchone("SELECT * FROM vds WHERE id = ?", (promo_code["vds_id"],))
-    nodes = await fetchall(
-        "SELECT * FROM node WHERE cores_available >= ? AND ram_available >= ? AND disk_size_available >= ?",
-        (vds["cores"], vds["ram"], vds["disk_size"])
+    vds = await database.fetch_one(VDS.select().where(VDS.c.id == promo_code.vds_id))
+    nodes = await database.fetch_all(
+        Node.select().where(Node.c.cores_available >= vds.cores and Node.c.ram_available >= vds.ram and Node.c.disk_size_available >= vds.disk_size)
     )
 
     if not nodes:
         raise HTTPException(503, "We haven't available resources")
 
-    await request_vds(user["id"], vds, nodes[0])
+    await request_vds(user.id, vds, nodes[0])
 
-    await execute("DELETE FROM promo WHERE id = ?", (promo_code["id"],))
+    await database.execute(Promocode.delete().where(Promocode.c.id == promo_code.id))
 
     return RedirectResponse("/dashboard", 301, no_cache_headers)
 

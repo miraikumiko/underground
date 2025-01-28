@@ -5,7 +5,8 @@ from starlette.responses import RedirectResponse
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from starlette.routing import Route, WebSocketRoute
 from starlette.exceptions import HTTPException
-from underground.database import fetchone
+from underground.database import database
+from underground.models import IsoImage, VDS, Node, Server
 from underground.utils.server import vds_install, vds_action
 
 
@@ -20,22 +21,22 @@ async def install(request: Request):
         raise HTTPException(400, "The field os is required")
 
     # Check server
-    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    server = await database.fetch_one(Server.select().where(Server.c.id == server_id))
 
-    if not server or server["user_id"] != user["id"]:
+    if not server or server.user_id != user.id:
         raise HTTPException(403, "Invalid server")
 
     # Check os
-    os = await fetchone("SELECT * FROM os WHERE name = ?", (os_name,))
+    os = await database.fetch_one(IsoImage.select().where(IsoImage.c.name == os_name))
 
     if not os:
         raise HTTPException(422, "Invalid OS")
 
     # Installation logic
-    node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
-    vds = await fetchone("SELECT * FROM vds WHERE id = ?", (server["vds_id"],))
+    node = await database.fetch_one(Node.select().where(Node.c.id == server.node_id))
+    vds = await database.fetch_one(VDS.select().where(VDS.c.id == server.vds_id))
 
-    await vds_install(server, node["ip"], vds, os_name)
+    await vds_install(server, node.ip, vds, os_name)
 
     return RedirectResponse("/dashboard", 301)
 
@@ -44,16 +45,16 @@ async def install(request: Request):
 async def action(request: Request):
     user = request.user
     server_id = request.path_params.get("server_id")
-    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    server = await database.fetch_one(Server.select().where(Server.c.id == server_id))
 
     # Check server
-    if not server or server["user_id"] != user["id"]:
+    if not server or server.user_id != user.id:
         raise HTTPException(403, "Invalid server")
 
     # Action logic
-    node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
+    node = await database.fetch_one(Node.select().where(Node.c.id == server.node_id))
 
-    await vds_action(server["id"], node["ip"])
+    await vds_action(server.id, node.ip)
 
     return RedirectResponse("/dashboard", 301)
 
@@ -62,19 +63,19 @@ async def action(request: Request):
 async def vnc(websocket: WebSocket):
     user = websocket.user
     server_id = websocket.path_params.get("server_id")
-    server = await fetchone("SELECT * FROM server WHERE id = ?", (server_id,))
+    server = await database.fetch_one(Server.select().where(Server.c.id == server_id))
 
     # Check server
-    if not server or server["user_id"] != user["id"]:
+    if not server or server.user_id != user.id:
         raise WebSocketDisconnect(code=1008)
 
     # VNC logic
     await websocket.accept()
 
-    node = await fetchone("SELECT * FROM node WHERE id = ?", (server["node_id"],))
+    node = await database.fetch_one(Node.select().where(Node.c.id == server.node_id))
 
     try:
-        reader, writer = await asyncio.open_connection(node["ip"], server["vnc_port"])
+        reader, writer = await asyncio.open_connection(node.ip, server.vnc_port)
     except ConnectionRefusedError:
         return await websocket.close(1013, "VNC Server isn't running now")
 

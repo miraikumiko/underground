@@ -8,7 +8,7 @@ User = Table(
     Column("username", String, nullable=False, unique=True, index=True),
     Column("password", String, nullable=False),
     Column("token", String, unique=True, index=True),
-    Column("balance", DECIMAL(15, 12), default=0, nullable=False)
+    Column("balance", DECIMAL(15, 12), nullable=False)
 )
 
 Payment = Table(

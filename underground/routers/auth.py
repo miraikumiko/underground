@@ -5,8 +5,9 @@ from starlette.responses import RedirectResponse
 from starlette.routing import Route
 from starlette.exceptions import HTTPException
 from underground.config import REGISTRATION
-from underground.database import execute, fetchone, fetchall
-from underground.utils.auth import pwd
+from underground.database import database
+from underground.models import User, Server
+from underground.utils.auth import ph
 from underground.utils.display import no_cache_headers
 
 
@@ -19,25 +20,25 @@ async def login(request: Request):
         raise HTTPException(400, "The fields username and password are required")
 
     # Check password
-    user = await fetchone("SELECT * FROM users WHERE username = $1", username)
+    user = await database.fetch_one(User.select().where(User.c.username == username))
 
     if not user:
         raise HTTPException(401, "User doesn't exist")
 
-    if not pwd.verify(password, user["password"]):
+    if not ph.verify(user.password, password):
         raise HTTPException(401, "Invalid password")
 
     # Create auth token
     while True:
         token = str(uuid4())
-        token_exists = await fetchone("SELECT * FROM users WHERE token = $1", token)
+        token_exists = await database.fetch_one(User.select().where(User.c.token == token))
 
         if not token_exists:
-            await execute("UPDATE users SET token = $1 WHERE id = $2", token, user["id"])
+            await database.execute(User.update().where(User.c.id == user.id).values(token=token))
             break
 
     # Login
-    server = await fetchone("SELECT * FROM server WHERE user_id = $1", user["id"])
+    server = await database.fetch_one(Server.select().where(Server.c.user_id == user.id))
 
     return RedirectResponse("/dashboard" if server else '/', 301, {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -61,7 +62,7 @@ async def register(request: Request):
         raise HTTPException(400, "The password length must be 8-20 characters")
 
     # Check user
-    user = await fetchone("SELECT * FROM users WHERE username = $1;", username)
+    user = await database.fetch_one(User.select().where(User.c.username == username))
 
     if user:
         raise HTTPException(409, "User already exist")
@@ -69,13 +70,17 @@ async def register(request: Request):
     # Create auth token
     while True:
         token = str(uuid4())
-        token_exists = await fetchone("SELECT * FROM users WHERE token = $1;", token)
+        token_exists = await database.fetch_one(User.select().where(User.c.token == token))
 
         if not token_exists:
             # Registration
-            await execute(
-                "INSERT INTO users (username, password, token) VALUES ($1, $2, $3);",
-                username, pwd.hash(password), token
+            await database.execute(
+                User.insert().values(
+                    username=username,
+                    password=ph.hash(password),
+                    token=token,
+                    balance=0
+                )
             )
             break
 

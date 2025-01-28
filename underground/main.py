@@ -1,4 +1,9 @@
+import sys
+import asyncio
+import contextlib
 import uvicorn
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 from starlette.applications import Starlette
 from starlette.routing import Mount
 from starlette.staticfiles import StaticFiles
@@ -8,8 +13,9 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException, WebSocketException
 from underground.exceptions import handle_error, http_exception, websocket_exception
 from underground.config import BASE_DIR, HOST, PORT
-from underground.database import lifespan
+from underground.database import database
 from underground.utils.auth import CookieAuthBackend
+from underground.utils.payment import set_xmr_course, payment_checkout, expiration_check
 from underground.routers.auth import auth_router
 from underground.routers.payment import payment_router
 from underground.routers.server import server_router
@@ -43,12 +49,53 @@ exception_handlers = {
     WebSocketException: websocket_exception
 }
 
-app = Starlette(routes=routes, middleware=middleware, exception_handlers=exception_handlers, lifespan=lifespan)
+scheduler = BackgroundScheduler()
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: Starlette):
+    # Startup
+    loop = asyncio.get_running_loop()
+
+    scheduler.add_job(
+        lambda loop, coro: asyncio.run_coroutine_threadsafe(coro, loop),
+        IntervalTrigger(days=1),
+        args=[loop, expiration_check()],
+        id="expiration_check"
+    )
+    scheduler.add_job(
+        lambda loop, coro: asyncio.run_coroutine_threadsafe(coro, loop),
+        IntervalTrigger(hours=12),
+        args=[loop, set_xmr_course(app)],
+        id="set_xmr_course"
+    )
+
+    scheduler.start()
+
+    await database.connect()
+
+    yield
+
+    # Shutdown
+    await database.disconnect()
+
+    scheduler.shutdown()
+
+
+app = Starlette(
+    routes=routes,
+    middleware=middleware,
+    exception_handlers=exception_handlers,
+    lifespan=lifespan
+)
 
 
 def main():
-    uvicorn.run(app, host=HOST, port=PORT)
+    asyncio.run(set_xmr_course(app))
 
-
-if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1:
+        txid = sys.argv[1]
+        course = app.state.XMR_COURSE
+        asyncio.run(payment_checkout(txid, course))
+    else:
+        uvicorn.run(app, host=HOST, port=PORT)

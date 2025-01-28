@@ -14,7 +14,7 @@ HOST = config("HOST")
 PORT = config("PORT", cast=int)
 
 DATABASE_URL = config("DATABASE_URL", cast=databases.DatabaseURL)
-TEST_DATABASE_URL = DATABASE_URL.replace(database='test_' + DATABASE_URL.database)
+TEST_DATABASE_URL = DATABASE_URL.replace(database="test_" + DATABASE_URL.database)
 
 IMAGES_PATH = config("IMAGES_PATH")
 

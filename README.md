@@ -79,13 +79,10 @@ Execute it in Postgres shell
 ```
 CREATE USER underground WITH PASSWORD 'underground';
 CREATE DATABASE underground;
+ALTER USER underground CREATEDB;
 ALTER DATABASE underground OWNER TO underground;
 GRANT ALL PRIVILEGES ON DATABASE underground TO underground;
 ```
-
-and run
-
-`psql -U underground -d underground -f tables.sql`
 
 ### Nginx
 

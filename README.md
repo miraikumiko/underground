@@ -49,7 +49,7 @@ MONERO_RPC_LOG_PATH=/dev/null
 MONERO_WALLET_PATH=/var/lib/wallets/underground
 MONERO_WALLET_PASSWORD=password
 MONERO_DAEMON_ADDRESS=127.0.0.1:18081
-MONERO_TX_PATH=underground_checkout
+MONERO_TX_PATH=underground
 ```
 
 Install noVNC dependencies
@@ -166,7 +166,7 @@ MONERO_TEST_RPC_LOG_PATH=/dev/null
 MONERO_TEST_WALLET_PATH=/var/lib/wallets/underground.pm
 MONERO_TEST_WALLET_PASSWORD=password
 MONERO_TEST_DAEMON_ADDRESS=127.0.0.1:18081
-MONERO_TEST_TX_PATH=underground_checkout
+MONERO_TEST_TX_PATH=underground
 ```
 
 Install requirements and build the app

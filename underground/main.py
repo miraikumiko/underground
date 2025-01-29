@@ -58,21 +58,21 @@ async def lifespan(app: Starlette):
     loop = asyncio.get_running_loop()
 
     scheduler.add_job(
-        lambda loop, coro: asyncio.run_coroutine_threadsafe(coro, loop),
+        lambda: asyncio.run_coroutine_threadsafe(expiration_check(), loop),
         IntervalTrigger(days=1),
-        args=[loop, expiration_check()],
         id="expiration_check"
     )
     scheduler.add_job(
-        lambda loop, coro: asyncio.run_coroutine_threadsafe(coro, loop),
+        lambda: asyncio.run_coroutine_threadsafe(set_xmr_course(app), loop),
         IntervalTrigger(hours=12),
-        args=[loop, set_xmr_course(app)],
         id="set_xmr_course"
     )
 
     scheduler.start()
 
     await database.connect()
+    await expiration_check()
+    await set_xmr_course(app)
 
     yield
 
@@ -91,8 +91,6 @@ app = Starlette(
 
 
 def main():
-    asyncio.run(set_xmr_course(app))
-
     if len(sys.argv) > 1:
         txid = sys.argv[1]
         course = app.state.XMR_COURSE

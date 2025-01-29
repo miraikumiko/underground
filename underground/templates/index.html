@@ -18,7 +18,7 @@
         {% endif %}
       </div>
       {% if user %}
-        <p id="balance">balance: ${{ user["balance"] | round(2) }}</p>
+        <a id="balance" href="/balance">${{ user["balance"] | round(2) }}</a>
       {% endif %}
     </div>
   </header>
@@ -51,12 +51,6 @@
       <p>Welcome to anonymous KVM hosting for cryptocurrency XMR, that doesn't spy its users!</p>
       <p>Also available on <a href="http://underupptqt5efxaxutkfgjikkwu2lsoosyyooxs45tqkeg7dfdytwqd.onion" target="_blank" style="color: #c145ff">.onion</a> and <a href="http://undergroundpm.i2p" target="_blank" style="color: #c145ff">.i2p</a>, all <a href="https://git.sr.ht/~yandere/underground.pm" target="_blank">sources</a> is open and available under GPLv3 licence.</p>
       <p>We publish news at <a href="https://mastodon.social/@undergroundpm" target="_blank" style="color: #8c8dff">Mastodon</a>. If you need help you can write <a href="mailto:murrr@macaw.me">admin</a>.</p>
-    </article>
-    <article style="text-align: right">
-      <h2>Rules</h2>
-      <p>Money for purchased goods isn't refundable.</p>
-      <p>Each downtime will be compensated by adding 3 days to the rent.</p>
-      <p>In case of data loss, the money for the remaining rent will be returned.</p>
     </article>
     <div>
       <h2>FAQ</h2>

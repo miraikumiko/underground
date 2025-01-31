@@ -15,7 +15,9 @@ from underground.exceptions import handle_error, http_exception, websocket_excep
 from underground.config import BASE_DIR, HOST, PORT
 from underground.database import database
 from underground.utils.auth import CookieAuthBackend
-from underground.utils.payment import set_xmr_course, payment_checkout, expiration_check
+from underground.utils.payment import (
+    get_xmr_course, set_xmr_course, payment_checkout, expiration_check
+)
 from underground.routers.auth import auth_router
 from underground.routers.payment import payment_router
 from underground.routers.server import server_router
@@ -53,7 +55,7 @@ scheduler = BackgroundScheduler()
 
 
 @contextlib.asynccontextmanager
-async def lifespan(app: Starlette):
+async def lifespan(_):
     # Startup
     loop = asyncio.get_running_loop()
 
@@ -93,7 +95,7 @@ app = Starlette(
 def main():
     if len(sys.argv) > 1:
         txid = sys.argv[1]
-        course = app.state.XMR_COURSE
+        course = asyncio.run(get_xmr_course())
         asyncio.run(payment_checkout(txid, course))
     else:
         uvicorn.run(app, host=HOST, port=PORT)

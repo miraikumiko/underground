@@ -1,5 +1,5 @@
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import date, timedelta
 import httpx
 from starlette.applications import Starlette
 from underground.config import (
@@ -23,11 +23,17 @@ async def monero_request(method: str, params: dict = None) -> dict | None:
     return response.json()
 
 
-async def set_xmr_course(app: Starlette) -> None:
+async def get_xmr_course() -> float:
     async with httpx.AsyncClient() as client:
         response = await client.get("https://api.coingecko.com/api/v3/simple/price?ids=monero&vs_currencies=usd")
         course = response.json()["monero"]["usd"]
-        app.state.XMR_COURSE = course
+
+        return course
+
+
+async def set_xmr_course(app: Starlette) -> None:
+    course = await get_xmr_course()
+    app.state.XMR_COURSE = course
 
 
 async def usd_to_xmr(usd: float, course: float) -> int:
@@ -52,8 +58,8 @@ async def request_vds(user_id: int, vds: dict, node: dict) -> None:
             vnc_port += 1
 
     # Registration of new server
-    start_at = datetime.now()
-    end_at = (datetime.now() + timedelta(days=VDS_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
+    start_at = date.today()
+    end_at = (start_at + timedelta(days=VDS_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
 
     await database.execute(
         Node.update().where(Node.c.id == node.id).values(
@@ -108,7 +114,7 @@ async def expiration_check() -> None:
     servers = await database.fetch_all(Server.select())
 
     for server in servers:
-        if datetime.fromisoformat(server.end_at + timedelta(days=VDS_EXPIRED_DAYS) <= datetime.now()):
+        if server.end_at + timedelta(days=VDS_EXPIRED_DAYS) <= date.today():
             node = await database.fetch_one(Node.select().where(Node.c.id == server.node_id))
             await database.execute(Server.delete().where(server.c.id == server.id))
             await vds_delete(server.id, node.ip)

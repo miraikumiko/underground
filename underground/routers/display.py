@@ -86,13 +86,42 @@ async def display_promo(request: Request):
 
 
 @requires("authenticated")
+async def display_balance(request: Request):
+    return templates.TemplateResponse(request, "balance.html", {
+        "user": request.user
+    })
+
+
+@requires("authenticated")
+async def add_funds(request: Request):
+    user = request.user
+    form = await request.form()
+    amount = form.get("amount")
+
+    if not amount:
+        raise HTTPException(400, "The amount field is required")
+
+    course = request.app.state.XMR_COURSE
+    xmr_amount = await usd_to_xmr(amount, course)
+    payment_uri = await payment_request(user.id, xmr_amount)
+    qrcode = await draw_qrcode(payment_uri)
+
+    return templates.TemplateResponse(request, "checkout.html", {
+        "uri": payment_uri,
+        "qrcode": qrcode,
+        "price": amount,
+        "course": course
+    })
+
+
+@requires("authenticated")
 async def display_checkout(request: Request):
     user = request.user
     vds_id = request.path_params.get("product_id")
     vds = await database.fetch_one(VDS.select().where(VDS.c.id == vds_id))
     course = request.app.state.XMR_COURSE
-    amount = await usd_to_xmr(vds.price, course)
-    payment_uri = await payment_request(user.id, amount)
+    xmr_amount = await usd_to_xmr(vds.price, course)
+    payment_uri = await payment_request(user.id, xmr_amount)
     qrcode = await draw_qrcode(payment_uri)
 
     return templates.TemplateResponse(request, "checkout.html", {
@@ -142,6 +171,8 @@ display_router = [
     Route("/register", display_register, methods=["GET"]),
     Route("/dashboard", display_dashboard, methods=["GET"]),
     Route("/promo", display_promo, methods=["GET"]),
+    Route("/balance", display_balance, methods=["GET"]),
+    Route("/add_funds", add_funds, methods=["GET"]),
     Route("/checkout/{product_id:int}", display_checkout, methods=["GET"]),
     Route("/install/{server_id:int}", display_install, methods=["GET"]),
     Route("/vnc/{server_id:int}", display_vnc, methods=["GET"]),

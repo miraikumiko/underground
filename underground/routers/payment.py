@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from starlette.authentication import requires
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
@@ -51,10 +51,7 @@ async def pay(request: Request):
         raise HTTPException(400, "Invalid server")
 
     # Check rent limit
-    server_end_at = datetime.fromisoformat(server.end_at)
-    server_start_at = datetime.fromisoformat(server.start_at)
-
-    if server_end_at - server_start_at + timedelta(days=VDS_DAYS) > timedelta(days=VDS_MAX_PAYED_DAYS):
+    if server.end_at - server.start_at + timedelta(days=VDS_DAYS) > timedelta(days=VDS_MAX_PAYED_DAYS):
         raise HTTPException(400, f"You can't pay for more than {VDS_MAX_PAYED_DAYS} days")
 
     # Pay VDS
@@ -65,7 +62,7 @@ async def pay(request: Request):
 
     await database.execute(User.update().where(User.c.id == user.id).values(balance=user.balance - vds.price))
 
-    end_at = (datetime.fromisoformat(server.end_at) + timedelta(days=VDS_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
+    end_at = server.end_at + timedelta(days=VDS_DAYS)
 
     await database.execute(Server.update().where(Server.c.id == server.id).values(end_at=end_at))
 

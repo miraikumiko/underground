@@ -106,8 +106,10 @@ http {
 
 ### Monero
 
-`cp contrib/monero/monero_wallet_rpc_run /bin`
-`cp contrib/monero/monero_test_wallet_rpc_run /bin`
+```
+cp contrib/monero/monero_wallet_rpc_run /bin
+cp contrib/monero/monero_test_wallet_rpc_run /bin
+```
 
 ### OpenRC
 

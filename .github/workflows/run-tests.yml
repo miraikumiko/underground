@@ -16,7 +16,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt install -y gcc make automake autoconf fakeroot libvirt
+        sudo apt install -y gcc make automake autoconf fakeroot libvirt-dev
         pip install ".[dev]"
 
     - name: Test with pytest

@@ -28,11 +28,11 @@ jobs:
         pip install ".[dev]"
     - name: Create user and database
       run: |
-        PGPASSWORD=postgres psql -U postgres -c "CREATE USER underground WITH PASSWORD 'underground';"
-        PGPASSWORD=postgres psql -U postgres -c "CREATE DATABASE underground;"
-        PGPASSWORD=postgres psql -U postgres -c "ALTER USER underground CREATEDB;"
-        PGPASSWORD=postgres psql -U postgres -c "ALTER DATABASE underground OWNER TO underground;"
-        PGPASSWORD=postgres psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE underground TO underground;"
+        PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c "CREATE USER underground WITH PASSWORD 'underground';"
+        PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c "CREATE DATABASE underground;"
+        PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c "ALTER USER underground CREATEDB;"
+        PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c "ALTER DATABASE underground OWNER TO underground;"
+        PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE underground TO underground;"
     - name: Run migrations
       run: alembic upgrade head
     - name: Test with pytest

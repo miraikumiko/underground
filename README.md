@@ -144,7 +144,7 @@ MONERO_TEST_TX_PATH=underground
 
 Install requirements and build the app
 
-`pip install .[dev]`
+`pip install ".[dev]"`
 
 Run test wallet
 

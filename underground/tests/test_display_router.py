@@ -50,7 +50,7 @@ async def test_display_vnc(http_client) -> None:
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_display_upgrademenu(http_client) -> None:
+async def test_display_upgrade(http_client) -> None:
     response = await http_client.get("/upgrademenu/abc")
     assert response.status_code == 404
 

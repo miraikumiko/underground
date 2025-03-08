@@ -3,7 +3,7 @@ requires = ["setuptools >= 70.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "underground.pm"
+name = "underground"
 description = "Privacy hosting"
 version = "1.0.0"
 authors = [
@@ -56,7 +56,7 @@ license = {file = "LICENSE"}
 
 [project.urls]
 Homepage = "https://underground.pm"
-Source = "https://github.com/miraikumiko/underground.pm"
+Source = "https://github.com/miraikumiko/underground"
 
 [project.optional-dependencies]
 dev = [

@@ -70,7 +70,7 @@ pyproject-build --wheel
 
 Install the app
 
-`pip install dist/underground.pm-*-py3-none-any.whl --break-system-packages`
+`pip install dist/underground-*-py3-none-any.whl --break-system-packages`
 
 ### Postgresql
 
@@ -87,8 +87,8 @@ GRANT ALL PRIVILEGES ON DATABASE underground TO underground;
 ### Nginx
 
 ```
-cp contrib/nginx/sites-available/underground.pm.conf /etc/nginx/sites-available/underground.pm.conf
-ln -s /etc/nginx/sites-available/underground.pm.conf /etc/nginx/sites-enabled/underground.pm.conf
+cp contrib/nginx/sites-available/underground.conf /etc/nginx/sites-available/underground.conf
+ln -s /etc/nginx/sites-available/underground.conf /etc/nginx/sites-enabled/underground.conf
 ```
 
 Edit `/etc/nginx/nginx.conf`
@@ -114,7 +114,7 @@ cp contrib/monero/monero_test_wallet_rpc_run /bin
 ### OpenRC
 
 ```
-cp contrib/openrc/underground.pm /etc/init.d/underground.pm
+cp contrib/openrc/underground /etc/init.d/underground
 cp contrib/openrc/monero-wallet-rpc /etc/init.d/monero-wallet-rpc
 cp contrib/openrc/monero-wallet-rpc /etc/init.d/monero-test-wallet-rpc
 ```
@@ -122,7 +122,7 @@ cp contrib/openrc/monero-wallet-rpc /etc/init.d/monero-test-wallet-rpc
 ### Systemd
 
 ```
-cp contrib/systemd/underground.pm.service /etc/systemd/system/underground.pm.service
+cp contrib/systemd/underground.service /etc/systemd/system/underground.service
 cp contrib/systemd/monero-wallet-rpc.service /etc/systemd/system/monero-wallet-rpc.service
 cp contrib/systemd/monero-test-wallet-rpc.service /etc/systemd/system/monero-test-wallet-rpc.service
 ```
@@ -139,7 +139,7 @@ rc-update add postgresql default
 rc-update add nginx default
 rc-update add monerod default
 rc-update add monero-wallet-rpc default
-rc-update add underground.pm default
+rc-update add underground default
 
 rc-service sshd start
 rc-service libvirtd start
@@ -147,12 +147,12 @@ rc-service postgresql start
 rc-service nginx start
 rc-service monerod start
 rc-service monero-wallet-rpc start
-rc-service underground.pm start
+rc-service underground start
 ```
 
 ### Systemd
 
-`systemctl enable --now sshd libvirtd postgresql nginx monerod monero-wallet-rpc underground.pm`
+`systemctl enable --now sshd libvirtd postgresql nginx monerod monero-wallet-rpc underground`
 
 
 ## Testing
@@ -165,7 +165,7 @@ MONERO_TEST_RPC_USERNAME=username
 MONERO_TEST_RPC_PASSWORD=password
 MONERO_TEST_RPC_LOG_PATH=/dev/null
 
-MONERO_TEST_WALLET_PATH=/var/lib/wallets/underground.pm
+MONERO_TEST_WALLET_PATH=/var/lib/wallets/underground
 MONERO_TEST_WALLET_PASSWORD=password
 MONERO_TEST_DAEMON_ADDRESS=127.0.0.1:18081
 MONERO_TEST_TX_PATH=underground

@@ -1,5 +1,5 @@
 [Unit]
-Description=underground.pm
+Description=Privacy hosting
 Wants=network-online.target
 Wants=libvirtd.service
 Wants=postgresql.service

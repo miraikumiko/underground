@@ -17,10 +17,7 @@ Privacy hosting
 
 Clone repository and download submodules:
 
-```
-git submodule init
-git submodule update
-```
+`git submodule update --init --recursive`
 
 ## Setup
 

@@ -13,12 +13,6 @@ Privacy hosting
 * monero
 * openrc/systemd
 
-## Installing
-
-Clone repository and download submodules:
-
-`git submodule update --init --recursive`
-
 ## Setup
 
 ### App
@@ -48,26 +42,6 @@ MONERO_WALLET_PASSWORD=password
 MONERO_DAEMON_ADDRESS=127.0.0.1:18081
 MONERO_TX_PATH=underground
 ```
-
-Install noVNC dependencies
-
-```
-cd underground/static/noVNC
-npm i
-```
-
-Install requirements and build the app
-
-```
-python -m venv venv
-. venv/bin/activate
-pip install .
-pyproject-build --wheel
-```
-
-Install the app
-
-`pip install dist/underground-*-py3-none-any.whl --break-system-packages`
 
 ### Postgresql
 

@@ -4,10 +4,18 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
-  tests_python:
+  tests:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        options: >-
+          -e POSTGRES_PASSWORD=postgres
+          -e POSTGRES_DB=postgres
+          -p 5432:5432
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
@@ -16,8 +24,16 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt install -y gcc make automake autoconf fakeroot libvirt-dev
+        sudo apt install -y gcc make automake autoconf fakeroot libvirt-dev postgresql-client
         pip install ".[dev]"
-
+    - name: Create user and database
+      run: |
+        PGPASSWORD=postgres psql -U postgres -c "CREATE USER underground WITH PASSWORD 'underground';"
+        PGPASSWORD=postgres psql -U postgres -c "CREATE DATABASE underground;"
+        PGPASSWORD=postgres psql -U postgres -c "ALTER USER underground CREATEDB;"
+        PGPASSWORD=postgres psql -U postgres -c "ALTER DATABASE underground OWNER TO underground;"
+        PGPASSWORD=postgres psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE underground TO underground;"
+    - name: Run migrations
+      run: alembic upgrade head
     - name: Test with pytest
       run: pytest

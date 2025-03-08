@@ -55,6 +55,10 @@ ALTER DATABASE underground OWNER TO underground;
 GRANT ALL PRIVILEGES ON DATABASE underground TO underground;
 ```
 
+And run migrations
+
+`alembic upgrade head`
+
 ### Nginx
 
 ```

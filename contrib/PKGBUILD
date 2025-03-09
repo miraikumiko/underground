@@ -1,0 +1,49 @@
+pkgname=underground
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='Privacy hosting'
+url='https://github.com/miraikumiko/underground'
+license=('GPL3')
+arch=('any')
+depends=('python-starlette' 'python-sqlalchemy' 'python-sqlalchemy-utils' 'python-websockets' 'libvirt-python' 'python-qrcode' 'python-jinja' 'python-asyncpg' 'python-httpx' 'python-apscheduler' 'python-alembic' 'uvicorn' 'python-argon2-cffi' 'python-bcrypt' 'python-databases' 'python-psycopg2' 'python-python-multipart' 'npm' 'openssh' 'postgresql' 'nginx' 'monero')
+makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools')
+source=('git+https://github.com/miraikumiko/underground.git')
+sha256sums=('SKIP')
+
+prepare() {
+	cd "$srcdir/$pkgname"
+	git submodule update --init --recursive
+}
+
+build() {
+	cd "$srcdir/$pkgname/$pkgname/static/noVNC"
+	npm i
+	cd "$srcdir/$pkgname"
+	python -m build --wheel --no-isolation
+}
+
+package() {
+	cd "$srcdir/$pkgname"
+	python -m installer --destdir="$pkgdir" dist/*.whl
+
+    if command -v systemctl &>/dev/null; then
+        install -Dm 644 "contrib/systemd/$pkgname.service" "$pkgdir/usr/lib/systemd/system/$pkgname.service"
+        install -Dm 644 "contrib/systemd/monero-wallet-rpc.service" "$pkgdir/usr/lib/systemd/system/monero-wallet-rpc.service"
+        install -Dm 644 "contrib/systemd/monero-test-wallet-rpc.service" "$pkgdir/usr/lib/systemd/system/monero-test-wallet-rpc.service"
+    elif [ -d /etc/init.d ]; then
+        install -Dm 644 "contrib/openrc/$pkgname" "$pkgdir/etc/init.d/$pkgname"
+        install -Dm 644 "contrib/openrc/monero-wallet-rpc" "$pkgdir/etc/init.d/monero-wallet-rpc"
+        install -Dm 644 "contrib/openrc/monero-test-wallet-rpc" "$pkgdir/etc/init.d/monero-test-wallet-rpc"
+    else
+        echo "Unknown init system"
+    fi
+
+	install -Dm 644 "contrib/monero/monero_wallet_rpc_run" "$pkgdir/usr/bin/monero_wallet_rpc_run"
+	install -Dm 644 "contrib/monero/monero_test_wallet_rpc_run" "$pkgdir/usr/bin/monero_test_wallet_rpc_run"
+
+	install -Dm 644 "contrib/nginx/sites-available/underground.conf" "$pkgdir/etc/nginx/sites-available/underground.conf"
+    mkdir -p "$pkgdir/etc/nginx/sites-enabled"
+    ln -s "/etc/nginx/sites-available/$pkgname.conf" "$pkgdir/etc/nginx/sites-enabled/$pkgname.conf"
+
+	install -Dm 644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

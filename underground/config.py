@@ -1,11 +1,11 @@
 from pathlib import Path
 from starlette.config import Config
-import databases
+from databases import DatabaseURL
 import underground
 
 BASE_DIR = Path(underground.__file__).parent.resolve()
 
-config = Config("/etc/environment")
+config = Config("/etc/underground.conf")
 
 TESTING = config("TESTING", cast=bool, default=False)
 REGISTRATION = config("REGISTRATION", cast=bool, default=True)
@@ -13,7 +13,7 @@ REGISTRATION = config("REGISTRATION", cast=bool, default=True)
 HOST = config("HOST", default="127.0.0.1")
 PORT = config("PORT", cast=int, default=8000)
 
-DATABASE_URL = config("DATABASE_URL", cast=databases.DatabaseURL, default=databases.DatabaseURL("postgresql://underground:underground@localhost/underground"))
+DATABASE_URL = config("DATABASE_URL", cast=DatabaseURL, default=DatabaseURL("postgresql://underground:underground@localhost/underground"))
 TEST_DATABASE_URL = DATABASE_URL.replace(database="test_" + DATABASE_URL.database)
 
 IMAGES_PATH = config("IMAGES_PATH", default="/var/lib/libvirt/images")

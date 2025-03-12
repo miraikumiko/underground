@@ -17,7 +17,7 @@ Privacy hosting
 
 ### App
 
-Define environment varibles in `/etc/environment`
+Define environment varibles in `/etc/underground.conf`
 
 ```
 TESTING=false

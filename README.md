@@ -20,6 +20,9 @@ Privacy hosting
 Define environment varibles in `/etc/environment`
 
 ```
+TESTING=false
+REGISTRATION=true
+
 HOST=127.0.0.1
 PORT=8000
 

@@ -39,3 +39,5 @@ jobs:
       run: alembic upgrade head
     - name: Test with pytest
       run: pytest
+      env:
+        TESTING: true

@@ -7,10 +7,10 @@ name = "underground"
 description = "Privacy hosting"
 version = "1.0.0"
 authors = [
-    { name = "Mirai Kumiko", email = "murrr@macaw.me" }
+    { name = "Mirai Kumiko", email = "miraikumiko@disroot.org" }
 ]
 maintainers = [
-    { name = "Mirai Kumiko", email = "murrr@macaw.me" }
+    { name = "Mirai Kumiko", email = "miraikumiko@disroot.org" }
 ]
 keywords = [
     "Hosting",

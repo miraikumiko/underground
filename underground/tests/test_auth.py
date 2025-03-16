@@ -1,8 +1,8 @@
 import pytest
 
-USERNAME="test"
-SHORT_PASSWORD="ab12"
-LONG_PASSWORD="abcd1234"
+USERNAME = "test"
+SHORT_PASSWORD = "ab12"
+LONG_PASSWORD = "abcd1234"
 
 
 @pytest.mark.asyncio(loop_scope="session")

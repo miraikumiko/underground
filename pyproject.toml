@@ -55,7 +55,6 @@ readme = "README.md"
 license = {file = "LICENSE"}
 
 [project.urls]
-Homepage = "https://underground.pm"
 Source = "https://github.com/miraikumiko/underground"
 
 [project.optional-dependencies]

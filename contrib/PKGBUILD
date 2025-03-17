@@ -42,8 +42,8 @@ package() {
 	install -Dm 644 "contrib/monero/monero_test_wallet_rpc_run" "$pkgdir/usr/bin/monero_test_wallet_rpc_run"
 
 	install -Dm 644 "contrib/nginx/sites-available/underground.conf" "$pkgdir/etc/nginx/sites-available/underground.conf"
-    mkdir -p "$pkgdir/etc/nginx/sites-enabled"
-    ln -s "/etc/nginx/sites-available/$pkgname.conf" "$pkgdir/etc/nginx/sites-enabled/$pkgname.conf"
+	mkdir -p "$pkgdir/etc/nginx/sites-enabled"
+	ln -s "/etc/nginx/sites-available/$pkgname.conf" "$pkgdir/etc/nginx/sites-enabled/$pkgname.conf"
 
 	install -Dm 644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

@@ -11,8 +11,9 @@ After=monerod.service
 
 [Service]
 Type=simple
-User=root
-ExecStart=underground_run
+ExecStart=/usr/bin/underground
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target

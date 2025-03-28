@@ -6,7 +6,7 @@ from httpx import AsyncClient, ASGITransport
 
 environ["TESTING"] = "true"
 
-from underground.config import HOST, PORT, TEST_DATABASE_URL
+from underground.config import HOST, PORT, DATABASE_TEST_URL
 from underground.database import metadata, database
 from underground.main import app
 
@@ -20,7 +20,7 @@ async def lifespan():
 
 @pytest.fixture(scope="session", autouse=True)
 async def create_test_database():
-    url = str(TEST_DATABASE_URL)
+    url = str(DATABASE_TEST_URL)
     engine = create_engine(url)
     assert not database_exists(url), "Test database already exists. Aborting tests."
     create_database(url)

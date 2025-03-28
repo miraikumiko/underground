@@ -1,5 +1,5 @@
 [Unit]
-Description=Privacy hosting
+Description=Privacy Hosting
 Wants=network-online.target
 Wants=libvirtd.service
 Wants=postgresql.service

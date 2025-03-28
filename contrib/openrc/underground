@@ -1,6 +1,6 @@
 #!/sbin/openrc-run
 
-description="Privacy hosting"
+description="Privacy Hosting"
 name=$RC_SVCNAME
 
 command="/usr/bin/underground"

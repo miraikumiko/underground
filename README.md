@@ -1,6 +1,6 @@
 # Underground
 
-Privacy hosting
+Privacy Hosting
 
 ## Dependencies
 

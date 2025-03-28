@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "underground"
-description = "Privacy hosting"
+description = "Privacy Hosting"
 version = "1.0.0"
 authors = [
     { name = "Mirai Kumiko", email = "miraikumiko@disroot.org" }
